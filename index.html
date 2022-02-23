@@ -36,7 +36,16 @@
         color: purple;
       }
 
-      #textbox {
+      #code {
+        text-align: left;
+        outline: none;
+        background-color: white;
+        width: 100%;
+        height: 90vh;
+        border: none;
+      }
+
+      #output {
         text-align: left;
         outline: none;
         background-color: white;
@@ -69,6 +78,11 @@
         color: white;
       }
     </style>
+    <script type="text/javascript">
+      function main() {
+          holyc_parser(holyc_lex(document.getElementById("code").value))
+      }
+    </script>
   </head>
   <body>
     <main>
@@ -76,8 +90,8 @@
       <section class="container">
         <div id="col-1">
           <fieldset>
-            <legend>Output</legend>
-            <textarea id="textbox"></textarea>
+            <legend>Code</legend>
+            <textarea id="code"></textarea>
           </fieldset>
         </div>
         <div id="col-2">
@@ -86,7 +100,7 @@
                 <a href="">Source</a>
                 <p>Terry A. Davis (1969 - 2018). Rest in peace!</p>
             </div>
-            <button id="run-bt">RUN</button>
+            <button id="run-bt" onclick="main()">RUN</button>
             <div>
                 <p>Copyright (c) (2022-present) <a href="">Leonardo Z. Nunes</a></p>
             </div>
@@ -94,7 +108,7 @@
         <div id="col-3">
           <fieldset>
             <legend>Output</legend>
-            <textarea id="textbox"></textarea>
+            <textarea id="output" style="pointer-events: none;"></textarea>
           </fieldset>
         </div>
       </section>
