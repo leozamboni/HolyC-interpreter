@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HOLYC INTERPRETER</title>
+    <style>
+      * {
+        text-align: center;
+        font-family: monospace;
+        margin: 0;
+        padding: 0;
+      }
+      .title {
+        background-color: blue;
+        color: white;
+        display: inline;
+      }
+
+      .container {
+        display: flex;
+      }
+
+      #col-1,
+      #col-2,
+      #col-3 {
+        flex: 1;
+      }
+
+      #col-2 div {
+        margin: 20px;
+        color: blue;
+      }
+
+      #col-2 div a {
+        color: purple;
+      }
+
+      #textbox {
+        text-align: left;
+        outline: none;
+        background-color: white;
+        width: 100%;
+        height: 90vh;
+        border: none;
+      }
+
+      #run-bt {
+        width: 90%;
+        height: 50px;
+        border: 4px solid purple;
+        color: purple;
+      }
+
+      #run-bt:hover {
+        cursor: pointer;
+      }
+
+      #run-bt:active {
+        background-color: white;
+      }
+
+      fieldset {
+        border: 8px double blue;
+      }
+
+      fieldset legend {
+        background-color: blue;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 class="title">Online HolyC Interpreter</h1>
+      <section class="container">
+        <div id="col-1">
+          <fieldset>
+            <legend>Output</legend>
+            <textarea id="textbox"></textarea>
+          </fieldset>
+        </div>
+        <div id="col-2">
+            <div>
+                <p>HolyC Interpreter 1.0.0</p>
+                <a href="">Source</a>
+                <p>Terry A. Davis (1969 - 2018). Rest in peace!</p>
+            </div>
+            <button id="run-bt">RUN</button>
+            <div>
+                <p>Copyright (c) (2022-present) <a href="">Leonardo Z. Nunes</a></p>
+            </div>
+        </div>
+        <div id="col-3">
+          <fieldset>
+            <legend>Output</legend>
+            <textarea id="textbox"></textarea>
+          </fieldset>
+        </div>
+      </section>
+    </main>
+    <script src="holyc-interpreter.js"></script>
+  </body>
+</html>
