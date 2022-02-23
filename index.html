@@ -77,10 +77,18 @@
         background-color: blue;
         color: white;
       }
+
+      #copy {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        text-align: center;
+      }
     </style>
     <script type="text/javascript">
       function main() {
-          holyc_parser(holyc_lex(document.getElementById("code").value))
+        holyc_parser(holyc_lex(document.getElementById("code").value));
       }
     </script>
   </head>
@@ -91,24 +99,32 @@
         <div id="col-1">
           <fieldset>
             <legend>Code</legend>
-            <textarea id="code"></textarea>
+            <textarea id="code">
+U0 
+Hello()
+{
+        "Hello World\n";
+}
+
+Hello;
+            </textarea>
           </fieldset>
         </div>
         <div id="col-2">
-            <div>
-                <p>HolyC Interpreter 1.0.0</p>
-                <a href="">Source</a>
-                <p>Terry A. Davis (1969 - 2018). Rest in peace!</p>
-            </div>
-            <button id="run-bt" onclick="main()">RUN</button>
-            <div>
-                <p>Copyright (c) (2022-present) <a href="">Leonardo Z. Nunes</a></p>
-            </div>
+          <div>
+            <p>HolyC Interpreter 1.0.0</p>
+            <a href="">Source</a>
+            <p>HolyC and TempleOS are creations of Terry Davis.</p>
+          </div>
+          <button id="run-bt" onclick="main()">RUN</button>
+          <div id="copy">
+            <p>Copyright (c) (2022-present) <a href="">Leonardo Z. Nunes</a></p>
+          </div>
         </div>
         <div id="col-3">
           <fieldset>
             <legend>Output</legend>
-            <textarea id="output" style="pointer-events: none;"></textarea>
+            <textarea id="output" style="pointer-events: none"></textarea>
           </fieldset>
         </div>
       </section>
