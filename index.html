@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HOLYC INTERPRETER</title>
+    <link rel="shortcut icon" href="https://www.templeos.org/favicon.ico" type="image/x-icon">
     <style>
       * {
         text-align: center;
@@ -79,16 +80,13 @@
       }
 
       #copy {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        text-align: center;
+        padding-top: 65vh;
       }
     </style>
     <script type="text/javascript">
       function main() {
-        holyc_parser(holyc_lex(document.getElementById("code").value));
+        print_ast(holyc_parser(holyc_lex(document.getElementById("code").value)));
+        
       }
     </script>
   </head>

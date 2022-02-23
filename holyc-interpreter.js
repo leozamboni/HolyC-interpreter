@@ -16,24 +16,25 @@ class ExpList {
 
 var tokenType = {
   const: 1,
-  id: 2,
-  add: 3,
-  sub: 4,
-  div: 5,
-  mul: 6,
-  semi: 7,
-  lbrace: 8,
-  rbrace: 9,
-  u0: 10,
-  i8: 11,
-  u8: 12,
-  i16: 13,
-  u16: 14,
-  i32: 15,
-  u32: 16,
-  i64: 17,
-  u64: 18,
-  f64: 19,
+  str: 2,
+  id: 3,
+  add: 4,
+  sub: 5,
+  div: 6,
+  mul: 7,
+  semi: 8,
+  lbrace: 9,
+  rbrace: 10,
+  u0: 11,
+  i8: 12,
+  u8: 13,
+  i16: 14,
+  u16: 15,
+  i32: 16,
+  u32: 17,
+  i64: 18,
+  u64: 19,
+  f64: 20,
 };
 
 var is_alpha = (val) => {
@@ -134,7 +135,7 @@ function holyc_lex(input) {
       tokenList.push({
         value: aux,
         line: line,
-        type: tokenType.const,
+        type: tokenType.str,
       });
     }
 
@@ -231,8 +232,84 @@ function holyc_lex(input) {
   return tokenList;
 }
 
+var globalIndexForTokenList;
+
+function list_eat(token, expectedType) {
+  if (token.type !== expectedType) {
+    throw new Error(`parser: ${token.value} unexpected value\n`);
+  }
+  globalIndexForTokenList++;
+}
+
+function list_eat_type(token) {
+  if (
+    token.type === tokenType.u0 ||
+    token.type === tokenType.i8 ||
+    token.type === tokenType.u8 ||
+    token.type === tokenType.i16 ||
+    token.type === tokenType.u16 ||
+    token.type === tokenType.i32 ||
+    token.type === tokenType.u32 ||
+    token.type === tokenType.i64 ||
+    token.type === tokenType.u64 ||
+    token.type === tokenType.f64
+  ) {
+    globalIndexForTokenList++;
+  } else {
+    throw new Error(`parser: ${token.value} unexpected value\n`);
+  }
+}
+
+function holyc_parser_parse_procedure(tokenList = []) {
+  ast = new Ast();
+  ast.token = tokenList[globalIndexForTokenList];
+  list_eat_type(tokenList[globalIndexForTokenList]);
+
+  ast.next = new Ast();
+  ast.next.token = tokenList[globalIndexForTokenList];
+  list_eat(tokenList[globalIndexForTokenList], tokenType.id);
+
+  ast.left = new Ast();
+  ast.left.token = tokenList[globalIndexForTokenList];
+  list_eat(tokenList[globalIndexForTokenList], tokenType.rbrace);
+
+  if (tokenList[globalIndexForTokenList].type === tokenType.str) {
+    console.log(tokenList[globalIndexForTokenList].value);
+
+    ast.right = new Ast();
+    ast.right.token = tokenList[globalIndexForTokenList];
+    list_eat(tokenList[globalIndexForTokenList], tokenType.str);
+  }
+
+  return ast;
+}
+
+function holyc_parser_parse(tokenList = []) {
+  if (!tokenList[globalIndexForTokenList]) return null;
+  expList = new ExpList();
+  expList.ast = holyc_parser_parse_procedure(tokenList);
+  //expList.next = holyc_parser_parse(tokenList);
+  return expList;
+}
+
 function holyc_parser(tokenList = []) {
-  console.log("not implemented yet");
+  globalIndexForTokenList = 0;
+  expList = holyc_parser_parse(tokenList);
+  return expList;
+}
+
+function print_ast_node(ast) {
+  if (!ast) return;
+  console.log(ast.token, "\n");
+  print_ast_node(ast.next);
+  print_ast_node(ast.left);
+  print_ast_node(ast.right);
+}
+
+function print_ast(expList) {
+  if (!expList) return;
+  print_ast_node(expList.ast);
+  print_ast(expList.next);
 }
 
 document.getElementById("code").addEventListener("keydown", function (e) {
