@@ -1,9 +1,10 @@
 class Ast {
-  constructor(token, left, right, next) {
-    this.token = token;
-    this.next = next;
-    this.left = left;
-    this.right = right;
+  token = {};
+  next = null;
+  left = null;
+  right = null;
+  constructor(type) {
+    this.type = type;
   }
 }
 
@@ -43,7 +44,7 @@ var globalIndexForTokenList;
 
 var clearOutput = () => {
   document.getElementById("output").value = "HolyC Interpreter version 1.0.0\n";
-}
+};
 
 var is_alpha = (val) => {
   if (val === " " || val === "\n") return false;
@@ -309,7 +310,7 @@ function holyc_lex(input) {
 function holyc_parser_parse_block(tokenList = []) {
   if (tokenList[globalIndexForTokenList].type === tokenType.semi) return null;
 
-  var ast = new Ast();
+  var ast = new Ast(tokenList[globalIndexForTokenList].type);
 
   switch (tokenList[globalIndexForTokenList].type) {
     case tokenType.str:
@@ -326,23 +327,23 @@ function holyc_parser_parse_block(tokenList = []) {
 }
 
 function holyc_parser_parse_procedure(tokenList = []) {
-  ast = new Ast();
+  ast = new Ast(tokenList[globalIndexForTokenList].type);
   ast.token = tokenList[globalIndexForTokenList];
   list_eat_type(tokenList[globalIndexForTokenList]);
 
-  ast.next = new Ast();
+  ast.next = new Ast(tokenType.id);
   ast.next.token = tokenList[globalIndexForTokenList];
   list_eat(tokenList[globalIndexForTokenList], tokenType.id);
 
-  ast.next.next = new Ast();
+  ast.next.next = new Ast(tokenType.rparen);
   ast.next.next.token = tokenList[globalIndexForTokenList];
   list_eat(tokenList[globalIndexForTokenList], tokenType.rparen);
 
-  ast.next.next.next = new Ast();
+  ast.next.next.next = new Ast(tokenType.lparen);
   ast.next.next.next.token = tokenList[globalIndexForTokenList];
   list_eat(tokenList[globalIndexForTokenList], tokenType.lparen);
 
-  ast.left = new Ast();
+  ast.left = new Ast(tokenType.rbrace);
   ast.left.token = tokenList[globalIndexForTokenList];
   list_eat(tokenList[globalIndexForTokenList], tokenType.rbrace);
 
