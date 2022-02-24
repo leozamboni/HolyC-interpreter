@@ -4,22 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HOLYC INTERPRETER</title>
-    <link rel="shortcut icon" href="https://www.templeos.org/favicon.ico" type="image/x-icon">
     <style>
       * {
         text-align: center;
         font-family: monospace;
+        line-height: 1.5em;
         margin: 0;
         padding: 0;
-      }
-      .title {
-        background-color: blue;
-        color: white;
-        display: inline;
       }
 
       .container {
         display: flex;
+      }
+
+      hr {
+        margin: 10px;
       }
 
       #col-1,
@@ -28,39 +27,15 @@
         flex: 1;
       }
 
-      #col-2 div {
-        margin: 20px;
-        color: blue;
-      }
-
-      #col-2 div a {
-        color: purple;
-      }
-
-      #code {
-        text-align: left;
-        outline: none;
-        background-color: white;
-        width: 100%;
-        height: 90vh;
-        border: none;
-      }
-
+      #code,
       #output {
         text-align: left;
         outline: none;
-        background-color: white;
         width: 100%;
         height: 90vh;
         border: none;
       }
 
-      #run-bt {
-        width: 90%;
-        height: 50px;
-        border: 4px solid purple;
-        color: purple;
-      }
 
       #run-bt:hover {
         cursor: pointer;
@@ -69,30 +44,18 @@
       #run-bt:active {
         background-color: white;
       }
-
-      fieldset {
-        border: 8px double blue;
-      }
-
-      fieldset legend {
-        background-color: blue;
-        color: white;
-      }
-
-      #copy {
-        padding-top: 65vh;
-      }
     </style>
     <script type="text/javascript">
       function main() {
-        print_ast(holyc_parser(holyc_lex(document.getElementById("code").value)));
-        
+        print_ast(
+          holyc_parser(holyc_lex(document.getElementById("code").value))
+        );
       }
     </script>
   </head>
   <body>
     <main>
-      <h1 class="title">Online HolyC Interpreter</h1>
+      <h1 class="title">HolyC Interpreter</h1>
       <section class="container">
         <div id="col-1">
           <fieldset>
@@ -109,20 +72,25 @@ Hello;
           </fieldset>
         </div>
         <div id="col-2">
-          <div>
-            <p>HolyC Interpreter 1.0.0</p>
-            <a href="">Source</a>
-            <p>HolyC and TempleOS are creations of Terry Davis.</p>
-          </div>
-          <button id="run-bt" onclick="main()">RUN</button>
-          <div id="copy">
-            <p>Copyright (c) (2022-present) <a href="">Leonardo Z. Nunes</a></p>
-          </div>
+          <button onclick="main()">RUN(▶)</button>
+          <select onchange="examples()" id="examples">
+            <option value="">Examples</option>
+            <option value="helloWorld" selected="selected">Hello World</option>
+          </select>
+          <button onclick="clearOutput()">CLEAR(🗑)</button>
+          <hr />
+          <p>HolyC Interpreter 1.0.0</p>
+          <p>(Interpreter & site by <a href="">Leonardo Z. Nunes</a>.)</p>
+          <a href="">Source</a>
+          <p>HolyC and TempleOS are creations of Terry Davis.</p>
         </div>
         <div id="col-3">
           <fieldset>
             <legend>Output</legend>
-            <textarea id="output" style="pointer-events: none"></textarea>
+            <textarea disabled id="output">
+HolyC Interpreter version 1.0.0
+</textarea
+            >
           </fieldset>
         </div>
       </section>
