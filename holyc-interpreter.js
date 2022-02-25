@@ -47,7 +47,7 @@ var examples = () => {
   switch (document.getElementById("examples").value) {
     case "helloWorld":
       document.getElementById("code").value =
-        'U0\nHello()\n{\n\t"Hello World\\n";\n}\n\nHello;';
+        'U0\nHello()\n{\n\t"Holy World\\n";\n}\n\nHello;';
       break;
     default:
       document.getElementById("code").value = "";
