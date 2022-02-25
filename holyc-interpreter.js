@@ -68,20 +68,24 @@ var is_digit = (val) => {
   return !isNaN(val);
 };
 
-var lexer_error = (val) => {
+var lexer_error = (token) => {
   var output = document.getElementById("output");
   output.value += "interpretation failure\n";
-  throw new Error((output.value += `lexer: '${val}' unexpected value\n`));
+  throw new Error(
+    (output.value += `lexer: '${token.value}' unexpected value in line ${token.line}\n`)
+  );
 };
 
 var remove_tabs = (val) => {
   return val.replace(/\t/g, "");
 };
 
-var parser_error = (val) => {
+var parser_error = (token) => {
   var output = document.getElementById("output");
   output.value += "interpretation failure\n";
-  throw new Error((output.value += `parser: '${val}' unexpected value\n`));
+  throw new Error(
+    (output.value += `parser: '${token.value}' unexpected value in line ${token.line}\n`)
+  );
 };
 
 var list_eat = (token, expectedType) => {
@@ -319,7 +323,7 @@ function holyc_lex(input) {
         });
         break;
       default:
-        lexer_error(input[i]);
+        lexer_error({ value: input[i], line: line });
         break;
     }
   }
@@ -328,7 +332,7 @@ function holyc_lex(input) {
 }
 
 function holyc_parser_parse_block(tokenList = []) {
-  if (tokenList[glWalk].type === tokenType.semi) return null;
+  if (tokenList[glWalk].type === tokenType.lbrace) return null;
 
   let ast = new Ast(tokenList[glWalk].type);
 
@@ -338,8 +342,12 @@ function holyc_parser_parse_block(tokenList = []) {
       list_eat(tokenList[glWalk], tokenType.str);
       break;
     default:
-      parser_error(tokenList[glWalk].value);
+      parser_error(tokenList[glWalk]);
   }
+
+  ast.next = new Ast(tokenType.semi);
+  ast.next.token = tokenList[glWalk];
+  list_eat(tokenList[glWalk], tokenType.semi);
 
   ast.right = holyc_parser_parse_block(tokenList);
 
@@ -347,9 +355,8 @@ function holyc_parser_parse_block(tokenList = []) {
 }
 
 function holyc_parser_parse_call(tokenList = []) {
-  if (!glSymTab.filter(e => e.value === tokenList[glWalk].value).length)
-  {
-    parser_error(tokenList[glWalk].value);
+  if (!glSymTab.filter((e) => e.value === tokenList[glWalk].value).length) {
+    parser_error(tokenList[glWalk]);
   }
   glCalls.push(tokenList[glWalk]);
 
@@ -393,10 +400,6 @@ function holyc_parser_parse_id(tokenList = []) {
 
   ast.right = holyc_parser_parse_block(tokenList);
 
-  ast.right.next = new Ast(tokenType.semi);
-  ast.right.next.token = tokenList[glWalk];
-  list_eat(tokenList[glWalk], tokenType.semi);
-
   ast.right.next.next = new Ast(tokenType.lbrace);
   ast.right.next.next.token = tokenList[glWalk];
   list_eat(tokenList[glWalk], tokenType.lbrace);
@@ -426,7 +429,7 @@ function holyc_parser_parse(tokenList = []) {
       expList.ast = holyc_parser_parse_id(tokenList);
       break;
     default:
-      parser_error(tokenList[glWalk].value);
+      parser_error(tokenList[glWalk]);
   }
 
   expList.next = holyc_parser_parse(tokenList);
@@ -457,7 +460,7 @@ function print_ast(expList) {
 
 function output_value(val) {
   var output = document.getElementById("output");
-  output.value += `> ${val}\n`;
+  output.value += `${val}\n`;
 }
 
 function printf(val) {
@@ -486,8 +489,7 @@ function code_gen_get_ast_check(ast, id) {
 
 function code_gen_get_ast(expList = [], id) {
   if (!expList) return null;
-  if (expList.ast.type != tokenType.call)
-  {
+  if (expList.ast.type != tokenType.call) {
     let ret = code_gen_get_ast_check(expList.ast, id);
     if (ret) return expList.ast;
   }
@@ -495,10 +497,9 @@ function code_gen_get_ast(expList = [], id) {
 }
 
 function code_gen(expList = []) {
-  for (let i = 0; i < glCalls.length; ++i)
-  {
+  for (let i = 0; i < glCalls.length; ++i) {
     let ret = code_gen_get_ast(expList, glCalls[i]);
-    if (ret) code_gen_gen_id(ret); 
+    if (ret) code_gen_gen_id(ret);
   }
 }
 
