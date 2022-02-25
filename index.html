@@ -35,19 +35,10 @@
         height: 90vh;
         border: none;
       }
-
-
-      #run-bt:hover {
-        cursor: pointer;
-      }
-
-      #run-bt:active {
-        background-color: white;
-      }
     </style>
     <script type="text/javascript">
       function main() {
-        print_ast(
+        code_gen(
           holyc_parser(holyc_lex(document.getElementById("code").value))
         );
       }
@@ -55,7 +46,7 @@
   </head>
   <body>
     <main>
-      <h1 class="title">HolyC Interpreter</h1>
+      <h1><a href="">"HolyC Interpreter"</a></h1>
       <section class="container">
         <div id="col-1">
           <fieldset>
@@ -77,9 +68,8 @@ Hello;
             <option value="">Examples</option>
             <option value="helloWorld" selected="selected">Hello World</option>
           </select>
-          <button onclick="clearOutput()">CLEAR(🗑)</button>
+          <button onclick="clear_output()">CLEAR(🗑)</button>
           <hr />
-          <p>HolyC Interpreter 1.0.0</p>
           <p>(Interpreter & site by <a href="">Leonardo Z. Nunes</a>.)</p>
           <a href="">Source</a>
           <p>HolyC and TempleOS are creations of Terry Davis.</p>
