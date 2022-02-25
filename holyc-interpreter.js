@@ -13,6 +13,10 @@ class ExpList {
   ast = null;
 }
 
+var glSymTab = [];
+var glCalls = [];
+var glWalk;
+
 var tokenType = {
   const: 1,
   str: 2,
@@ -36,6 +40,7 @@ var tokenType = {
   f64: 20,
   rparen: 21,
   lparen: 22,
+  call: 23,
 };
 
 var examples = () => {
@@ -48,8 +53,6 @@ var examples = () => {
       document.getElementById("code").value = "";
   }
 };
-
-var glWalk;
 
 var clear_output = () => {
   document.getElementById("output").value = "HolyC Interpreter version 1.0.0\n";
@@ -344,7 +347,13 @@ function holyc_parser_parse_block(tokenList = []) {
 }
 
 function holyc_parser_parse_call(tokenList = []) {
-  let ast = new Ast(tokenType.id);
+  if (!glSymTab.filter(e => e.value === tokenList[glWalk].value).length)
+  {
+    parser_error(tokenList[glWalk].value);
+  }
+  glCalls.push(tokenList[glWalk]);
+
+  let ast = new Ast(tokenType.call);
   ast.token = tokenList[glWalk];
   list_eat(tokenList[glWalk], tokenType.id);
 
@@ -363,6 +372,8 @@ function holyc_parser_parse_id(tokenList = []) {
   let ast = new Ast(tokenList[glWalk].type);
   ast.token = tokenList[glWalk];
   list_eat_type(tokenList[glWalk]);
+
+  glSymTab.push(tokenList[glWalk]);
 
   ast.next = new Ast(tokenType.id);
   ast.next.token = tokenList[glWalk];
@@ -425,6 +436,8 @@ function holyc_parser_parse(tokenList = []) {
 
 function holyc_parser(tokenList = []) {
   glWalk = 0;
+  glCalls = [];
+  glSymTab = [];
   return holyc_parser_parse(tokenList);
 }
 
@@ -466,38 +479,27 @@ function code_gen_gen_id(ast = []) {
   code_gen_gen_id(ast.right);
 }
 
-function code_gen_gen(ast = []) {
-  if (!ast) return;
+function code_gen_get_ast_check(ast, id) {
+  if (ast.next.token.value === id.value) return true;
+  return false;
+}
 
-  switch (ast.type) {
-    case tokenType.u0:
-    case tokenType.i8:
-    case tokenType.u8:
-    case tokenType.i16:
-    case tokenType.u16:
-    case tokenType.i32:
-    case tokenType.u32:
-    case tokenType.i64:
-    case tokenType.u64:
-    case tokenType.f64:
-    case tokenType.id:
-      ast = code_gen_gen_id(ast);
-      break;
-    default:
-      parser_error(ast.token.value);
+function code_gen_get_ast(expList = [], id) {
+  if (!expList) return null;
+  if (expList.ast.type != tokenType.call)
+  {
+    let ret = code_gen_get_ast_check(expList.ast, id);
+    if (ret) return expList.ast;
   }
-
-  if (!ast) return;
-
-  code_gen_gen(ast.next);
-  code_gen_gen(ast.left);
-  code_gen_gen(ast.right);
+  return code_gen_get_ast(expList.next, id);
 }
 
 function code_gen(expList = []) {
-  if (!expList) return;
-  code_gen_gen(expList.ast);
-  code_gen(expList.next);
+  for (let i = 0; i < glCalls.length; ++i)
+  {
+    let ret = code_gen_get_ast(expList, glCalls[i]);
+    if (ret) code_gen_gen_id(ret); 
+  }
 }
 
 document.getElementById("code").addEventListener("keydown", function (e) {
