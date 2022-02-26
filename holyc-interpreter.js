@@ -536,14 +536,16 @@ function print_ast(expList) {
   print_ast(expList.next);
 }
 
-function output_value(val) {
+function printf(val) {
   var output = document.getElementById("output");
-  output.value += `${val}\n`;
+  if (val.includes("\\n"))
+  {
+	output.value += `${val.replace("\\n","")}\n`;
+  } else {
+  	output.value += `${val}`;
+  }
 }
 
-function printf(val) {
-  output_value(val.replace(/(\\r\\n|\\n|\\r)/gm, ""));
-}
 
 function code_gen_gen_id(ast = []) {
   if (!ast) return;
