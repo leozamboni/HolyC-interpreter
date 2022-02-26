@@ -74,7 +74,7 @@ var examples = () => {
 };
 
 var clear_output = () => {
-  document.getElementById("output").value = "HolyC Interpreter version 1.0.0\n";
+  document.getElementById("output").value = "HolyC Interpreter version 0.0.0\n";
 };
 
 var is_alpha = (val) => {
