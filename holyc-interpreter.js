@@ -47,7 +47,26 @@ var examples = () => {
   switch (document.getElementById("examples").value) {
     case "helloWorld":
       document.getElementById("code").value =
-        'U0\nHello()\n{\n\t"Holy World\\n";\n}\n\nHello;';
+        "// HolyC Hello world\n" +
+        '"Holy World\\n";\n\n' +
+        "U0\n" +
+        "HelloWorld()\n" +
+        "{\n" +
+        '\t"Holy World\\n";\n' +
+        "}\n\n" +
+        "U0\n" +
+        "Hello()\n" +
+        "{\n" +
+        "\t'H';\n\t'o';\n\t'l';\n\t'y';\n\t' ';\n" +
+        "}\n\n" +
+        "U0\n" +
+        "World()\n" +
+        "{\n" +
+        "\t'World';\n" +
+        "}\n\n" +
+        "Hello;\n" +
+        "World();\n" +
+        'HelloWorld("*");\n';
       break;
     default:
       document.getElementById("code").value = "";
@@ -90,7 +109,7 @@ var parser_error = (token) => {
 
 var list_eat = (token, expectedType) => {
   if (token.type !== expectedType) {
-    parser_error(token.value);
+    parser_error(token);
   }
   glWalk++;
 };
@@ -195,9 +214,36 @@ function holyc_lex(input) {
 
   var tokenList = [];
   var line = 1;
+
   for (let i = 0; i < input.length; ++i) {
     if (input[i] === "\n") line++;
     if (input[i] === " " || input[i] === "\n") continue;
+
+    if (input[i] === "/" && input[i + 1] === "/") {
+      i++;
+      while (input[i] !== "\n") {
+        i++;
+      }
+      continue;
+    }
+
+    if (input[i] === "'") {
+      let aux = "";
+
+      i++;
+
+      while (input[i] !== "'" && input[i]) {
+        aux += input[i++];
+      }
+
+      tokenList.push({
+        value: aux,
+        line: line,
+        type: tokenType.str,
+      });
+
+      continue;
+    }
 
     if (input[i] === '"') {
       let aux = "";
@@ -327,27 +373,34 @@ function holyc_lex(input) {
         break;
     }
   }
-
+  console.log(tokenList);
   return tokenList;
+}
+
+function holyc_parser_parse_str(tokenList = []) {
+  let ast = new Ast(tokenType.str);
+  ast.token = tokenList[glWalk];
+  list_eat(tokenList[glWalk], tokenType.str);
+
+  ast.next = new Ast(tokenType.semi);
+  ast.next.token = tokenList[glWalk];
+  list_eat(tokenList[glWalk], tokenType.semi);
+
+  return ast;
 }
 
 function holyc_parser_parse_block(tokenList = []) {
   if (tokenList[glWalk].type === tokenType.lbrace) return null;
 
-  let ast = new Ast(tokenList[glWalk].type);
+  let ast;
 
   switch (tokenList[glWalk].type) {
     case tokenType.str:
-      ast.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.str);
+      ast = holyc_parser_parse_str(tokenList);
       break;
     default:
       parser_error(tokenList[glWalk]);
   }
-
-  ast.next = new Ast(tokenType.semi);
-  ast.next.token = tokenList[glWalk];
-  list_eat(tokenList[glWalk], tokenType.semi);
 
   ast.right = holyc_parser_parse_block(tokenList);
 
@@ -364,9 +417,31 @@ function holyc_parser_parse_call(tokenList = []) {
   ast.token = tokenList[glWalk];
   list_eat(tokenList[glWalk], tokenType.id);
 
-  ast.next = new Ast(tokenType.semi);
-  ast.next.token = tokenList[glWalk];
-  list_eat(tokenList[glWalk], tokenType.semi);
+  if (tokenList[glWalk].type === tokenType.semi) {
+    ast.next = new Ast(tokenType.semi);
+    ast.next.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.semi);
+  } else {
+    ast.next = new Ast(tokenType.rparen);
+    ast.next.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.rparen);
+
+    if (tokenList[glWalk].type === tokenType.str) {
+      if (tokenList[glWalk].value === "*") {
+        ast.next = new Ast(tokenType.str);
+        ast.next.token = tokenList[glWalk];
+        list_eat(tokenList[glWalk], tokenType.str);
+      }
+    }
+
+    ast.next = new Ast(tokenType.lparen);
+    ast.next.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.lparen);
+
+    ast.next = new Ast(tokenType.semi);
+    ast.next.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.semi);
+  }
 
   return ast;
 }
@@ -427,6 +502,9 @@ function holyc_parser_parse(tokenList = []) {
     case tokenType.f64:
     case tokenType.id:
       expList.ast = holyc_parser_parse_id(tokenList);
+      break;
+    case tokenType.str:
+      expList.ast = holyc_parser_parse_str(tokenList);
       break;
     default:
       parser_error(tokenList[glWalk]);
@@ -497,9 +575,22 @@ function code_gen_get_ast(expList = [], id) {
 }
 
 function code_gen(expList = []) {
-  for (let i = 0; i < glCalls.length; ++i) {
-    let ret = code_gen_get_ast(expList, glCalls[i]);
-    if (ret) code_gen_gen_id(ret);
+  let expListAux = expList;
+
+  while (expListAux) {
+    switch (expListAux.ast.type) {
+      case tokenType.str:
+        printf(expListAux.ast.token.value);
+        break;
+      case tokenType.call:
+        let ast = code_gen_get_ast(expList, expListAux.ast.token);
+        code_gen_gen_id(ast);
+        break;
+      default:
+        break;
+    }
+
+    expListAux = expListAux.next;
   }
 }
 
