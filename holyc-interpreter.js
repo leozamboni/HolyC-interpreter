@@ -14,7 +14,6 @@ class ExpList {
 }
 
 var glSymTab = [];
-var glCalls = [];
 var glWalk;
 
 var tokenType = {
@@ -41,6 +40,7 @@ var tokenType = {
   rparen: 21,
   lparen: 22,
   call: 23,
+  comma: 24,
 };
 
 var examples = () => {
@@ -57,15 +57,17 @@ var examples = () => {
         "U0\n" +
         "Hello()\n" +
         "{\n" +
-        "\t'H';\n\t'o';\n\t'l';\n\t'y';\n\t' ';\n" +
+        "\t'Ho';\n\t'l', 'y';\n\t' ';\n" +
         "}\n\n" +
         "U0\n" +
         "World()\n" +
         "{\n" +
-        "\t'World';\n" +
+        "\t'World\\n';\n" +
         "}\n\n" +
+	"'\\t';\n" +
         "Hello;\n" +
-        "World();\n" +
+        "World();\n\n" +
+	"'\\n';\n" +
         'HelloWorld("*");\n';
       break;
     default:
@@ -368,6 +370,13 @@ function holyc_lex(input) {
           type: tokenType.lparen,
         });
         break;
+  case ",":
+        tokenList.push({
+          value: ",",
+          line: line,
+          type: tokenType.comma,
+        });
+break;
       default:
         lexer_error({ value: input[i], line: line });
         break;
@@ -382,10 +391,16 @@ function holyc_parser_parse_str(tokenList = []) {
   ast.token = tokenList[glWalk];
   list_eat(tokenList[glWalk], tokenType.str);
 
+	if (tokenList[glWalk].type === tokenType.semi) {
   ast.next = new Ast(tokenType.semi);
   ast.next.token = tokenList[glWalk];
   list_eat(tokenList[glWalk], tokenType.semi);
+	} else {
+ 		ast.next = new Ast(tokenType.comma);
+  ast.next.token = tokenList[glWalk];
+  list_eat(tokenList[glWalk], tokenType.comma);
 
+	}
   return ast;
 }
 
@@ -411,7 +426,6 @@ function holyc_parser_parse_call(tokenList = []) {
   if (!glSymTab.filter((e) => e.value === tokenList[glWalk].value).length) {
     parser_error(tokenList[glWalk]);
   }
-  glCalls.push(tokenList[glWalk]);
 
   let ast = new Ast(tokenType.call);
   ast.token = tokenList[glWalk];
@@ -475,8 +489,8 @@ function holyc_parser_parse_id(tokenList = []) {
 
   ast.right = holyc_parser_parse_block(tokenList);
 
-  ast.right.next.next = new Ast(tokenType.lbrace);
-  ast.right.next.next.token = tokenList[glWalk];
+  ast.right.next = new Ast(tokenType.lbrace);
+  ast.right.next.token = tokenList[glWalk];
   list_eat(tokenList[glWalk], tokenType.lbrace);
 
   return ast;
@@ -538,12 +552,15 @@ function print_ast(expList) {
 
 function printf(val) {
   var output = document.getElementById("output");
-  if (val.includes("\\n"))
-  {
-	output.value += `${val.replace("\\n","")}\n`;
-  } else {
-  	output.value += `${val}`;
-  }
+  output.value += val.replace(/\\n|\\t/g, (e) => {
+	  switch(e)
+	  {
+		  case "\\r":
+		  case "\\n": return '\n';
+		  case '\\t': return '\t';
+		  default: return e;
+	  }
+  });
 }
 
 
