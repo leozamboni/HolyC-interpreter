@@ -1,5 +1,5 @@
 class Ast {
-	token = {};
+	token = null;
 	next = null;
 	left = null;
 	right = null;
@@ -7,6 +7,7 @@ class Ast {
 		this.type = type;
 	}
 }
+
 
 class ExpList {
 	next = null;
@@ -27,20 +28,21 @@ var tokenType = {
 	semi: 8,
 	lbrace: 9,
 	rbrace: 10,
-	u0: 11,
-	i8: 12,
-	u8: 13,
-	i16: 14,
-	u16: 15,
-	i32: 16,
-	u32: 17,
-	i64: 18,
-	u64: 19,
-	f64: 20,
-	rparen: 21,
-	lparen: 22,
-	call: 23,
-	comma: 24,
+	i0: 11,
+	u0: 12,
+	i8: 13,
+	u8: 14,
+	i16: 15,
+	u16: 16,
+	i32: 17,
+	u32: 18,
+	i64: 19,
+	u64: 20,
+	f64: 21,
+	rparen: 22,
+	lparen: 23,
+	call: 24,
+	comma: 25,
 };
 
 var examples = () => {
@@ -90,7 +92,7 @@ var is_digit = (val) => {
 };
 
 var lexer_error = (token) => {
-	var output = document.getElementById("output");
+	let output = document.getElementById("output");
 	output.value += "interpretation failure\n";
 	throw new Error(
 		(output.value += `lexer: '${token.value}' unexpected value in line ${token.line}\n`)
@@ -102,7 +104,7 @@ var remove_tabs = (val) => {
 };
 
 var parser_error = (token) => {
-	var output = document.getElementById("output");
+	let output = document.getElementById("output");
 	output.value += "interpretation failure\n";
 	throw new Error(
 		(output.value += `parser: '${token.value}' unexpected value in line ${token.line}\n`)
@@ -110,10 +112,7 @@ var parser_error = (token) => {
 };
 
 var list_eat = (token, expectedType) => {
-	if (token.type !== expectedType) {
-		parser_error(token);
-	}
-	glWalk++;
+	token.type !== expectedType ? parser_error(token) : glWalk++;
 };
 
 var is_dtype = (type) => {
@@ -136,15 +135,13 @@ var is_dtype = (type) => {
 };
 
 var list_eat_type = (token) => {
-	if (is_dtype(token.type)) {
-		glWalk++;
-	} else {
-		parser_error(token.value);
-	}
+	is_dtype(token.type) ? glWalk++ : parser_error(token.value);
 };
 
 var get_type = (val) => {
 	switch (val) {
+		case "I0":
+			return tokenType.i0;
 		case "U0":
 			return tokenType.u0;
 		case "I8":
