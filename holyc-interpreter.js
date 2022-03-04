@@ -78,6 +78,37 @@ var examples = () => {
 	}
 };
 
+var get_symtab = (token) => {
+	for (let i = 0; i < glSymTab.length; ++i) {
+		if (glSymTab[i].value === token.value) return i;
+	}
+}
+
+var get_argsymtab = (ast, symtabNode, priorWalk, tokenList) => {
+	if (ast.next.next.right) {
+		symtabNode.args = []
+		let auxArgNode = {};
+
+		for (let i = priorWalk; i < glWalk; ++i) {
+			if (tokenList[i].type === tokenType.assig) continue;
+			if (tokenList[i].type === tokenType.comma) {
+				symtabNode.args.push(auxArgNode);
+				auxArgNode = {};
+			}
+			else if (is_dtype(tokenList[i].type)) {
+				auxArgNode.type = tokenList[i];	
+			} else if (tokenList[i].type === tokenType.id) {
+				auxArgNode.id = tokenList[i];
+			} else {
+				auxArgNode.value = tokenList[i];
+			}
+		}
+		symtabNode.args.push(auxArgNode);
+	}
+
+	glSymTab.push(symtabNode);
+}
+
 var clear_output = () => {
 	document.getElementById("output").value = "HolyC Interpreter version 0.0.0\n";
 };
@@ -471,14 +502,50 @@ function holyc_parser_parse_args(tokenList = []) {
 	return ast;
 }
 
+function holyc_parser_parse_call_args(tokenList = [], symIndex, i) {
+	if (tokenList[glWalk].type === tokenType.lparen) return null;	
+
+	let arg;
+
+	if (glSymTab[symIndex]?.args[i]?.value) {
+		if (tokenList[glWalk].type === tokenType.comma) {
+			ast = new Ast(tokenType.comma);
+			ast.token = tokenList[glWalk];
+			list_eat(tokenList[glWalk], tokenType.comma);
+		} else {
+			ast = new Ast(tokenList[glWalk].type);
+			ast.token = tokenList[glWalk];
+			list_eat(tokenList[glWalk], tokenList[glWalk].type);
+		}
+	} else {
+		ast = new Ast(tokenList[glWalk].type);
+		ast.token = tokenList[glWalk];
+		list_eat(tokenList[glWalk], tokenList[glWalk].type);
+	}
+
+	if (tokenList[glWalk].type !== tokenType.lparen) {
+		ast.left = new Ast(tokenType.comma);
+		ast.left.token = tokenList[glWalk];
+		list_eat(tokenList[glWalk], tokenType.comma);
+	}
+
+	ast.right = holyc_parser_parse_call_args(tokenList, symIndex, ++i);
+
+	return ast;
+}
+
 function holyc_parser_parse_call(tokenList = []) {
 	if (!glSymTab.filter((e) => e.value === tokenList[glWalk].value).length) {
 		parser_error(tokenList[glWalk]);
 	}
 
+	let symIndex = get_symtab(tokenList[glWalk]);
+	console.log(glSymTab[symIndex].args);
+
 	let ast = new Ast(tokenType.call);
 	ast.token = tokenList[glWalk];
 	list_eat(tokenList[glWalk], tokenType.id);
+
 
 	if (tokenList[glWalk].type === tokenType.semi) {
 		ast.next = new Ast(tokenType.semi);
@@ -495,6 +562,10 @@ function holyc_parser_parse_call(tokenList = []) {
 				ast.next.token = tokenList[glWalk];
 				list_eat(tokenList[glWalk], tokenType.str);
 			}
+		}
+
+		if (glSymTab[symIndex]?.args) {
+			ast.right = holyc_parser_parse_call_args(tokenList, symIndex, 0);
 		}
 
 		ast.next = new Ast(tokenType.lparen);
@@ -518,10 +589,7 @@ function holyc_parser_parse_id(tokenList = []) {
 	ast.token = tokenList[glWalk];
 	list_eat_type(tokenList[glWalk]);
 
-	let symtabNode = {
-		...tokenList[glWalk],
-		args: [],
-	};
+	let symtabNode = tokenList[glWalk];
 
 	ast.next = new Ast(tokenType.id);
 	ast.next.token = tokenList[glWalk];
@@ -535,27 +603,7 @@ function holyc_parser_parse_id(tokenList = []) {
 
 	ast.next.next.right = holyc_parser_parse_args(tokenList);
 
-	if (ast.next.next.right) {
-		let auxArgNode = {};
-
-		for (let i = priorWalk; i < glWalk; ++i) {
-			if (tokenList[i].type === tokenType.assig) continue;
-			if (tokenList[i].type === tokenType.comma) {
-				symtabNode.args.push(auxArgNode);
-				auxArgNode = {};
-			}
-			else if (is_dtype(tokenList[i].type)) {
-				auxArgNode.type = tokenList[i];	
-			} else if (tokenList[i] === tokenType.id) {
-				auxArgNode.id = tokenList[i];
-			} else {
-				auxArgNode.value = tokenList[i];
-			}
-		}
-		symtabNode.args.push(auxArgNode);
-	}
-
-	glSymTab.push(symtabNode);
+	get_argsymtab(ast, symtabNode, priorWalk, tokenList);
 
 	ast.next.next.next = new Ast(tokenType.lparen);
 	ast.next.next.next.token = tokenList[glWalk];
