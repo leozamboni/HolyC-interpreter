@@ -458,11 +458,9 @@ function holyc_parser_parse_args(tokenList = []) {
 			list_eat(tokenList[glWalk], tokenType.str);
 		}
 
-		ast.next.next.next.next = new Ast(tokenType.comma);
-		ast.next.next.next.next.token = tokenList[glWalk];
-		list_eat(tokenList[glWalk], tokenType.comma);
+	} 
 
-	} else if (tokenList[glWalk].type !== tokenType.lparen) {
+	if (tokenList[glWalk].type !== tokenType.lparen) {
 		ast.next.next = new Ast(tokenType.comma);
 		ast.next.next.token = tokenList[glWalk];
 		list_eat(tokenList[glWalk], tokenType.comma);
