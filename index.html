@@ -45,8 +45,22 @@
     </script>
   </head>
   <body>
+    <noscript>
+      <p><b>WARNING: JavaScript is Disabled!</b></p>
+      <p>
+        HOLYC Interpreter requires JavaScript. Please enable JavaScript for the
+        interpreter to work.
+      </p>
+    </noscript>
+
     <main>
-      <h2><a href="http://gnu.dev.br/compilers/holyc/2022/03/01/holyc-interpreter.html">"HolyC Interpreter"</a></h2>
+      <h2>
+        <a
+          href="http://gnu.dev.br/compilers/holyc/2022/03/01/holyc-interpreter.html"
+          >"HolyC Interpreter"</a
+        >
+      </h2>
+
       <section class="container">
         <div id="col-1">
           <fieldset>
@@ -83,6 +97,7 @@ HelloWorld("*");
             </textarea>
           </fieldset>
         </div>
+
         <div id="col-2">
           <button onclick="main()">RUN(▶)</button>
           <select onchange="examples()" id="examples">
@@ -96,7 +111,8 @@ HelloWorld("*");
               >"This is not a complete HolyC language compiler yet, the source
               code is on GitHub you can contribute
               <a href="https://github.com/leozamboni/HOLYC-INTERPRETER">here</a
-              >. All currently implemented features are exemplified in the select button"</b
+              >. All currently implemented features are exemplified in the
+              select button"</b
             >
           </p>
           <p>
@@ -105,6 +121,7 @@ HelloWorld("*");
           </p>
           <p>HolyC and TempleOS are creations of Terry Davis.</p>
         </div>
+
         <div id="col-3">
           <fieldset>
             <legend>Output</legend>
@@ -116,6 +133,7 @@ HolyC Interpreter version 0.0.0
         </div>
       </section>
     </main>
+
     <script src="holyc-interpreter.js"></script>
   </body>
 </html>
