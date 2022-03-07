@@ -500,7 +500,7 @@ function holyc_parser_parse_args(tokenList = []) {
 function holyc_parser_parse_call_args(tokenList = [], symIndex, i) {
   if (tokenList[glWalk].type === tokenType.lparen) return null;
 
-  let arg;
+  let ast;
 
   if (glSymTab[symIndex]?.args[i]?.value) {
     if (tokenList[glWalk].type === tokenType.comma) {
