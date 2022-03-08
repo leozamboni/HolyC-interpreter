@@ -1,112 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HOLYC INTERPRETER</title>
-    <style>
-      * {
-        text-align: center;
-        font-family: monospace;
-        line-height: 1.5em;
-        margin: 0;
-        padding: 0;
-      }
 
-      .container {
-        display: flex;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOLYC INTERPRETER</title>
+  <style>
+    * {
+      text-align: center;
+      font-family: monospace;
+      line-height: 1.5em;
+      margin: 0;
+      padding: 0;
+    }
 
-      hr {
-        margin: 10px;
-      }
+    .container {
+      display: flex;
+    }
 
-      #col-1,
-      #col-2,
-      #col-3 {
-        flex: 1;
-      }
+    hr {
+      margin: 10px;
+    }
 
-      #code,
-      #output {
-        text-align: left;
-        outline: none;
-        width: 100%;
-        height: 90vh;
-        border: none;
-      }
-    </style>
-    <script type="text/javascript">
-      function main() {
-        code_gen(
-          holyc_parser(holyc_lex(document.getElementById("code").value))
-        );
-      }
-    </script>
-  </head>
-  <body>
-    <noscript>
-      <p><b>WARNING: JavaScript is Disabled!</b></p>
-      <p>
-        HOLYC Interpreter requires JavaScript. Please enable JavaScript for the
-        interpreter to work.
-      </p>
-    </noscript>
+    #col-1,
+    #col-2,
+    #col-3 {
+      flex: 1;
+    }
 
-    <main>
-      <h2>
-        <a
-          href="http://gnu.dev.br/compilers/holyc/2022/03/01/holyc-interpreter.html"
-          >"HolyC Interpreter"</a
-        >
-      </h2>
+    #code,
+    #output {
+      text-align: left;
+      outline: none;
+      width: 100%;
+      height: 90vh;
+      border: none;
+    }
+  </style>
+  <script type="text/javascript">
+    function main() {
+      code_gen(
+        holyc_parser(holyc_lex(document.getElementById("code").value))
+      );
+    }
+  </script>
+</head>
 
-      <section class="container">
-        <div id="col-1">
-          <fieldset>
-            <legend>Code</legend>
-            <textarea id="code">
-"hello world";
-            </textarea>
-          </fieldset>
-        </div>
+<body>
+  <noscript>
+    <p><b>WARNING: JavaScript is Disabled!</b></p>
+    <p>
+      HOLYC Interpreter requires JavaScript. Please enable JavaScript for the
+      interpreter to work.
+    </p>
+  </noscript>
 
-        <div id="col-2">
-          <button onclick="main()">RUN(▶)</button>
-          <select onchange="examples()" id="examples">
-            <option value="">Examples</option>
-            <option value="helloWorld">Hello World</option>
-          </select>
-          <button onclick="clear_output()">CLEAR(🗑)</button>
-          <hr />
-          <p style="color: red">
-            <b
-              >"This is not a complete HolyC language compiler yet, the source
-              code is on GitHub you can contribute
-              <a href="https://github.com/leozamboni/HOLYC-INTERPRETER">here</a
-              >. All currently implemented features are exemplified in the
-              select button"</b
-            >
-          </p>
-          <p>
-            (Interpreter & site by
-            <a href="http://gnu.dev.br/blog">Leonardo Z. Nunes</a>.)
-          </p>
-          <p>HolyC and TempleOS are creations of Terry Davis.</p>
-        </div>
+  <main>
+    <h2>
+      <a href="http://gnu.dev.br/compilers/holyc/2022/03/01/holyc-interpreter.html">"HolyC Interpreter"</a>
+    </h2>
 
-        <div id="col-3">
-          <fieldset>
-            <legend>Output</legend>
-            <textarea disabled id="output">
-HolyC Interpreter version 0.0.0
-</textarea
-            >
-          </fieldset>
-        </div>
-      </section>
-    </main>
+    <section class="container">
+      <div id="col-1">
+        <fieldset>
+          <legend>Code</legend>
+          <textarea id="code"></textarea>
+        </fieldset>
+      </div>
 
-    <script src="holyc-interpreter.js"></script>
-  </body>
+      <div id="col-2">
+        <button onclick="main()">RUN(▶)</button>
+        <select onchange="examples()" id="examples">
+          <option value="">Examples</option>
+          <option value="helloWorld">Hello World</option>
+        </select>
+        <button onclick="clear_output()">CLEAR(🗑)</button>
+        <hr />
+        <p style="color: red">
+          <b>"This is not a complete HolyC language compiler yet, the source
+            code is on GitHub you can contribute
+            <a href="https://github.com/leozamboni/HOLYC-INTERPRETER">here</a>. All currently implemented features are
+            exemplified in the
+            select button"</b>
+        </p>
+        <p>
+          (Interpreter & site by
+          <a href="http://gnu.dev.br/blog">Leonardo Z. Nunes</a>.)
+        </p>
+        <p>HolyC and TempleOS are creations of Terry Davis.</p>
+      </div>
+
+      <div id="col-3">
+        <fieldset>
+          <legend>Output</legend>
+          <textarea disabled id="output"></textarea>
+        </fieldset>
+      </div>
+    </section>
+  </main>
+
+  <script src="holyc-interpreter.js"></script>
+</body>
+
 </html>

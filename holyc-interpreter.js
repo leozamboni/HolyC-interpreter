@@ -1,3 +1,9 @@
+var version = "0.0.0";
+document.getElementById(
+  "output"
+).value = `HolyC Interpreter version ${version}\n`;
+document.getElementById("code").value = '"hello world";';
+
 class Ast {
   token = null;
   next = null;
@@ -108,7 +114,9 @@ var get_argsymtab = (ast, symtabNode, priorWalk, tokenList) => {
 };
 
 var clear_output = () => {
-  document.getElementById("output").value = "HolyC Interpreter version 0.0.0\n";
+  document.getElementById(
+    "output"
+  ).value = `HolyC Interpreter version ${version}\n`;
 };
 
 var is_alpha = (val) => {
@@ -142,7 +150,7 @@ var parser_error = (token) => {
 };
 
 var list_eat = (token, expectedType) => {
-  token.type !== expectedType ? parser_error(token) : glWalk++;
+  token?.type !== expectedType ? parser_error(token) : glWalk++;
 };
 
 var is_dtype = (type) => {
@@ -194,7 +202,7 @@ var get_type = (val) => {
     case "F64":
       return tokenType.f64;
     default:
-      console.log("ERROR");
+      console.log("UNKNOWN TYPE");
   }
 };
 
@@ -425,6 +433,8 @@ function holyc_parser_parse_str(tokenList = []) {
   let ast = new Ast(tokenType.str);
   ast.token = tokenList[glWalk];
   list_eat(tokenList[glWalk], tokenType.str);
+
+  if (!tokenList[glWalk]) parser_error(tokenList[glWalk - 1]);
 
   if (tokenList[glWalk].type === tokenType.semi) {
     ast.next = new Ast(tokenType.semi);
