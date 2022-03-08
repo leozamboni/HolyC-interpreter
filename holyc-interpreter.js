@@ -50,6 +50,8 @@ var tokenType = {
   call: 24,
   comma: 25,
   assig: 26,
+  less: 27,
+  large: 28,
 };
 
 var examples = () => {
@@ -90,10 +92,10 @@ var examples = () => {
         "I32 i;\n" +
         "for (i = 0; i < 20; i++) {\n" +
         "\tc = a + b;\n" +
-        "\t\"%d\\n\", c;\n" +
+        '\t"%d\\n", c;\n' +
         "\ta = b;\n" +
         "\tb = c;\n" +
-        "}\n"
+        "}\n";
       break;
     default:
       document.getElementById("code").value = "";
@@ -435,6 +437,20 @@ function holyc_lex(input) {
           value: "=",
           line: line,
           type: tokenType.assig,
+        });
+        break;
+      case "<":
+        tokenList.push({
+          value: "<",
+          line: line,
+          type: tokenType.less,
+        });
+        break;
+      case ">":
+        tokenList.push({
+          value: ">",
+          line: line,
+          type: tokenType.large,
         });
         break;
       default:
