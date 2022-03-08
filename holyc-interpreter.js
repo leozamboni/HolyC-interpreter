@@ -1,4 +1,5 @@
 var version = "0.0.0";
+
 document.getElementById(
   "output"
 ).value = `HolyC Interpreter version ${version}\n`;
@@ -77,6 +78,22 @@ var examples = () => {
         "Hello;\n" +
         "'\\n';\n" +
         'HelloWorld("*");\n';
+      break;
+    case "fibonacci":
+      document.getElementById("code").value =
+        "// HolyC Fibonacci\n" +
+        "I32 a;\n" +
+        "I32 b;\n" +
+        "I32 c;\n\n" +
+        "a = 0;\n" +
+        "b = 1;\n\n" +
+        "I32 i;\n" +
+        "for (i = 0; i < 20; i++) {\n" +
+        "\tc = a + b;\n" +
+        "\t\"%d\\n\", c;\n" +
+        "\ta = b;\n" +
+        "\tb = c;\n" +
+        "}\n"
       break;
     default:
       document.getElementById("code").value = "";
