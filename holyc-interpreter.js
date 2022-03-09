@@ -516,7 +516,7 @@ function holyc_parser_parse_str(tokenList = []) {
   } else {
     ast.next = new Ast(tokenType.comma);
     ast.next.token = tokenList[glWalk];
-    list_eat(tokenList[glWalk], tokenType.comma);
+    list_eat(tokenList[glWalk], tokenType.comma); 
   }
   return ast;
 }
@@ -690,6 +690,21 @@ function holyc_parser_parse_exp(tokenList = []) {
         ast = new Ast(tokenList[glWalk].type);
         ast.token = tokenList[glWalk];
         list_eat_math(tokenList[glWalk]);
+      } else if (
+        tokenList[glWalk].type === tokenType.add ||
+        tokenList[glWalk].type === tokenType.sub
+      ) {
+        let priorOp = tokenList[glWalk].type;
+
+        ast = new Ast(tokenList[glWalk].type);
+        ast.token = tokenList[glWalk];
+        list_eat_math(tokenList[glWalk]);
+
+        if (tokenList[glWalk].type === priorOp) {
+          ast.left = new Ast(tokenList[glWalk].type);
+          ast.left.token = tokenList[glWalk];
+          list_eat_math(tokenList[glWalk]);
+        }
       }
     } else {
       ast = new Ast(tokenType.assig);
@@ -725,6 +740,12 @@ function holyc_parser_parse_exp(tokenList = []) {
       ast.token = tokenList[glWalk];
       list_eat(tokenList[glWalk], tokenType.id);
     }
+  } else if (tokenList[glWalk].type === tokenType.id) {
+    ast = new Ast(tokenType.id);
+    ast.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.id);
+  } else {
+    parser_error(tokenList[glWalk]);
   }
 
   // if (tokenList[glWalk].type !== tokenType.semi) {
@@ -741,13 +762,7 @@ function holyc_parser_parse_exp(tokenList = []) {
 function holyc_parser_parse_id(tokenList = []) {
   if (tokenList[glWalk].type === tokenType.id) {
     if (tokenList[glWalk + 1].type === tokenType.assig) {
-      let ast;
-
-      ast = new Ast(tokenType.id);
-      ast.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.id);
-
-      ast.right = holyc_parser_parse_exp(tokenList);
+      let ast = holyc_parser_parse_exp(tokenList);
 
       ast.left = new Ast(tokenType.semi);
       ast.left.token = tokenList[glWalk];
