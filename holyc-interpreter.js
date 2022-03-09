@@ -110,25 +110,43 @@ var get_symtab = (token) => {
 };
 
 var get_argsymtab = (ast, symtabNode, priorWalk, tokenList) => {
-  if (ast.next.next.right) {
-    symtabNode.args = [];
-    let auxArgNode = {};
+  // if (ast.next.next.right) {
+  //   symtabNode.args = [];
+  //   let auxArgNode = {};
 
-    for (let i = priorWalk; i < glWalk; ++i) {
-      if (tokenList[i].type === tokenType.assig) continue;
-      if (tokenList[i].type === tokenType.comma) {
-        symtabNode.args.push(auxArgNode);
-        auxArgNode = {};
-      } else if (is_dtype(tokenList[i].type)) {
-        auxArgNode.type = tokenList[i];
-      } else if (tokenList[i].type === tokenType.id) {
-        auxArgNode.id = tokenList[i];
-      } else {
-        auxArgNode.value = tokenList[i];
-      }
+  //   for (let i = priorWalk; i < glWalk; ++i) {
+  //     if (tokenList[i].type === tokenType.assig) continue;
+  //     if (tokenList[i].type === tokenType.comma) {
+  //       symtabNode.args.push(auxArgNode);
+  //       auxArgNode = {};
+  //     } else if (is_dtype(tokenList[i].type)) {
+  //       auxArgNode.type = tokenList[i];
+  //     } else if (tokenList[i].type === tokenType.id) {
+  //       auxArgNode.id = tokenList[i];
+  //     } else {
+  //       auxArgNode.value = tokenList[i];
+  //     }
+  //   }
+  //   symtabNode.args.push(auxArgNode);
+  // }
+
+  symtabNode.args = [];
+  let auxArgNode = {};
+
+  for (let i = priorWalk; i < glWalk; ++i) {
+    if (tokenList[i].type === tokenType.assig) continue;
+    if (tokenList[i].type === tokenType.comma) {
+      symtabNode.args.push(auxArgNode);
+      auxArgNode = {};
+    } else if (is_dtype(tokenList[i].type)) {
+      auxArgNode.type = tokenList[i];
+    } else if (tokenList[i].type === tokenType.id) {
+      auxArgNode.id = tokenList[i];
+    } else {
+      auxArgNode.value = tokenList[i];
     }
-    symtabNode.args.push(auxArgNode);
   }
+  symtabNode.args.push(auxArgNode);
 
   glSymTab.push(symtabNode);
 };
@@ -502,7 +520,129 @@ function holyc_lex(input) {
   return tokenList;
 }
 
+function holyc_parser_parse_exp(tokenList = []) {
+  if (tokenList[glWalk].type === tokenType.semi) return null;
+
+  let ast;
+
+  if (tokenList[glWalk - 1].type === tokenType.id) {
+    if (is_mathop(tokenList[glWalk].type)) {
+      if (
+        tokenList[glWalk + 1].type === tokenType.id ||
+        tokenList[glWalk + 1].type === tokenType.const
+      ) {
+        ast = new Ast(tokenList[glWalk].type);
+        ast.token = tokenList[glWalk];
+        list_eat_math(tokenList[glWalk]);
+      } else if (
+        tokenList[glWalk].type === tokenType.add ||
+        tokenList[glWalk].type === tokenType.sub
+      ) {
+        let priorOp = tokenList[glWalk].type;
+
+        ast = new Ast(tokenList[glWalk].type);
+        ast.token = tokenList[glWalk];
+        list_eat_math(tokenList[glWalk]);
+
+        if (tokenList[glWalk].type === priorOp) {
+          ast.left = new Ast(tokenList[glWalk].type);
+          ast.left.token = tokenList[glWalk];
+          list_eat_math(tokenList[glWalk]);
+        }
+      }
+    } else {
+      ast = new Ast(tokenType.assig);
+      ast.token = tokenList[glWalk];
+      list_eat(tokenList[glWalk], tokenType.assig);
+    }
+  } else if (tokenList[glWalk - 1].type === tokenType.assig) {
+    if (tokenList[glWalk].type !== tokenType.id) {
+      ast = new Ast(tokenType.const);
+      ast.token = tokenList[glWalk];
+      list_eat(tokenList[glWalk], tokenType.const);
+    } else {
+      ast = new Ast(tokenType.id);
+      ast.token = tokenList[glWalk];
+      list_eat(tokenList[glWalk], tokenType.id);
+    }
+  } else if (is_mathop(tokenList[glWalk - 1].type)) {
+    if (
+      (tokenList[glWalk - 1].type === tokenType.add &&
+        tokenList[glWalk].type === tokenType.add) ||
+      (tokenList[glWalk - 1].type === tokenType.sub &&
+        tokenList[glWalk].type === tokenType.sub)
+    ) {
+      ast = new Ast(tokenList[glWalk].type);
+      ast.token = tokenList[glWalk];
+      list_eat_math(tokenList[glWalk]);
+    } else if (tokenList[glWalk].type !== tokenType.id) {
+      ast = new Ast(tokenType.const);
+      ast.token = tokenList[glWalk];
+      list_eat(tokenList[glWalk], tokenType.const);
+    } else {
+      ast = new Ast(tokenType.id);
+      ast.token = tokenList[glWalk];
+      list_eat(tokenList[glWalk], tokenType.id);
+    }
+  } else if (tokenList[glWalk].type === tokenType.id) {
+    ast = new Ast(tokenType.id);
+    ast.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.id);
+  } else if (tokenList[glWalk].type !== tokenType.semi) {
+    ast = new Ast(tokenType.comma);
+    ast.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.comma);
+  } else {
+    parser_error(tokenList[glWalk]);
+  }
+
+  ast.right = holyc_parser_parse_exp(tokenList);
+
+  return ast;
+}
+
+function holyc_parser_parse_str_args(tokenList = []) {
+  if (tokenList[glWalk].type === tokenType.semi) return null;
+
+  let ast;
+
+  if (
+    tokenList[glWalk].type === tokenType.id ||
+    tokenList[glWalk].type === tokenType.const
+  ) {
+    ast = new Ast(tokenList[glWalk].type);
+    ast.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenList[glWalk].type);
+  } else if (tokenList[glWalk].type === tokenType.str) {
+    ast = new Ast(tokenList[glWalk].str);
+    ast.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenList[glWalk].str);
+  } else {
+    ast = holyc_parser_parse_exp(tokenList);
+  }
+
+  if (tokenList[glWalk].type === tokenType.assig) {
+    ast.left = new Ast(tokenType.assig);
+    ast.left.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.assig);
+
+    ast.left.right = holyc_parser_parse_exp(tokenList);
+  }
+
+  if (tokenList[glWalk].type !== tokenType.semi) {
+    ast.left.left = new Ast(tokenType.comma);
+    ast.left.left.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.comma);
+  }
+
+  ast.right = holyc_parser_parse_str_args(tokenList);
+
+  return ast;
+}
+
 function holyc_parser_parse_str(tokenList = []) {
+  let symtabNode = tokenList[glWalk];
+
   let ast = new Ast(tokenType.str);
   ast.token = tokenList[glWalk];
   list_eat(tokenList[glWalk], tokenType.str);
@@ -516,8 +656,21 @@ function holyc_parser_parse_str(tokenList = []) {
   } else {
     ast.next = new Ast(tokenType.comma);
     ast.next.token = tokenList[glWalk];
-    list_eat(tokenList[glWalk], tokenType.comma); 
+    list_eat(tokenList[glWalk], tokenType.comma);
+
+    if (tokenList[glWalk].type !== tokenType.semi) {
+      let priorWalk = glWalk;
+
+      holyc_parser_parse_str_args(tokenList);
+
+      get_argsymtab(ast, symtabNode, priorWalk, tokenList);
+
+      ast.next.next = new Ast(tokenType.semi);
+      ast.next.next.token = tokenList[glWalk];
+      list_eat(tokenList[glWalk], tokenType.semi);
+    }
   }
+
   return ast;
 }
 
@@ -672,89 +825,6 @@ function holyc_parser_parse_inline_vars(tokenList = []) {
   }
 
   ast.right = holyc_parser_parse_inline_vars(tokenList);
-
-  return ast;
-}
-
-function holyc_parser_parse_exp(tokenList = []) {
-  if (tokenList[glWalk].type === tokenType.semi) return null;
-
-  let ast;
-
-  if (tokenList[glWalk - 1].type === tokenType.id) {
-    if (is_mathop(tokenList[glWalk].type)) {
-      if (
-        tokenList[glWalk + 1].type === tokenType.id ||
-        tokenList[glWalk + 1].type === tokenType.const
-      ) {
-        ast = new Ast(tokenList[glWalk].type);
-        ast.token = tokenList[glWalk];
-        list_eat_math(tokenList[glWalk]);
-      } else if (
-        tokenList[glWalk].type === tokenType.add ||
-        tokenList[glWalk].type === tokenType.sub
-      ) {
-        let priorOp = tokenList[glWalk].type;
-
-        ast = new Ast(tokenList[glWalk].type);
-        ast.token = tokenList[glWalk];
-        list_eat_math(tokenList[glWalk]);
-
-        if (tokenList[glWalk].type === priorOp) {
-          ast.left = new Ast(tokenList[glWalk].type);
-          ast.left.token = tokenList[glWalk];
-          list_eat_math(tokenList[glWalk]);
-        }
-      }
-    } else {
-      ast = new Ast(tokenType.assig);
-      ast.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.assig);
-    }
-  } else if (tokenList[glWalk - 1].type === tokenType.assig) {
-    if (tokenList[glWalk].type !== tokenType.id) {
-      ast = new Ast(tokenType.const);
-      ast.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.const);
-    } else {
-      ast = new Ast(tokenType.id);
-      ast.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.id);
-    }
-  } else if (is_mathop(tokenList[glWalk - 1].type)) {
-    if (
-      (tokenList[glWalk - 1].type === tokenType.add &&
-        tokenList[glWalk].type === tokenType.add) ||
-      (tokenList[glWalk - 1].type === tokenType.sub &&
-        tokenList[glWalk].type === tokenType.sub)
-    ) {
-      ast = new Ast(tokenList[glWalk].type);
-      ast.token = tokenList[glWalk];
-      list_eat_math(tokenList[glWalk]);
-    } else if (tokenList[glWalk].type !== tokenType.id) {
-      ast = new Ast(tokenType.const);
-      ast.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.const);
-    } else {
-      ast = new Ast(tokenType.id);
-      ast.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.id);
-    }
-  } else if (tokenList[glWalk].type === tokenType.id) {
-    ast = new Ast(tokenType.id);
-    ast.token = tokenList[glWalk];
-    list_eat(tokenList[glWalk], tokenType.id);
-  } else {
-    parser_error(tokenList[glWalk]);
-  }
-
-  // if (tokenList[glWalk].type !== tokenType.semi) {
-  //   ast.left = new Ast(tokenType.const);
-  //   ast.left.token = tokenList[glWalk];
-  //   list_eat(tokenList[glWalk], tokenType.const);
-  // }
-
-  ast.right = holyc_parser_parse_exp(tokenList);
 
   return ast;
 }
