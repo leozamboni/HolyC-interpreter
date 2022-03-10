@@ -613,9 +613,9 @@ function holyc_parser_parse_str_args(tokenList = []) {
     ast.token = tokenList[glWalk];
     list_eat(tokenList[glWalk], tokenList[glWalk].type);
   } else if (tokenList[glWalk].type === tokenType.str) {
-    ast = new Ast(tokenList[glWalk].str);
+    ast = new Ast(tokenType.str);
     ast.token = tokenList[glWalk];
-    list_eat(tokenList[glWalk], tokenList[glWalk].str);
+    list_eat(tokenList[glWalk], tokenType.str);
   } else {
     ast = holyc_parser_parse_exp(tokenList);
   }
