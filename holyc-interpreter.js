@@ -1,3 +1,10 @@
+/**
+ * @Copyright Leonardo Z. Nunes 2022
+ * @license MIT
+ * @fileoverview JS HolyC Interpreter
+ * @version 0.0.0
+ */
+
 var version = "0.0.0";
 
 document.getElementById(
@@ -20,6 +27,10 @@ document.getElementById("code").addEventListener("keydown", function (e) {
   }
 });
 
+/**
+ * JS HolyC AST
+ * @constructor
+ */
 class Ast {
   token = null;
   next = null;
@@ -30,14 +41,32 @@ class Ast {
   }
 }
 
+/**
+ * JS HolyC expression list
+ * @constructor
+ */
 class ExpList {
   next = null;
   ast = null;
 }
 
+/**
+ * symbol table
+ * @global
+ */
 var glSymTab = [];
+
+/**
+ * index for token list iteration
+ * @global
+ */
 var glWalk;
 
+/**
+ * enum for token types.
+ * @readonly
+ * @enum {number}
+ */
 var tokenType = {
   const: 1,
   str: 2,
@@ -70,6 +99,10 @@ var tokenType = {
   for: 29,
 };
 
+/**
+ * examples list of currently implemented features
+ * @global
+ */
 var examples = () => {
   switch (document.getElementById("examples").value) {
     case "helloWorld":
@@ -118,13 +151,21 @@ var examples = () => {
   }
 };
 
+/**
+ * get index of a symbol in symbol table
+ * @global
+ */
 var get_symtab = (token) => {
   for (let i = 0; i < glSymTab.length; ++i) {
     if (glSymTab[i].value === token.value) return i;
   }
 };
 
-var get_argsymtab = (ast, symtabNode, priorWalk, tokenList) => {
+/**
+ * set arguments of a symbol in symbol table
+ * @global
+ */
+var set_argsymtab = (ast, symtabNode, priorWalk, tokenList) => {
   symtabNode.args = [];
   let auxArgNode = {};
 
@@ -146,22 +187,41 @@ var get_argsymtab = (ast, symtabNode, priorWalk, tokenList) => {
   glSymTab.push(symtabNode);
 };
 
+/**
+ * clear output textarea
+ * @global
+ */
 var clear_output = () => {
   document.getElementById(
     "output"
   ).value = `HolyC Interpreter version ${version}\n`;
 };
 
+/**
+ * check if value is alphanumeric
+ * @global
+ * @arg {number} val - token value
+ */
 var is_alpha = (val) => {
   if (val === " " || val === "\n") return false;
   return /^[A-Z0-9]$/i.test(val);
 };
 
+/**
+ * check if value is alphanumeric
+ * @global
+ * @arg {number} val - token value
+ */
 var is_digit = (val) => {
   if (val === " " || val === "\n") return false;
   return !isNaN(val);
 };
 
+/**
+ * throw lexer error
+ * @global
+ * @arg {object} token
+ */
 var lexer_error = (token) => {
   let output = document.getElementById("output");
   output.value += "interpretation failure\n";
@@ -170,10 +230,11 @@ var lexer_error = (token) => {
   );
 };
 
-var remove_tabs = (val) => {
-  return val.replace(/\t/g, "");
-};
-
+/**
+ * throw parser error
+ * @global
+ * @arg {object} token
+ */
 var parser_error = (token) => {
   let output = document.getElementById("output");
   output.value += "interpretation failure\n";
@@ -182,10 +243,30 @@ var parser_error = (token) => {
   );
 };
 
+/**
+ * remove tabulation from string
+ * @global
+ * @arg {number} val - token value
+ */
+var remove_tabs = (val) => {
+  return val.replace(/\t/g, "");
+};
+
+/**
+ * throw parser error
+ * @global
+ * @arg {object} token
+ * @arg {number} expectedType
+ */
 var list_eat = (token, expectedType) => {
   token?.type !== expectedType ? parser_error(token) : glWalk++;
 };
 
+/**
+ * check if token is in symbol table
+ * @global
+ * @arg {object} token
+ */
 var symtab_contain = (token) => {
   if (!glSymTab.filter((e) => e.value === token.value).length) {
     return false;
@@ -193,6 +274,11 @@ var symtab_contain = (token) => {
   return true;
 };
 
+/**
+ * check if token type is a data type
+ * @global
+ * @arg {number} type - token type
+ */
 var is_dtype = (type) => {
   if (
     type === tokenType.i0 ||
@@ -212,6 +298,11 @@ var is_dtype = (type) => {
   return false;
 };
 
+/**
+ * check if token type is a logical operator
+ * @global
+ * @arg {number} type - token type
+ */
 var is_logicalop = (type) => {
   if (type === tokenType.big || type === tokenType.less) {
     return true;
@@ -219,6 +310,11 @@ var is_logicalop = (type) => {
   return false;
 };
 
+/**
+ * check if token type is a mathematical operator
+ * @global
+ * @arg {number} type - token type
+ */
 var is_mathop = (type) => {
   if (
     type === tokenType.add ||
@@ -231,18 +327,38 @@ var is_mathop = (type) => {
   return false;
 };
 
+/**
+ * increment glWalk to next node in token list if token type is data type
+ * @global
+ * @arg {object} token
+ */
 var list_eat_type = (token) => {
   is_dtype(token.type) ? glWalk++ : parser_error(token);
 };
 
+/**
+ * increment glWalk to next node in token list if token type is logical operator
+ * @global
+ * @arg {object} token
+ */
 var list_eat_logical = (token) => {
   is_logicalop(token.type) ? glWalk++ : parser_error(token);
 };
 
+/**
+ * increment glWalk to next node in token list if token type is mathematical operator
+ * @global
+ * @arg {object} token
+ */
 var list_eat_math = (token) => {
   is_mathop(token.type) ? glWalk++ : parser_error(token);
 };
 
+/**
+ * number token data type to string
+ * @global
+ * @arg {number} val - token value
+ */
 var get_type = (val) => {
   switch (val) {
     case "I0":
@@ -272,6 +388,13 @@ var get_type = (val) => {
   }
 };
 
+/**
+ * lexical analysis of HolyC data types
+ * @arg {array} tokenList - current lexer token list
+ * @arg {number} line - line of token
+ * @arg {string} input - current input string
+ * @arg {number} i - current string index
+ */
 function holyc_lex_type(tokenList, line, input, i) {
   if (input[i] === "U" || input[i] === "I" || input[i] === "F") {
     if (input[i + 1] === "0" || input[i + 1] === "8") {
@@ -313,6 +436,10 @@ function holyc_lex_type(tokenList, line, input, i) {
   return false;
 }
 
+/**
+ * JS HolyC lexer
+ * @arg {string} input - input string
+ */
 function holyc_lex(input) {
   input = remove_tabs(input);
 
@@ -519,7 +646,11 @@ function holyc_lex(input) {
   return tokenList;
 }
 
-function holyc_parser_parse_exp(tokenList = []) {
+/**
+ * semantic analysis of expresions
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse_exp(tokenList) {
   if (tokenList[glWalk].type === tokenType.semi) return null;
 
   let ast;
@@ -600,7 +731,11 @@ function holyc_parser_parse_exp(tokenList = []) {
   return ast;
 }
 
-function holyc_parser_parse_str_args(tokenList = []) {
+/**
+ * semantic analysis of string arguments
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse_str_args(tokenList) {
   if (tokenList[glWalk].type === tokenType.semi) return null;
 
   let ast;
@@ -639,7 +774,11 @@ function holyc_parser_parse_str_args(tokenList = []) {
   return ast;
 }
 
-function holyc_parser_parse_str(tokenList = []) {
+/**
+ * semantic analysis of strings
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse_str(tokenList) {
   let symtabNode = tokenList[glWalk];
 
   let ast = new Ast(tokenType.str);
@@ -662,7 +801,7 @@ function holyc_parser_parse_str(tokenList = []) {
 
       holyc_parser_parse_str_args(tokenList);
 
-      get_argsymtab(ast, symtabNode, priorWalk, tokenList);
+      set_argsymtab(ast, symtabNode, priorWalk, tokenList);
 
       ast.next.next = new Ast(tokenType.semi);
       ast.next.next.token = tokenList[glWalk];
@@ -673,7 +812,11 @@ function holyc_parser_parse_str(tokenList = []) {
   return ast;
 }
 
-function holyc_parser_parse_block(tokenList = []) {
+/**
+ * semantic analysis of blocks
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse_block(tokenList) {
   if (tokenList[glWalk].type === tokenType.lbrace) return null;
 
   let ast;
@@ -694,6 +837,10 @@ function holyc_parser_parse_block(tokenList = []) {
   return ast;
 }
 
+/**
+ * semantic analysis of procedures arguments
+ * @arg {array} tokenList
+ */
 function holyc_parser_parse_args(tokenList = []) {
   if (tokenList[glWalk].type === tokenType.lparen) return null;
 
@@ -732,7 +879,13 @@ function holyc_parser_parse_args(tokenList = []) {
   return ast;
 }
 
-function holyc_parser_parse_call_args(tokenList = [], symIndex, i) {
+/**
+ * semantic analysis of procedures call arguments
+ * @arg {array} tokenList
+ * @arg {number} symIndex - index of procedure symbol
+ * @arg {number} i - number of arguments
+ */
+function holyc_parser_parse_call_args(tokenList, symIndex, i) {
   if (tokenList[glWalk].type === tokenType.lparen) return null;
 
   let ast;
@@ -764,7 +917,11 @@ function holyc_parser_parse_call_args(tokenList = [], symIndex, i) {
   return ast;
 }
 
-function holyc_parser_parse_call(tokenList = []) {
+/**
+ * semantic analysis of procedures call
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse_call(tokenList) {
   if (!symtab_contain(tokenList[glWalk])) {
     parser_error(tokenList[glWalk]);
   }
@@ -808,7 +965,11 @@ function holyc_parser_parse_call(tokenList = []) {
   return ast;
 }
 
-function holyc_parser_parse_inline_vars(tokenList = []) {
+/**
+ * semantic analysis of inline variables declaration
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse_inline_vars(tokenList) {
   if (tokenList[glWalk].type === tokenType.semi) return null;
 
   glSymTab.push(tokenList[glWalk]);
@@ -828,7 +989,11 @@ function holyc_parser_parse_inline_vars(tokenList = []) {
   return ast;
 }
 
-function holyc_parser_parse_id(tokenList = []) {
+/**
+ * semantic analysis of identifiers
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse_id(tokenList) {
   if (tokenList[glWalk].type === tokenType.id) {
     if (tokenList[glWalk + 1].type === tokenType.assig) {
       let ast = holyc_parser_parse_exp(tokenList);
@@ -882,7 +1047,7 @@ function holyc_parser_parse_id(tokenList = []) {
 
     ast.next.next.right = holyc_parser_parse_args(tokenList);
 
-    get_argsymtab(ast, symtabNode, priorWalk, tokenList);
+    set_argsymtab(ast, symtabNode, priorWalk, tokenList);
 
     ast.next.next.next = new Ast(tokenType.lparen);
     ast.next.next.next.token = tokenList[glWalk];
@@ -902,7 +1067,11 @@ function holyc_parser_parse_id(tokenList = []) {
   return ast;
 }
 
-function holyc_parser_parse_increment(tokenList = []) {
+/**
+ * semantic analysis of variable increment
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse_increment(tokenList) {
   let ast;
 
   if (is_mathop(tokenList[glWalk].type)) {
@@ -962,7 +1131,11 @@ function holyc_parser_parse_increment(tokenList = []) {
   return ast;
 }
 
-function holyc_parser_parse_for(tokenList = []) {
+/**
+ * semantic analysis of for statement
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse_for(tokenList) {
   let ast = new Ast(tokenType.for);
   ast.token = tokenList[glWalk];
   list_eat(tokenList[glWalk], tokenType.for);
@@ -1038,7 +1211,10 @@ function holyc_parser_parse_for(tokenList = []) {
   return ast;
 }
 
-function holyc_parser_parse(tokenList = []) {
+/**
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse(tokenList) {
   if (!tokenList[glWalk]) return null;
 
   let expList = new ExpList();
@@ -1075,13 +1251,21 @@ function holyc_parser_parse(tokenList = []) {
   return expList;
 }
 
-function holyc_parser(tokenList = []) {
+/**
+ * HolyC semantic analysis
+ * @arg {array} tokenList
+ */
+function holyc_parser(tokenList) {
   glWalk = 0;
   glSymTab = [];
   console.log(glSymTab);
   return holyc_parser_parse(tokenList);
 }
 
+/**
+ * printf function
+ * @arg {number} val  - token value
+ */
 function printf(val) {
   let output = document.getElementById("output");
   output.value += val.replace(/\\n|\\t/g, (e) => {
@@ -1097,7 +1281,12 @@ function printf(val) {
   });
 }
 
-function code_gen_gen_id(ast = [], expList) {
+/**
+ * code generation of identifiers
+ * @arg {object} ast
+ * @arg {array} expList
+ */
+function code_gen_gen_id(ast, expList) {
   if (!ast) return;
   if (ast.type === tokenType.lbrace) return ast;
 
@@ -1115,12 +1304,22 @@ function code_gen_gen_id(ast = [], expList) {
   code_gen_gen_id(ast.right, expList);
 }
 
+/**
+ * code generation check procedure ast
+ * @arg {object} ast
+ * @arg {object} id
+ */
 function code_gen_get_ast_check(ast, id) {
   if (ast.next.token.value === id.value) return true;
   return false;
 }
 
-function code_gen_get_ast(expList = [], id) {
+/**
+ * code generation get ast procedure
+ * @arg {object} ast
+ * @arg {object} id
+ */
+function code_gen_get_ast(expList, id) {
   if (!expList) return null;
   if (expList.ast.type != tokenType.call) {
     let ret = code_gen_get_ast_check(expList.ast, id);
@@ -1129,6 +1328,11 @@ function code_gen_get_ast(expList = [], id) {
   return code_gen_get_ast(expList.next, id);
 }
 
+/**
+ * code generation of blocks
+ * @arg {object} walk
+ * @arg {array} expList
+ */
 function code_gen_gen_block(walk, expList) {
   do {
     switch (walk.token.type) {
@@ -1148,6 +1352,11 @@ function code_gen_gen_block(walk, expList) {
   } while (walk);
 }
 
+/**
+ * code generation of for statement
+ * @arg {object} ast
+ * @arg {array} expList
+ */
 function code_gen_gen_for(ast, expList) {
   let val = parseInt(ast.right.right.token.value);
   let cond = ast.left.left.left.left.token;
@@ -1173,7 +1382,11 @@ function code_gen_gen_for(ast, expList) {
   }
 }
 
-function code_gen(expList = []) {
+/**
+ * HolyC code generation
+ * @arg {array} expList
+ */
+function code_gen(expList) {
   let expListAux = expList;
 
   while (expListAux) {
