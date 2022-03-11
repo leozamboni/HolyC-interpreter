@@ -571,7 +571,7 @@ function holyc_lex(input) {
         if (input[i + 1] === "-") {
           i++;
           tokenList.push({
-            value: "-",
+            value: "--",
             line: line,
             type: tokenType.decrement,
           });
@@ -1002,6 +1002,11 @@ function holyc_parser_parse_id(tokenList) {
       list_eat(tokenList[glWalk], tokenType.semi);
 
       return ast;
+    } else if (
+      tokenList[glWalk + 1].type === tokenType.increment ||
+      tokenList[glWalk + 1].type === tokenType.decrement
+    ) {
+      return holyc_parser_parse_prepostfix(tokenList, false);
     } else {
       return holyc_parser_parse_call(tokenList);
     }
@@ -1067,10 +1072,11 @@ function holyc_parser_parse_id(tokenList) {
 }
 
 /**
- * semantic analysis of variable increment
+ * semantic analysis of variable with pre/post fix operator
  * @arg {array} tokenList
+ * @arg {boolean} block
  */
-function holyc_parser_parse_increment(tokenList) {
+function holyc_parser_parse_prepostfix(tokenList, block) {
   let ast;
 
   if (is_mathop(tokenList[glWalk].type)) {
@@ -1101,14 +1107,20 @@ function holyc_parser_parse_increment(tokenList) {
     list_eat(tokenList[glWalk], tokenType.id);
 
     if (tokenList[glWalk].type === tokenType.increment) {
-      ast = new Ast(tokenType.increment);
-      ast.token = tokenList[glWalk];
+      ast.right = new Ast(tokenType.increment);
+      ast.right.token = tokenList[glWalk];
       list_eat_math(tokenList[glWalk]);
     } else {
-      ast = new Ast(tokenType.decrement);
-      ast.token = tokenList[glWalk];
+      ast.right = new Ast(tokenType.decrement);
+      ast.right.token = tokenList[glWalk];
       list_eat_math(tokenList[glWalk]);
     }
+  }
+
+  if (!block) {
+    ast.left = new Ast(tokenType.semi);
+    ast.left.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.semi);
   }
 
   return ast;
@@ -1173,8 +1185,10 @@ function holyc_parser_parse_for(tokenList) {
   ast.left.left.left.left.left.left.token = tokenList[glWalk];
   list_eat(tokenList[glWalk], tokenType.semi);
 
-  ast.left.left.left.left.left.left.left =
-    holyc_parser_parse_increment(tokenList);
+  ast.left.left.left.left.left.left.left = holyc_parser_parse_prepostfix(
+    tokenList,
+    true
+  );
 
   ast.left.left.left.left.left.left.left.next = new Ast(tokenType.lparen);
   ast.next.token = tokenList[glWalk];
@@ -1218,6 +1232,10 @@ function holyc_parser_parse(tokenList) {
     case tokenType.f64:
     case tokenType.id:
       expList.ast = holyc_parser_parse_id(tokenList);
+      break;
+    case tokenType.increment:
+    case tokenType.decrement:
+      expList.ast = holyc_parser_parse_prepostfix(tokenList, false);
       break;
     case tokenType.str:
       expList.ast = holyc_parser_parse_str(tokenList);
