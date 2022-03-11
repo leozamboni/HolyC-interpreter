@@ -850,6 +850,28 @@ function holyc_parser_parse_str_args(tokenList) {
 }
 
 /**
+ * semantic analysis of inline strings
+ * @arg {array} tokenList
+ */
+function holyc_parser_parse_inline_str(tokenList) {
+  if (tokenList[glWalk].type === tokenType.semi) return null;
+
+  let ast = new Ast(tokenType.str);
+  ast.token = tokenList[glWalk];
+  list_eat(tokenList[glWalk], tokenType.str);
+
+  if (tokenList[glWalk].type !== tokenType.semi) {
+    ast.next = new Ast(tokenType.comma);
+    ast.next.token = tokenList[glWalk];
+    list_eat(tokenList[glWalk], tokenType.comma);
+  }
+
+  ast.left = holyc_parser_parse_inline_str(tokenList);
+
+  return ast;
+}
+
+/**
  * semantic analysis of strings
  * @arg {array} tokenList
  */
@@ -871,15 +893,22 @@ function holyc_parser_parse_str(tokenList) {
     ast.next.token = tokenList[glWalk];
     list_eat(tokenList[glWalk], tokenType.comma);
 
-    if (tokenList[glWalk].type !== tokenType.semi) {
+    if (tokenList[glWalk].type !== tokenType.str) {
       let priorWalk = glWalk;
 
-      holyc_parser_parse_str_args(tokenList);
+      ast.next.right = holyc_parser_parse_str_args(tokenList);
 
       set_argsymtab(ast, symtabNode, priorWalk, tokenList);
 
       ast.next.next = new Ast(tokenType.semi);
       ast.next.next.token = tokenList[glWalk];
+      list_eat(tokenList[glWalk], tokenType.semi);
+    } else {
+      console.log(tokenList[glWalk]);
+      ast.left = holyc_parser_parse_inline_str(tokenList);
+      console.log(ast);
+      ast.next.left = new Ast(tokenType.semi);
+      ast.next.left.token = tokenList[glWalk];
       list_eat(tokenList[glWalk], tokenType.semi);
     }
   }
@@ -1489,7 +1518,11 @@ function code_gen(expList) {
         code_gen_gen_for(expListAux.ast, expList);
         break;
       case tokenType.str:
-        printf(expListAux.ast.token.value);
+        let walk = expListAux.ast;
+        do {
+          printf(walk.token.value);
+          walk = walk.left;
+        } while (walk);
         break;
       case tokenType.call:
         code_gen_gen_id(
