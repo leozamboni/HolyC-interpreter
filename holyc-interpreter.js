@@ -97,6 +97,8 @@ var tokenType = {
   less: 27,
   big: 28,
   for: 29,
+  increment: 30,
+  decrement: 31,
 };
 
 /**
@@ -320,7 +322,9 @@ var is_mathop = (type) => {
     type === tokenType.add ||
     type === tokenType.sub ||
     type === tokenType.div ||
-    type === tokenType.mul
+    type === tokenType.mul ||
+    type === tokenType.increment ||
+    type === tokenType.decrement
   ) {
     return true;
   }
@@ -546,19 +550,38 @@ function holyc_lex(input) {
     }
 
     switch (input[i]) {
-      case "+":
-        tokenList.push({
-          value: "+",
-          line: line,
-          type: tokenType.add,
-        });
+      case "+": {
+        if (input[i + 1] === "+") {
+          i++;
+          tokenList.push({
+            value: "++",
+            line: line,
+            type: tokenType.increment,
+          });
+        } else {
+          tokenList.push({
+            value: "+",
+            line: line,
+            type: tokenType.add,
+          });
+        }
         break;
+      }
       case "-":
-        tokenList.push({
-          value: "-",
-          line: line,
-          type: tokenType.sub,
-        });
+        if (input[i + 1] === "-") {
+          i++;
+          tokenList.push({
+            value: "-",
+            line: line,
+            type: tokenType.decrement,
+          });
+        } else {
+          tokenList.push({
+            value: "-",
+            line: line,
+            type: tokenType.sub,
+          });
+        }
         break;
       case "*":
         tokenList.push({
@@ -664,21 +687,6 @@ function holyc_parser_parse_exp(tokenList) {
         ast = new Ast(tokenList[glWalk].type);
         ast.token = tokenList[glWalk];
         list_eat_math(tokenList[glWalk]);
-      } else if (
-        tokenList[glWalk].type === tokenType.add ||
-        tokenList[glWalk].type === tokenType.sub
-      ) {
-        let priorOp = tokenList[glWalk].type;
-
-        ast = new Ast(tokenList[glWalk].type);
-        ast.token = tokenList[glWalk];
-        list_eat_math(tokenList[glWalk]);
-
-        if (tokenList[glWalk].type === priorOp) {
-          ast.left = new Ast(tokenList[glWalk].type);
-          ast.left.token = tokenList[glWalk];
-          list_eat_math(tokenList[glWalk]);
-        }
       }
     } else {
       ast = new Ast(tokenType.assig);
@@ -696,16 +704,7 @@ function holyc_parser_parse_exp(tokenList) {
       list_eat(tokenList[glWalk], tokenType.id);
     }
   } else if (is_mathop(tokenList[glWalk - 1].type)) {
-    if (
-      (tokenList[glWalk - 1].type === tokenType.add &&
-        tokenList[glWalk].type === tokenType.add) ||
-      (tokenList[glWalk - 1].type === tokenType.sub &&
-        tokenList[glWalk].type === tokenType.sub)
-    ) {
-      ast = new Ast(tokenList[glWalk].type);
-      ast.token = tokenList[glWalk];
-      list_eat_math(tokenList[glWalk]);
-    } else if (tokenList[glWalk].type !== tokenType.id) {
+    if (tokenList[glWalk].type !== tokenType.id) {
       ast = new Ast(tokenType.const);
       ast.token = tokenList[glWalk];
       list_eat(tokenList[glWalk], tokenType.const);
@@ -1075,22 +1074,14 @@ function holyc_parser_parse_increment(tokenList) {
   let ast;
 
   if (is_mathop(tokenList[glWalk].type)) {
-    if (tokenList[glWalk].type === tokenType.add) {
-      ast = new Ast(tokenType.add);
+    if (tokenList[glWalk].type === tokenType.increment) {
+      ast = new Ast(tokenType.increment);
       ast.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.add);
-
-      ast.left = new Ast(tokenType.add);
-      ast.left.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.add);
+      list_eat_math(tokenList[glWalk]);
     } else {
-      ast = new Ast(tokenType.sub);
+      ast = new Ast(tokenType.decrement);
       ast.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.sub);
-
-      ast.left = new Ast(tokenType.sub);
-      ast.left.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.sub);
+      list_eat_math(tokenList[glWalk]);
     }
 
     if (!symtab_contain(tokenList[glWalk])) {
@@ -1109,22 +1100,14 @@ function holyc_parser_parse_increment(tokenList) {
     ast.token = tokenList[glWalk];
     list_eat(tokenList[glWalk], tokenType.id);
 
-    if (tokenList[glWalk].type === tokenType.add) {
-      ast.left = new Ast(tokenType.add);
-      ast.left.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.add);
-
-      ast.right = new Ast(tokenType.add);
-      ast.right.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.add);
+    if (tokenList[glWalk].type === tokenType.increment) {
+      ast = new Ast(tokenType.increment);
+      ast.token = tokenList[glWalk];
+      list_eat_math(tokenList[glWalk]);
     } else {
-      ast.left = new Ast(tokenType.sub);
-      ast.left.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.sub);
-
-      ast.right = new Ast(tokenType.sub);
-      ast.right.token = tokenList[glWalk];
-      list_eat(tokenList[glWalk], tokenType.sub);
+      ast = new Ast(tokenType.decrement);
+      ast.token = tokenList[glWalk];
+      list_eat_math(tokenList[glWalk]);
     }
   }
 
