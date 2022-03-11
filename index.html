@@ -49,7 +49,9 @@
   <script type="text/javascript">
     function main() {
       code_gen(
-        holyc_parser(holyc_lex(document.getElementById("code").value))
+        holyc_parser(
+          holyc_lex(document.getElementById("code").value)
+        )
       );
     }
   </script>

@@ -727,7 +727,6 @@ function holyc_lex(input) {
         break;
     }
   }
-  console.log(tokenList);
   return tokenList;
 }
 
@@ -864,6 +863,8 @@ function holyc_parser_parse_inline_str(tokenList) {
     ast.next = new Ast(tokenType.comma);
     ast.next.token = tokenList[glWalk];
     list_eat(tokenList[glWalk], tokenType.comma);
+    
+    if (tokenList[glWalk].type !== tokenType.str) parser_error(tokenList[glWalk]);
   }
 
   ast.left = holyc_parser_parse_inline_str(tokenList);
@@ -904,9 +905,9 @@ function holyc_parser_parse_str(tokenList) {
       ast.next.next.token = tokenList[glWalk];
       list_eat(tokenList[glWalk], tokenType.semi);
     } else {
-      console.log(tokenList[glWalk]);
+      
       ast.left = holyc_parser_parse_inline_str(tokenList);
-      console.log(ast);
+     
       ast.next.left = new Ast(tokenType.semi);
       ast.next.left.token = tokenList[glWalk];
       list_eat(tokenList[glWalk], tokenType.semi);
@@ -1380,7 +1381,6 @@ function holyc_parser_parse(tokenList) {
 function holyc_parser(tokenList) {
   glWalk = 0;
   glSymTab = [];
-  console.log(glSymTab);
   return holyc_parser_parse(tokenList);
 }
 
