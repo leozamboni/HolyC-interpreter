@@ -22,9 +22,7 @@
       margin: 10px;
     }
 
-    #col-1,
-    #col-2,
-    #col-3 {
+    .container div {
       flex: 1;
     }
 
@@ -35,6 +33,17 @@
       width: 100%;
       height: 90vh;
       border: none;
+    }
+
+    @media only screen and (max-width: 900px) {
+      .container {
+        display: block;
+      }
+
+      #code,
+      #output {
+        height: 50vh;
+      }
     }
   </style>
   <script type="text/javascript">
@@ -61,14 +70,14 @@
     </h2>
 
     <section class="container">
-      <div id="col-1">
+      <div>
         <fieldset>
           <legend>Code</legend>
           <textarea id="code"></textarea>
         </fieldset>
       </div>
 
-      <div id="col-2">
+      <div>
         <button onclick="main()">RUN(▶)</button>
         <select onchange="examples()" id="examples">
           <option value="">Examples</option>
@@ -91,7 +100,7 @@
         <p>HolyC and TempleOS are creations of Terry Davis.</p>
       </div>
 
-      <div id="col-3">
+      <div>
         <fieldset>
           <legend>Output</legend>
           <textarea disabled id="output"></textarea>
