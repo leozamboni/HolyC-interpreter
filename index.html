@@ -8,41 +8,22 @@
   <style>
     * {
       text-align: center;
-      font-family: monospace;
-      line-height: 1.5em;
-      margin: 0;
-      padding: 0;
     }
 
-    .container {
+    .textarea-container {
       display: flex;
     }
 
-    hr {
-      margin: 10px;
-    }
-
-    .container div {
-      flex: 1;
-    }
-
-    #code,
-    #output {
+    textarea {
+      width: 40vw;
+      height: 40vh;
       text-align: left;
-      outline: none;
-      width: 100%;
-      height: 90vh;
-      border: none;
     }
 
     @media only screen and (max-width: 900px) {
-      .container {
-        display: block;
-      }
-
-      #code,
-      #output {
-        height: 50vh;
+      textarea {
+        width: 60vw;
+        height: 30vh;
       }
     }
   </style>
@@ -67,48 +48,37 @@
   </noscript>
 
   <main>
-    <h2>
+    <b>
       <a href="http://gnu.dev.br/compilers/holyc/2022/03/01/holyc-interpreter.html">"HolyC Interpreter"</a>
-    </h2>
+    </b>
+    <p>
+      (Interpreter & site by
+      <a href="http://gnu.dev.br/blog">Leonardo Z. Nunes</a>.)
+    </p>
 
-    <section class="container">
-      <div>
-        <fieldset>
-          <legend>Code</legend>
-          <textarea id="code"></textarea>
-        </fieldset>
-      </div>
+    <div id="textarea-container">
+      <textarea id="code"></textarea>
+      <textarea disabled id="output"></textarea>
+    </div>
 
-      <div>
-        <button onclick="main()">RUN(▶)</button>
-        <select onchange="examples()" id="examples">
-          <option value="">Examples</option>
-          <option value="helloWorld">Hello World</option>
-          <option value="fibonacci">Fibonacci</option>
-        </select>
-        <button onclick="clear_output()">CLEAR(🗑)</button>
-        <hr />
-        <p style="color: red">
-          <b>"This is not a complete HolyC language compiler yet, the source
-            code is on GitHub you can contribute
-            <a href="https://github.com/leozamboni/HOLYC-INTERPRETER">here</a>. All currently implemented features are
-            exemplified in the
-            select button"</b>
-        </p>
-        <p>
-          (Interpreter & site by
-          <a href="http://gnu.dev.br/blog">Leonardo Z. Nunes</a>.)
-        </p>
-        <p>HolyC and TempleOS are creations of Terry Davis.</p>
-      </div>
+    <button onclick="main()">RUN(▶)</button>
+    <select onchange="examples()" id="examples">
+      <option value="">Examples</option>
+      <option value="helloWorld">Hello World</option>
+      <option value="fibonacci">Fibonacci</option>
+    </select>
+    <button onclick="clear_output()">CLEAR(🗑)</button>
 
-      <div>
-        <fieldset>
-          <legend>Output</legend>
-          <textarea disabled id="output"></textarea>
-        </fieldset>
-      </div>
-    </section>
+    <hr />
+    <p style="color: red">
+      <b>"This is not a complete HolyC language compiler yet, the source
+        code is on GitHub you can contribute
+        <a href="https://github.com/leozamboni/HOLYC-INTERPRETER">here</a>. All currently implemented features are
+        exemplified in the
+        select button"</b>
+    </p>
+
+    <p>HolyC and TempleOS are creations of Terry Davis.</p>
   </main>
 
   <script src="holyc-interpreter.js"></script>
