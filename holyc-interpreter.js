@@ -1482,26 +1482,25 @@ function code_gen_gen_for(ast, expList) {
   let cond = ast.left.left.left.left.token;
   let condVal = parseInt(ast.left.left.left.left.left.token.value);
   let iterate = ast.left.left.left.left.left.left.left;
-
   if (iterate.type === tokenType.id) {
     iterate = ast.left.left.left.left.left.left.left.right;
   }
-
+  
   let iterateValue;
   if (is_assingop(iterate.type)) {
     iterateValue = parseInt(iterate.right.token.value);
   } else {
     iterateValue = 1;
   }
-
+ 
   switch (cond.type) {
     case tokenType.less:
-      for (let i = val; i < condVal; ++i) {
+      for (let i = val; i < condVal; i += iterateValue) {
         code_gen_gen_block(ast.left.left.left.left.left.left.right, expList);
       }
       break;
     case tokenType.big:
-      for (let i = val; i > condVal; ++i) {
+      for (let i = val; i > condVal; i += iterateValue) {
         code_gen_gen_block(ast.left.left.left.left.left.left.right, expList);
       }
       break;
