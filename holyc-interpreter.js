@@ -866,7 +866,7 @@ function holyc_parser_parse_inline_str(tokenList) {
       parser_error(tokenList[glWalk]);
   }
 
-  ast.left = holyc_parser_parse_inline_str(tokenList);
+  ast.right = holyc_parser_parse_inline_str(tokenList);
 
   return ast;
 }
@@ -894,14 +894,11 @@ function holyc_parser_parse_str(tokenList) {
     list_eat(tokenList[glWalk], tokenType.comma);
 
     if (tokenList[glWalk].type === tokenType.str) {
-      ast.left.right = holyc_parser_parse_inline_str(tokenList);
+      ast.right = holyc_parser_parse_inline_str(tokenList);
 
       ast.left.left = new Ast(tokenType.semi);
       ast.left.left.token = tokenList[glWalk];
       list_eat(tokenList[glWalk], tokenType.semi);
-      console.log("holyc_parser_parse_inline_str");
-      console.log(ast);
-      console.log("end");
     } else {
       let priorWalk = glWalk;
 
@@ -1469,8 +1466,6 @@ function code_gen_gen_call(ast, expList) {
       code_gen_gen_call(code_gen_get_ast(expList, ast.token));
       break;
     case tokenType.str:
-      //console.log("code_gen_gen_call")
-      //console.log(ast)
       printf(ast);
       break;
   }
@@ -1500,7 +1495,6 @@ function code_gen_get_ast(expList, id) {
   if (is_dtype(expList.ast.type)) {
     let ret = code_gen_get_ast_check(expList.ast, id);
     if (ret) {
-      console.log(expList.ast);
       return expList.ast;
     }
   }
@@ -1586,11 +1580,10 @@ function code_gen(expList) {
         break;
       case tokenType.str:
         let walk = expListAux.ast;
-        //console.log(walk);
-        printf(walk);
-        // do {
-        //   walk = walk.left;
-        // } while (walk);
+        do {
+          printf(walk);
+          walk = walk.right;
+        } while (walk);
         break;
       case tokenType.id:
         code_gen_gen_exp(expListAux.ast);
