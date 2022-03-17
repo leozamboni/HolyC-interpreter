@@ -1597,6 +1597,7 @@ function code_gen_gen_block(walk, expList) {
  * @arg {array} expList
  */
 function code_gen_gen_for(ast, expList) {
+  let symTabI = get_symtab(ast.left.token);
   let val = parseInt(ast.right.right.token.value);
   let cond = ast.left.left.left.left.token;
   let condVal = parseInt(ast.left.left.left.left.left.token.value);
@@ -1617,11 +1618,13 @@ function code_gen_gen_for(ast, expList) {
     case tokenType.less:
       for (let i = val; i < condVal; i += iterateValue) {
         code_gen_gen_block(ast.left.left.left.left.left.left.right, expList);
+        glSymTab[symTabI].const += iterateValue;
       }
       break;
     case tokenType.big:
       for (let i = val; i > condVal; i += iterateValue) {
         code_gen_gen_block(ast.left.left.left.left.left.left.right, expList);
+        glSymTab[symTabI].const += iterateValue;
       }
       break;
   }
