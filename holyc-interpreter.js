@@ -229,7 +229,7 @@ var is_digit = (val) => {
  */
 var lexer_error = (token) => {
   let output = document.getElementById("output");
-  output.value += "interpretation failure\n";
+  output.value += "compile failure\n";
   throw new Error(
     (output.value += `lexer: '${token.value}' unexpected value in line ${token.line}\n`)
   );
@@ -242,7 +242,7 @@ var lexer_error = (token) => {
  */
 var parser_error = (token) => {
   let output = document.getElementById("output");
-  output.value += "interpretation failure\n";
+  output.value += "compile failure\n";
   throw new Error(
     (output.value += `parser: '${token.value}' unexpected value in line ${token.line}\n`)
   );
@@ -535,6 +535,11 @@ function holyc_lex_type(tokenList, line, input, i) {
  * @arg {string} input - input string
  */
 function holyc_lex(input) {
+  if (!input) {
+    throw new Error(
+      (document.getElementById("output").value += 'nothing to compile\n')
+    );
+  }
   input = remove_tabs(input);
 
   glInputLen = input.length;
