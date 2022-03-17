@@ -537,7 +537,7 @@ function holyc_lex_type(tokenList, line, input, i) {
 function holyc_lex(input) {
   if (!input) {
     throw new Error(
-      (document.getElementById("output").value += 'nothing to compile\n')
+      (document.getElementById("output").value += "nothing to compile\n")
     );
   }
   input = remove_tabs(input);
