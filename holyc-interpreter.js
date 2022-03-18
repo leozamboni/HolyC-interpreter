@@ -264,9 +264,12 @@ var remove_tabs = (val) => {
  * @arg {number} expectedType
  */
 var list_eat = (tokenList, expectedType) => {
-  tokenList[glWalk].type === expectedType
-    ? glWalk++
-    : parser_error(tokenList[glWalk]);
+  try {
+    tokenList[glWalk].type === expectedType;
+    glWalk++;
+  } catch {
+    parser_error(tokenList[glWalk] ? tokenList[glWalk] : tokenList[glWalk - 1]);
+  }
 };
 
 /**
@@ -418,7 +421,7 @@ var is_assingop = (tokenList, index) => {
  * @arg {array} tokenList
  */
 var list_eat_type = (tokenList) => {
-  is_dtype(tokenList, glWalk) ? glWalk++ : parser_error(token);
+  is_dtype(tokenList, glWalk) ? glWalk++ : parser_error(tokenList[glWalk]);
 };
 
 /**
@@ -427,7 +430,7 @@ var list_eat_type = (tokenList) => {
  * @arg {array} tokenList
  */
 var list_eat_logical = (tokenList) => {
-  is_logicalop(tokenList, glWalk) ? glWalk++ : parser_error(token);
+  is_logicalop(tokenList, glWalk) ? glWalk++ : parser_error(tokenList[glWalk]);
 };
 
 /**
@@ -436,7 +439,7 @@ var list_eat_logical = (tokenList) => {
  * @arg {array} tokenList
  */
 var list_eat_math = (tokenList) => {
-  is_mathop(tokenList, glWalk) ? glWalk++ : parser_error(token);
+  is_mathop(tokenList, glWalk) ? glWalk++ : parser_error(tokenList[glWalk]);
 };
 
 /**
@@ -445,7 +448,7 @@ var list_eat_math = (tokenList) => {
  * @arg {array} tokenList
  */
 var list_eat_compassing = (tokenList) => {
-  is_assingop(tokenList, glWalk) ? glWalk++ : parser_error(token);
+  is_assingop(tokenList, glWalk) ? glWalk++ : parser_error(tokenList[glWalk]);
 };
 
 /**
@@ -803,8 +806,8 @@ function holyc_lex(input) {
  */
 function holyc_parser_parse_exp(tokenList, arg) {
   if (
-    tokenList[glWalk].type === tokenType.semi ||
-    (arg && tokenList[glWalk].type === tokenType.lparen)
+    check_token(tokenList, glWalk, tokenType.semi) ||
+    (arg && check_token(tokenList, glWalk, tokenType.lparen))
   )
     return null;
 
@@ -816,8 +819,8 @@ function holyc_parser_parse_exp(tokenList, arg) {
   ) {
     if (is_mathop(tokenList, glWalk)) {
       if (
-        tokenList[glWalk + 1].type === tokenType.id ||
-        tokenList[glWalk + 1].type === tokenType.const
+        check_token(tokenList, glWalk + 1, tokenType.id) ||
+        check_token(tokenList, glWalk + 1, tokenType.const)
       ) {
         ast = new Ast(tokenList[glWalk].type);
         ast.token = tokenList[glWalk];
@@ -877,7 +880,7 @@ function holyc_parser_parse_exp(tokenList, arg) {
  * @arg {array} tokenList
  */
 function holyc_parser_parse_str_args(tokenList) {
-  if (tokenList[glWalk].type === tokenType.semi) return null;
+  if (check_token(tokenList, glWalk, tokenType.semi)) return null;
 
   let ast;
 
@@ -918,7 +921,7 @@ function holyc_parser_parse_str_args(tokenList) {
  * @arg {array} tokenList
  */
 function holyc_parser_parse_inline_str(tokenList) {
-  if (tokenList[glWalk].type === tokenType.semi) return null;
+  if (check_token(tokenList, glWalk, tokenType.semi)) return null;
 
   let ast = new Ast(tokenType.str);
   ast.token = tokenList[glWalk];
@@ -986,7 +989,7 @@ function holyc_parser_parse_str(tokenList) {
  * @arg {array} tokenList
  */
 function holyc_parser_parse_block(tokenList) {
-  if (tokenList[glWalk].type === tokenType.lbrace) return null;
+  if (check_token(tokenList, glWalk, tokenType.lbrace)) return null;
 
   let ast;
 
@@ -1011,7 +1014,7 @@ function holyc_parser_parse_block(tokenList) {
  * @arg {array} tokenList
  */
 function holyc_parser_parse_args(tokenList = []) {
-  if (tokenList[glWalk].type === tokenType.lparen) return null;
+  if (check_token(tokenList, glWalk, tokenType.lparen)) return null;
 
   let ast = new Ast(tokenList[glWalk].type);
   ast.token = tokenList[glWalk];
@@ -1055,7 +1058,7 @@ function holyc_parser_parse_args(tokenList = []) {
  * @arg {number} i - number of arguments
  */
 function holyc_parser_parse_call_args(tokenList, symIndex, i) {
-  if (tokenList[glWalk].type === tokenType.lparen) return null;
+  if (check_token(tokenList, glWalk, tokenType.lparen)) return null;
 
   let ast;
 
@@ -1254,7 +1257,7 @@ function holyc_parser_parse_prepostfix(tokenList, block) {
   let ast;
 
   if (is_mathop(tokenList, glWalk)) {
-    if (tokenList[glWalk].type === tokenType.increment) {
+    if (check_token(tokenList, glWalk, tokenType.increment)) {
       ast = new Ast(tokenType.increment);
       ast.token = tokenList[glWalk];
       list_eat_math(tokenList);
