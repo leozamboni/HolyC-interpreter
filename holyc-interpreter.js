@@ -265,7 +265,15 @@ var remove_tabs = (val) => {
  */
 var list_eat = (tokenList, expectedType) => {
   try {
-    tokenList[glWalk].type === expectedType;
+    if (tokenList[glWalk].type !== expectedType) {
+      throw new Error();
+    }
+    if (
+      tokenList[glWalk].type === tokenType.id &&
+      !symtab_contain(tokenList[glWalk])
+    ) {
+      throw new Error();
+    }
     glWalk++;
   } catch {
     parser_error(tokenList[glWalk] ? tokenList[glWalk] : tokenList[glWalk - 1]);
@@ -822,12 +830,12 @@ function holyc_parser_parse_exp(tokenList, arg) {
         check_token(tokenList, glWalk + 1, tokenType.id) ||
         check_token(tokenList, glWalk + 1, tokenType.const)
       ) {
-        ast = new Ast(tokenList[glWalk].type);
+        ast = new Ast(tokenList[glWalk]?.type);
         ast.token = tokenList[glWalk];
         list_eat_math(tokenList);
       }
     } else if (is_assingop(tokenList, glWalk)) {
-      ast = new Ast(tokenList[glWalk].type);
+      ast = new Ast(tokenList[glWalk]?.type);
       ast.token = tokenList[glWalk];
       list_eat_compassing(tokenList);
     } else {
@@ -888,7 +896,7 @@ function holyc_parser_parse_str_args(tokenList) {
     check_token(tokenList, glWalk, tokenType.id) ||
     check_token(tokenList, glWalk, tokenType.const)
   ) {
-    ast = new Ast(tokenList[glWalk].type);
+    ast = new Ast(tokenList[glWalk]?.type);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenList[glWalk].type);
   } else if (check_token(tokenList, glWalk, tokenType.str)) {
@@ -1016,7 +1024,7 @@ function holyc_parser_parse_block(tokenList) {
 function holyc_parser_parse_args(tokenList = []) {
   if (check_token(tokenList, glWalk, tokenType.lparen)) return null;
 
-  let ast = new Ast(tokenList[glWalk].type);
+  let ast = new Ast(tokenList[glWalk]?.type);
   ast.token = tokenList[glWalk];
   list_eat_type(tokenList);
 
@@ -1068,12 +1076,12 @@ function holyc_parser_parse_call_args(tokenList, symIndex, i) {
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.comma);
     } else {
-      ast = new Ast(tokenList[glWalk].type);
+      ast = new Ast(tokenList[glWalk]?.type);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenList[glWalk].type);
     }
   } else {
-    ast = new Ast(tokenList[glWalk].type);
+    ast = new Ast(tokenList[glWalk]?.type);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenList[glWalk].type);
   }
@@ -1100,7 +1108,7 @@ function holyc_parser_parse_call(tokenList) {
 
   let symIndex = get_symtab(tokenList[glWalk]);
 
-  let ast = new Ast(tokenType.call);
+  let ast = new Ast(tokenType.id);
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.id);
 
@@ -1189,7 +1197,7 @@ function holyc_parser_parse_id(tokenList) {
     }
   }
 
-  let ast = new Ast(tokenList[glWalk].type);
+  let ast = new Ast(tokenList[glWalk]?.type);
   ast.token = tokenList[glWalk];
   list_eat_type(tokenList);
 
@@ -1267,21 +1275,14 @@ function holyc_parser_parse_prepostfix(tokenList, block) {
       list_eat_math(tokenList);
     }
 
-    if (!symtab_contain(tokenList[glWalk])) {
-      parser_error(tokenList[glWalk]);
-    }
-
     ast.right = new Ast(tokenType.id);
     ast.right.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
   } else {
-    if (!symtab_contain(tokenList[glWalk])) {
-      parser_error(tokenList[glWalk]);
-    }
-
     ast = new Ast(tokenType.id);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
+
     if (check_token(tokenList, glWalk, tokenType.increment)) {
       ast.right = new Ast(tokenType.increment);
       ast.right.token = tokenList[glWalk];
@@ -1316,7 +1317,7 @@ function holyc_parser_parse_for(tokenList) {
   list_eat(tokenList, tokenType.rparen);
 
   if (is_dtype(tokenList, glWalk)) {
-    ast.next.next = new Ast(tokenList[glWalk].type);
+    ast.next.next = new Ast(tokenList[glWalk]?.type);
     ast.next.next.token = tokenList[glWalk];
     list_eat_type(tokenList);
 
@@ -1325,10 +1326,6 @@ function holyc_parser_parse_for(tokenList) {
     }
 
     glSymTab.push(tokenList[glWalk]);
-  }
-
-  if (!symtab_contain(tokenList[glWalk])) {
-    parser_error(tokenList[glWalk]);
   }
 
   ast.left = new Ast(tokenType.id);
@@ -1341,15 +1338,11 @@ function holyc_parser_parse_for(tokenList) {
   ast.left.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.semi);
 
-  if (!symtab_contain(tokenList[glWalk])) {
-    parser_error(tokenList[glWalk]);
-  }
-
   ast.left.left.left = new Ast(tokenType.id);
   ast.left.left.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.id);
 
-  ast.left.left.left.left = new Ast(tokenList[glWalk].type);
+  ast.left.left.left.left = new Ast(tokenList[glWalk]?.type);
   ast.left.left.left.left.token = tokenList[glWalk];
   list_eat_logical(tokenList);
 
