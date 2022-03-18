@@ -420,7 +420,8 @@ var is_assingop = (tokenList, index) => {
     return type === tokenType.assingdiv ||
       type === tokenType.assingmul ||
       type === tokenType.assingsub ||
-      type === tokenType.assingsum
+      type === tokenType.assingsum ||
+      type === tokenType.assig
       ? true
       : false;
   } catch {
@@ -716,7 +717,7 @@ function holyc_lex(input) {
           tokenList.push({
             value: "*=",
             line: line,
-            type: tokenType.assingsub,
+            type: tokenType.assingmul,
           });
         } else {
           tokenList.push({
@@ -863,7 +864,7 @@ function holyc_parser_parse_exp(tokenList, arg) {
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.const);
     }
-  } else if (is_mathop(tokenList, glWalk)) {
+  } else if (is_mathop(tokenList, glWalk - 1)) {
     if (check_token(tokenList, glWalk, tokenType.id)) {
       check_symtab(tokenList, true);
 
@@ -1013,6 +1014,17 @@ function holyc_parser_parse_block(tokenList) {
   let ast;
 
   switch (tokenList[glWalk].type) {
+    case tokenType.i0:
+    case tokenType.u0:
+    case tokenType.i8:
+    case tokenType.u8:
+    case tokenType.i16:
+    case tokenType.u16:
+    case tokenType.i32:
+    case tokenType.u32:
+    case tokenType.i64:
+    case tokenType.u64:
+    case tokenType.f64:
     case tokenType.id:
       ast = holyc_parser_parse_id(tokenList);
       break;
@@ -1161,7 +1173,9 @@ function holyc_parser_parse_call(tokenList) {
 function holyc_parser_parse_inline_vars(tokenList) {
   if (check_token(tokenList, glWalk, tokenType.semi)) return null;
 
-  glSymTab.push(tokenList[glWalk]);
+  check_symtab(tokenList, false);
+
+  glSymTab.push({ ...tokenList[glWalk], const: 0 });
 
   let ast = new Ast(tokenType.id);
   ast.token = tokenList[glWalk];
@@ -1184,7 +1198,7 @@ function holyc_parser_parse_inline_vars(tokenList) {
  */
 function holyc_parser_parse_id(tokenList) {
   if (check_token(tokenList, glWalk, tokenType.id)) {
-    if (check_token(tokenList, glWalk + 1, tokenType.assig)) {
+    if (is_assingop(tokenList, glWalk + 1)) {
       let ast = holyc_parser_parse_exp(tokenList, false);
 
       ast.left = new Ast(tokenType.semi);
@@ -1205,6 +1219,8 @@ function holyc_parser_parse_id(tokenList) {
   let ast = new Ast(tokenList[glWalk]?.type);
   ast.token = tokenList[glWalk];
   list_eat_type(tokenList);
+
+  check_symtab(tokenList, false);
 
   let symtabNode = tokenList[glWalk];
 
@@ -1231,7 +1247,13 @@ function holyc_parser_parse_id(tokenList) {
     ast.left.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.semi);
   } else if (check_token(tokenList, glWalk, tokenType.assig)) {
+    glSymTab.push({ ...symtabNode, const: 0 });
+
     ast.right = holyc_parser_parse_exp(tokenList, false);
+
+    ast.left.left = new Ast(tokenType.semi);
+    ast.left.left.token = tokenList[glWalk];
+    list_eat(tokenList, tokenType.semi);
   } else {
     ast.left.left = new Ast(tokenType.rparen);
     ast.left.left.token = tokenList[glWalk];
@@ -1489,12 +1511,45 @@ function printf(ast) {
  * @arg {object} ast
  */
 function code_gen_gen_exp(ast) {
-  let symTabI = get_symtab(ast.token);
+  let symTabI;
+  if (check_ast_type(ast.token.type, "data_type")) {
+    symTabI = get_symtab(ast.left.token);
+  } else {
+    symTabI = get_symtab(ast.token);
+  }
   let value = parseInt(glSymTab[symTabI].const);
   let walk = ast;
 
   while (walk) {
     switch (walk.type) {
+      case tokenType.assingdiv:
+        if (walk.right.token.type === tokenType.const) {
+          value /= parseInt(walk.right.token.value);
+        } else {
+          value /= parseInt(glSymTab[get_symtab(walk.right.token)].const);
+        }
+        break;
+      case tokenType.assingmul:
+        if (walk.right.token.type === tokenType.const) {
+          value *= parseInt(walk.right.token.value);
+        } else {
+          value *= parseInt(glSymTab[get_symtab(walk.right.token)].const);
+        }
+        break;
+      case tokenType.assingsub:
+        if (walk.right.token.type === tokenType.const) {
+          value -= parseInt(walk.right.token.value);
+        } else {
+          value -= parseInt(glSymTab[get_symtab(walk.right.token)].const);
+        }
+        break;
+      case tokenType.assingsum:
+        if (walk.right.token.type === tokenType.const) {
+          value += parseInt(walk.right.token.value);
+        } else {
+          value += parseInt(glSymTab[get_symtab(walk.right.token)].const);
+        }
+        break;
       case tokenType.assig:
         if (walk.right.token.type === tokenType.const) {
           value = parseInt(walk.right.token.value);
@@ -1534,6 +1589,17 @@ function code_gen_gen_call(ast, expList) {
   if (ast.type === tokenType.lbrace) return ast;
 
   switch (ast.type) {
+    case tokenType.i0:
+    case tokenType.u0:
+    case tokenType.i8:
+    case tokenType.u8:
+    case tokenType.i16:
+    case tokenType.u16:
+    case tokenType.i32:
+    case tokenType.u32:
+    case tokenType.i64:
+    case tokenType.u64:
+    case tokenType.f64:
     case tokenType.id:
       code_gen_gen_exp(ast);
       break;
@@ -1585,6 +1651,17 @@ function code_gen_gen_block(walk, expList) {
   if (!walk) return;
 
   switch (walk.token.type) {
+    case tokenType.i0:
+    case tokenType.u0:
+    case tokenType.i8:
+    case tokenType.u8:
+    case tokenType.i16:
+    case tokenType.u16:
+    case tokenType.i32:
+    case tokenType.u32:
+    case tokenType.i64:
+    case tokenType.u64:
+    case tokenType.f64:
     case tokenType.id:
       code_gen_gen_exp(walk);
       break;
@@ -1653,6 +1730,20 @@ function code_gen(expList) {
 
   do {
     switch (expListAux.ast.type) {
+      case tokenType.i0:
+      case tokenType.u0:
+      case tokenType.i8:
+      case tokenType.u8:
+      case tokenType.i16:
+      case tokenType.u16:
+      case tokenType.i32:
+      case tokenType.u32:
+      case tokenType.i64:
+      case tokenType.u64:
+      case tokenType.f64:
+      case tokenType.id:
+        code_gen_gen_exp(expListAux.ast);
+        break;
       case tokenType.for:
         code_gen_gen_for(expListAux.ast, expList);
         break;
@@ -1662,9 +1753,6 @@ function code_gen(expList) {
           printf(walk);
           walk = walk.right;
         } while (walk);
-        break;
-      case tokenType.id:
-        code_gen_gen_exp(expListAux.ast);
         break;
       case tokenType.call:
         code_gen_gen_call(
