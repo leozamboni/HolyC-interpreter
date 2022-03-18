@@ -140,18 +140,21 @@ var examples = () => {
     case "fibonacci":
       document.getElementById("code").value =
         "// HolyC Fibonacci\n" +
-        "I32 a;\n" +
-        "I32 b;\n" +
-        "I32 c;\n\n" +
-        "a = 0;\n" +
-        "b = 1;\n\n" +
-        "I32 i;\n" +
-        "for (i = 0; i < 20; i++) {\n" +
-        "\tc = a + b;\n" +
-        '\t"%d\\n", c;\n' +
-        "\ta = b;\n" +
-        "\tb = c;\n" +
-        "}\n";
+        "U0\n" +
+        "Fibonacci()\n" +
+        "{\n" +
+        "\tI32 a, b, c;\n\n" +
+        "\ta = 0;\n" +
+        "\tb = 1;\n\n" +
+        "\tfor (I32 i = 0; i < 20; i++)\n" +
+        "\t{\n" +
+        "\t\tc = a + b;\n" +
+        '\t\t"%d\\n", c;\n' +
+        "\t\ta = b;\n" +
+        "\t\tb = c;\n" +
+        "\t}\n" +
+        "}\n\n" +
+        "Fibonacci;";
       break;
     default:
       document.getElementById("code").value = "";
@@ -1028,8 +1031,15 @@ function holyc_parser_parse_block(tokenList) {
     case tokenType.id:
       ast = holyc_parser_parse_id(tokenList);
       break;
+    case tokenType.increment:
+    case tokenType.decrement:
+      ast = holyc_parser_parse_prepostfix(tokenList, false);
+      break;
     case tokenType.str:
       ast = holyc_parser_parse_str(tokenList);
+      break;
+    case tokenType.for:
+      ast = holyc_parser_parse_for(tokenList);
       break;
     default:
       parser_error(tokenList[glWalk]);
@@ -1602,6 +1612,9 @@ function code_gen_gen_call(ast, expList) {
     case tokenType.f64:
     case tokenType.id:
       code_gen_gen_exp(ast);
+      break;
+    case tokenType.for:
+      code_gen_gen_for(ast);
       break;
     case tokenType.call:
       code_gen_gen_call(code_gen_get_ast(expList, ast.token));
