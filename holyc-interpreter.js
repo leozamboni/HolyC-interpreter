@@ -172,7 +172,7 @@ var get_symtab = (token) => {
  * set arguments of a symbol in symbol table
  * @global
  */
-var set_argsymtab = (ast, symtabNode, priorWalk, tokenList) => {
+var set_argsymtab = (symtabNode, priorWalk, tokenList) => {
   symtabNode.args = [];
   let auxArgNode = {};
 
@@ -258,6 +258,17 @@ var remove_tabs = (val) => {
 };
 
 /**
+ * check if symbol is in symbol table or not
+ * @global
+ * @arg {array} tokenList
+ */
+var check_symtab = (tokenList, isin) => {
+  if (symtab_contain(tokenList[glWalk]) !== isin) {
+    parser_error(tokenList[glWalk]);
+  }
+};
+
+/**
  * throw parser error
  * @global
  * @arg {array} tokenList
@@ -266,12 +277,6 @@ var remove_tabs = (val) => {
 var list_eat = (tokenList, expectedType) => {
   try {
     if (tokenList[glWalk].type !== expectedType) {
-      throw new Error();
-    }
-    if (
-      tokenList[glWalk].type === tokenType.id &&
-      !symtab_contain(tokenList[glWalk])
-    ) {
       throw new Error();
     }
     glWalk++;
@@ -848,6 +853,8 @@ function holyc_parser_parse_exp(tokenList, arg) {
     is_assingop(tokenList, glWalk - 1)
   ) {
     if (check_token(tokenList, glWalk, tokenType.id)) {
+      check_symtab(tokenList, true);
+
       ast = new Ast(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
@@ -858,6 +865,8 @@ function holyc_parser_parse_exp(tokenList, arg) {
     }
   } else if (is_mathop(tokenList, glWalk)) {
     if (check_token(tokenList, glWalk, tokenType.id)) {
+      check_symtab(tokenList, true);
+
       ast = new Ast(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
@@ -867,6 +876,8 @@ function holyc_parser_parse_exp(tokenList, arg) {
       list_eat(tokenList, tokenType.const);
     }
   } else if (check_token(tokenList, glWalk, tokenType.id)) {
+    check_symtab(tokenList, true);
+
     ast = new Ast(tokenType.id);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
@@ -981,7 +992,7 @@ function holyc_parser_parse_str(tokenList) {
 
       ast.left.right = holyc_parser_parse_str_args(tokenList);
 
-      set_argsymtab(ast, symtabNode, priorWalk, tokenList);
+      set_argsymtab(symtabNode, priorWalk, tokenList);
 
       ast.left.left = new Ast(tokenType.semi);
       ast.left.left.token = tokenList[glWalk];
@@ -1102,13 +1113,11 @@ function holyc_parser_parse_call_args(tokenList, symIndex, i) {
  * @arg {array} tokenList
  */
 function holyc_parser_parse_call(tokenList) {
-  if (!symtab_contain(tokenList[glWalk])) {
-    parser_error(tokenList[glWalk]);
-  }
+  check_symtab(tokenList, true);
 
   let symIndex = get_symtab(tokenList[glWalk]);
 
-  let ast = new Ast(tokenType.id);
+  let ast = new Ast(tokenType.call);
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.id);
 
@@ -1182,10 +1191,6 @@ function holyc_parser_parse_id(tokenList) {
       ast.left.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.semi);
 
-      //let sbi = get_symtab(ast.token)
-
-      //glSymTab[sbi].const = ast.right.right.token.value
-
       return ast;
     } else if (
       check_token(tokenList, glWalk + 1, tokenType.increment) ||
@@ -1236,7 +1241,7 @@ function holyc_parser_parse_id(tokenList) {
 
     ast.left.left.right = holyc_parser_parse_args(tokenList);
 
-    set_argsymtab(ast, symtabNode, priorWalk, tokenList);
+    set_argsymtab(symtabNode, priorWalk, tokenList);
 
     ast.left.left.left = new Ast(tokenType.lparen);
     ast.left.left.left.token = tokenList[glWalk];
@@ -1275,10 +1280,14 @@ function holyc_parser_parse_prepostfix(tokenList, block) {
       list_eat_math(tokenList);
     }
 
+    check_symtab(tokenList, true);
+
     ast.right = new Ast(tokenType.id);
     ast.right.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
   } else {
+    check_symtab(tokenList, true);
+
     ast = new Ast(tokenType.id);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
@@ -1321,12 +1330,12 @@ function holyc_parser_parse_for(tokenList) {
     ast.next.next.token = tokenList[glWalk];
     list_eat_type(tokenList);
 
-    if (symtab_contain(tokenList[glWalk])) {
-      parser_error(tokenList[glWalk]);
-    }
+    check_symtab(tokenList, true);
 
     glSymTab.push(tokenList[glWalk]);
   }
+
+  check_symtab(tokenList, true);
 
   ast.left = new Ast(tokenType.id);
   ast.left.token = tokenList[glWalk];
@@ -1337,6 +1346,8 @@ function holyc_parser_parse_for(tokenList) {
   ast.left.left = new Ast(tokenType.semi);
   ast.left.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.semi);
+
+  check_symtab(tokenList, true);
 
   ast.left.left.left = new Ast(tokenType.id);
   ast.left.left.left.token = tokenList[glWalk];
@@ -1365,6 +1376,8 @@ function holyc_parser_parse_for(tokenList) {
       true
     );
   } else {
+    check_symtab(tokenList, true);
+
     ast.left.left.left.left.left.left.next = new Ast(tokenType.id);
     ast.left.left.left.left.left.left.next.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
