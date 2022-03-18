@@ -1181,7 +1181,11 @@ function holyc_parser_parse_call(tokenList) {
  * @arg {array} tokenList
  */
 function holyc_parser_parse_inline_vars(tokenList) {
-  if (check_token(tokenList, glWalk, tokenType.semi)) return null;
+  if (
+    check_token(tokenList, glWalk, tokenType.semi) &&
+    !check_token(tokenList, glWalk - 1, tokenType.comma)
+  )
+    return null;
 
   check_symtab(tokenList, false);
 
