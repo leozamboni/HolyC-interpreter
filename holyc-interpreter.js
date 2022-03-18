@@ -1330,7 +1330,7 @@ function holyc_parser_parse_for(tokenList) {
     ast.next.next.token = tokenList[glWalk];
     list_eat_type(tokenList);
 
-    check_symtab(tokenList, true);
+    check_symtab(tokenList, false);
 
     glSymTab.push(tokenList[glWalk]);
   }
