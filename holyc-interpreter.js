@@ -137,9 +137,7 @@ var examples = () => {
         "U0\n" +
         "Fibonacci()\n" +
         "{\n" +
-        "\tI32 a, b, c;\n\n" +
-        "\ta = 0;\n" +
-        "\tb = 1;\n\n" +
+        "\tI32 a = 0, b = 1, c;\n\n" +
         "\tfor (I32 i = 0; i < 20; i++)\n" +
         "\t{\n" +
         "\t\tc = a + b;\n" +
