@@ -1545,12 +1545,6 @@ function printf(ast) {
  * @arg {boolean} left
  */
 function code_gen_gen_exp(ast, left) {
-  if (check_ast_type(ast?.left?.right?.token.type, "id")) {
-    code_gen_gen_exp(ast.left.right, true);
-  } else if (check_ast_type(ast?.right?.token.type, "id")) {
-    code_gen_gen_exp(ast.right, true);
-  }
-
   let symTabI;
   if (check_ast_type(ast.token.type, "data_type")) {
     symTabI = get_symtab(ast.left.token);
@@ -1610,6 +1604,12 @@ function code_gen_gen_exp(ast, left) {
     walk = walk.right;
   }
   glSymTab[symTabI].const = value;
+
+  if (check_ast_type(ast?.left?.right?.token.type, "id")) {
+    code_gen_gen_exp(ast.left.right, true);
+  } else if (check_ast_type(ast?.right?.token.type, "id")) {
+    code_gen_gen_exp(ast.right, true);
+  }
 
   return walk;
 }
