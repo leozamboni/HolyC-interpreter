@@ -1568,6 +1568,7 @@ function code_gen_gen_exp(ast, left) {
         } else {
           value /= parseInt(glSymTab[get_symtab(walk.right.token)].const);
         }
+        glSymTab[symTabI].const = value;
         break;
       case tokenType.mul:
       case tokenType.assingmul:
@@ -1576,6 +1577,7 @@ function code_gen_gen_exp(ast, left) {
         } else {
           value *= parseInt(glSymTab[get_symtab(walk.right.token)].const);
         }
+        glSymTab[symTabI].const = value;
         break;
       case tokenType.assig:
         if (walk.right.token.type === tokenType.const) {
@@ -1583,6 +1585,7 @@ function code_gen_gen_exp(ast, left) {
         } else {
           value = parseInt(glSymTab[get_symtab(walk.right.token)].const);
         }
+        glSymTab[symTabI].const = value;
         break;
       case tokenType.assingsum:
       case tokenType.add:
@@ -1591,6 +1594,7 @@ function code_gen_gen_exp(ast, left) {
         } else {
           value += parseInt(glSymTab[get_symtab(walk.right.token)].const);
         }
+        glSymTab[symTabI].const = value;
         break;
       case tokenType.assingsub:
       case tokenType.sub:
@@ -1599,11 +1603,11 @@ function code_gen_gen_exp(ast, left) {
         } else {
           value -= parseInt(glSymTab[get_symtab(walk.right.token)].const);
         }
+        glSymTab[symTabI].const = value;
         break;
     }
     walk = walk.right;
   }
-  glSymTab[symTabI].const = value;
 
   if (check_ast_type(ast?.left?.right?.token.type, "id")) {
     code_gen_gen_exp(ast.left.right, true);
