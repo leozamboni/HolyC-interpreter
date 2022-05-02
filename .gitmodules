@@ -1,3 +1,3 @@
-[submodule "path_to_submodule"] 
-  path = js-holyc-highlighter/
-  url =https://github.com/leozamboni/js-holyc-highlighter
+[submodule "js-holyc-highlighter"] 
+  path = js-holyc-highlighter
+  url = https://github.com/leozamboni/js-holyc-highlighter
