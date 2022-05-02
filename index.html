@@ -26,18 +26,18 @@
     }
 
     .highlight {
-      z-index: -1;
+      pointer-events: none;
       font-size: large;
       position: absolute;
-      top: 75px;
-      left: 9.5vw;
+      top: 76px;
+      left: 9.6vw;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       text-align: left;
     }
 
     span {
-      white-space: pre;
+      white-space: pre-wrap;
       word-break: break-word;
       overflow-wrap: break-word;
       -ms-word-break: break-word;
@@ -61,6 +61,12 @@
       text-align: left;
     }
 
+    @media only screen and (max-width: 328px) {
+      .highlight {
+        top: 90px;
+      }
+    }
+
     @media only screen and (max-width: 900px) {
 
       textarea,
@@ -73,6 +79,17 @@
       .highlight {
         left: 20vw;
       }
+    }
+
+    ::-moz-selection {
+      /* Code for Firefox */
+      color: rgb(43, 43, 43);
+      background: rgb(47, 114, 202);
+    }
+
+    ::selection {
+      color: rgb(43, 43, 43);
+      background: rgb(107, 162, 235);
     }
   </style>
   <script type="text/javascript">
