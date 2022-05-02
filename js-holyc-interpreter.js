@@ -4,24 +4,6 @@
  * @fileoverview JS HolyC Interpreter
  * @version 0.0.0
  */
-
-document.getElementById("code").value = '"hello world";';
-
-document.getElementById("code").addEventListener("keydown", function (e) {
-  if (e.key == "Tab") {
-    e.preventDefault();
-    let start = this.selectionStart;
-    let end = this.selectionEnd;
-
-    // set textarea value to: text before caret + tab + text after caret
-    this.value =
-      this.value.substring(0, start) + "\t" + this.value.substring(end);
-
-    // put caret at right position again
-    this.selectionStart = this.selectionEnd = start + 1;
-  }
-});
-
 /**
  * JS HolyC AST
  * @constructor
@@ -105,9 +87,10 @@ var tokenType = {
  * @global
  */
 var examples = () => {
+  let content = "";
   switch (document.getElementById("examples").value) {
     case "helloWorld":
-      document.getElementById("code").value =
+      content =
         "// HolyC Hello world\n" +
         '"Holy World\\n";\n\n' +
         "U0\n" +
@@ -132,7 +115,7 @@ var examples = () => {
         'HelloWorld("*");\n';
       break;
     case "fibonacci":
-      document.getElementById("code").value =
+      content =
         "// HolyC Fibonacci\n" +
         "U0\n" +
         "Fibonacci()\n" +
@@ -149,8 +132,10 @@ var examples = () => {
         "Fibonacci;";
       break;
     default:
-      document.getElementById("code").value = "";
+      content = "";
   }
+  document.getElementById("code").value = content;
+  highlight(content);
 };
 
 /**

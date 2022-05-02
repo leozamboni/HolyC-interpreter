@@ -5,25 +5,73 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HOLYC INTERPRETER</title>
+  <script src="js-holyc-highlighter/holyc-highlighter.js"></script>
+  <script src="js-holyc-interpreter.js"></script>
   <style>
     * {
       text-align: center;
+      padding: 0;
+      margin: 0;
+      font-family: monospace;
+    }
+
+    .textarea_input {
+      text-align: left;
+      background-color: rgba(0, 0, 0, 0);
+      position: relative;
+      color: transparent;
+      caret-color: black;
+      font-size: large;
+      white-space: break-spaces;
+    }
+
+    .highlight {
+      z-index: -1;
+      font-size: large;
+      position: absolute;
+      top: 75px;
+      left: 9.5vw;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      text-align: left;
+    }
+
+    span {
+      white-space: pre;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      -ms-word-break: break-word;
+      word-break: break-word;
+      -ms-hyphens: auto;
+      -moz-hyphens: auto;
+      -webkit-hyphens: auto;
+      hyphens: auto;
+      overflow-wrap: break-word;
     }
 
     .textarea-container {
       display: flex;
     }
 
-    textarea {
+    textarea,
+    .highlight,
+    .textarea_input {
       width: 40vw;
       height: 40vh;
       text-align: left;
     }
 
     @media only screen and (max-width: 900px) {
-      textarea {
+
+      textarea,
+      .highlight,
+      .textarea_input {
         width: 60vw;
         height: 30vh;
+      }
+
+      .highlight {
+        left: 20vw;
       }
     }
   </style>
@@ -48,18 +96,27 @@
   </noscript>
 
   <main>
+    <br>
     <b>
       <a href="http://leozamboni.github.io/compilers/holyc/2022/03/01/holyc-interpreter.html">"HolyC Interpreter"</a>
     </b>
+    <br>
+    <br>
     <p>
       (Interpreter & site by
       <a href="http://leozamboni.github.io">Leonardo Z. Nunes</a>.)
     </p>
+    <br>
 
     <div id="textarea-container">
-      <textarea id="code"></textarea>
+      <textarea id="code" onscroll="set_scroll()" oninput="highlight(this.value)" class="textarea_input"></textarea>
+      <div id="hl" class="highlight"></div>
+
       <textarea disabled id="output"></textarea>
     </div>
+
+    <br>
+
 
     <button onclick="main()">RUN(▶)</button>
     <select onchange="examples()" id="examples">
@@ -68,6 +125,9 @@
       <option value="fibonacci">Fibonacci</option>
     </select>
     <button onclick="clear_output()">CLEAR(🗑)</button>
+
+    <br>
+    <br>
 
     <hr />
     <p style="color: red">
@@ -80,8 +140,24 @@
 
     <p>HolyC and TempleOS are creations of Terry Davis.</p>
   </main>
+  <script>
+    document.getElementById("code").value = '"hello world";';
+    highlight('"hello world";')
+    document.getElementById("code").addEventListener("keydown", function (e) {
+      if (e.key == "Tab") {
+        e.preventDefault();
+        let start = this.selectionStart;
+        let end = this.selectionEnd;
 
-  <script src="holyc-interpreter.js"></script>
+        // set textarea value to: text before caret + tab + text after caret
+        this.value =
+          this.value.substring(0, start) + "\t" + this.value.substring(end);
+
+        // put caret at right position again
+        this.selectionStart = this.selectionEnd = start + 1;
+      }
+    });
+  </script>
 </body>
 
 </html>
