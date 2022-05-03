@@ -15,7 +15,8 @@
       font-family: monospace;
     }
 
-    .textarea_input {
+    textarea {
+      resize: none;
       text-align: left;
       background-color: rgba(0, 0, 0, 0);
       position: relative;
@@ -25,13 +26,13 @@
       white-space: break-spaces;
     }
 
-    .highlight {
+    #hl {
+      overflow: hidden;
       pointer-events: none;
       font-size: large;
       position: absolute;
       top: 76px;
-      left: 9.6vw;
-      overflow-y: auto;
+      left: 25vw;
       -webkit-overflow-scrolling: touch;
       text-align: left;
     }
@@ -49,42 +50,17 @@
       overflow-wrap: break-word;
     }
 
-    .textarea-container {
-      display: flex;
-    }
-
     textarea,
-    .highlight,
-    .textarea_input {
-      width: 40vw;
+    #hl {
+      width: 50vw;
       height: 40vh;
       text-align: left;
-    }
-
-    @media only screen and (max-width: 328px) {
-      .highlight {
-        top: 90px;
-      }
-    }
-
-    @media only screen and (max-width: 900px) {
-
-      textarea,
-      .highlight,
-      .textarea_input {
-        width: 60vw;
-        height: 30vh;
-      }
-
-      .highlight {
-        left: 20vw;
-      }
     }
 
     ::-moz-selection {
       /* Code for Firefox */
       color: rgb(43, 43, 43);
-      background: rgb(47, 114, 202);
+      background: rgb(107, 162, 235);
     }
 
     ::selection {
@@ -126,28 +102,29 @@
     <br>
 
     <div id="textarea-container">
-      <textarea id="code" onscroll="set_scroll()" oninput="highlight(this.value)" class="textarea_input"></textarea>
-      <div id="hl" class="highlight"></div>
-
-      <textarea disabled id="output"></textarea>
+      <textarea id="code" onmouseup="set_size()" onscroll="set_scroll()" oninput="highlight(this.value)"></textarea>
+      <div id="hl"></div>
     </div>
 
     <br>
 
-
-    <button onclick="main()">RUN(▶)</button>
     <select onchange="examples()" id="examples">
       <option value="">Examples</option>
       <option value="helloWorld">Hello World</option>
       <option value="fibonacci">Fibonacci</option>
     </select>
-    <button onclick="clear_output()">CLEAR(🗑)</button>
+    
+<br>
+<br>
+
+    <button onclick="main()">RUN(▶)</button>
+    
 
     <br>
     <br>
 
     <hr />
-    <p style="color: red">
+    <p>
       "This is not a complete HolyC language compiler yet, the source
       code is on GitHub you can contribute
       <a href="https://github.com/leozamboni/HOLYC-INTERPRETER">here</a>. All currently implemented features are

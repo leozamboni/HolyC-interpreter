@@ -8,6 +8,9 @@
  * JS HolyC AST
  * @constructor
  */
+
+var outputstr = "";
+
 class Ast {
   token = null;
   next = null;
@@ -44,7 +47,7 @@ var glWalk;
  * @readonly
  * @enum {number}
  */
-var tokenType = {
+const tokenType = {
   const: 1,
   str: 2,
   id: 3,
@@ -86,7 +89,7 @@ var tokenType = {
  * examples list of currently implemented features
  * @global
  */
-var examples = () => {
+const examples = () => {
   let content = "";
   switch (document.getElementById("examples").value) {
     case "helloWorld":
@@ -112,7 +115,7 @@ var examples = () => {
         "'\\t';\n" +
         "Hello;\n" +
         "'\\n';\n" +
-        'HelloWorld("*");\n';
+        'HelloWorld("*");';
       break;
     case "fibonacci":
       content =
@@ -142,7 +145,7 @@ var examples = () => {
  * get index of a symbol in symbol table
  * @global
  */
-var get_symtab = (token) => {
+const get_symtab = (token) => {
   for (let i = 0; i < glSymTab.length; ++i) {
     if (glSymTab[i].value === token.value) return i;
   }
@@ -152,7 +155,7 @@ var get_symtab = (token) => {
  * set arguments of a symbol in symbol table
  * @global
  */
-var set_argsymtab = (symtabNode, priorWalk, tokenList) => {
+const set_argsymtab = (symtabNode, priorWalk, tokenList) => {
   symtabNode.args = [];
   let auxArgNode = {};
 
@@ -178,19 +181,11 @@ var set_argsymtab = (symtabNode, priorWalk, tokenList) => {
 };
 
 /**
- * clear output textarea
- * @global
- */
-var clear_output = () => {
-  document.getElementById("output").value = "";
-};
-
-/**
  * check if value is alphanumeric
  * @global
  * @arg {number} val - token value
  */
-var is_alpha = (val) => {
+const is_alpha = (val) => {
   if (val === " " || val === "\n") return false;
   return /^[A-Z0-9]$/i.test(val);
 };
@@ -200,7 +195,7 @@ var is_alpha = (val) => {
  * @global
  * @arg {number} val - token value
  */
-var is_digit = (val) => {
+const is_digit = (val) => {
   if (val === " " || val === "\n") return false;
   return !isNaN(val);
 };
@@ -210,11 +205,9 @@ var is_digit = (val) => {
  * @global
  * @arg {object} token
  */
-var lexer_error = (token) => {
-  let output = document.getElementById("output");
-  output.value += "compile failure\n";
-  throw new Error(
-    (output.value += `lexer: '${token.value}' unexpected value in line ${token.line}\n`)
+const lexer_error = (token) => {
+  throw alert(
+    `compile failure\nlexer: '${token.value}' unexpected value in line ${token.line}\n`
   );
 };
 
@@ -223,11 +216,9 @@ var lexer_error = (token) => {
  * @global
  * @arg {object} token
  */
-var parser_error = (token) => {
-  let output = document.getElementById("output");
-  output.value += "compile failure\n";
-  throw new Error(
-    (output.value += `parser: '${token.value}' unexpected value in line ${token.line}\n`)
+const parser_error = (token) => {
+  throw alert(
+    `compile failure\nparser: '${token.value}' unexpected value in line ${token.line}\n`
   );
 };
 
@@ -236,7 +227,7 @@ var parser_error = (token) => {
  * @global
  * @arg {number} val - token value
  */
-var remove_tabs = (val) => {
+const remove_tabs = (val) => {
   return val.replace(/\t/g, "");
 };
 
@@ -246,7 +237,7 @@ var remove_tabs = (val) => {
  * @arg {array} tokenList
  * @arg {boolean} isin
  */
-var check_symtab = (tokenList, isin) => {
+const check_symtab = (tokenList, isin) => {
   if (symtab_contain(tokenList[glWalk]) !== isin) {
     parser_error(tokenList[glWalk]);
   }
@@ -258,7 +249,7 @@ var check_symtab = (tokenList, isin) => {
  * @arg {array} tokenList
  * @arg {number} expectedType
  */
-var list_eat = (tokenList, expectedType) => {
+const list_eat = (tokenList, expectedType) => {
   try {
     if (tokenList[glWalk].type !== expectedType) {
       throw new Error();
@@ -274,7 +265,7 @@ var list_eat = (tokenList, expectedType) => {
  * @global
  * @arg {object} token
  */
-var symtab_contain = (token) => {
+const symtab_contain = (token) => {
   if (!glSymTab.filter((e) => e.value === token.value).length) {
     return false;
   }
@@ -288,7 +279,7 @@ var symtab_contain = (token) => {
  * @arg {number} index
  * @arg {number} expectedType
  */
-var check_token = (tokenList, index, expectedType) => {
+const check_token = (tokenList, index, expectedType) => {
   try {
     return tokenList[index].type === expectedType ? true : false;
   } catch {
@@ -302,7 +293,7 @@ var check_token = (tokenList, index, expectedType) => {
  * @arg {number} type
  * @arg {string} expectedType
  */
-var check_ast_type = (type, expectedType) => {
+const check_ast_type = (type, expectedType) => {
   switch (expectedType) {
     case "id":
       return type === tokenType.id ? true : false;
@@ -336,7 +327,7 @@ var check_ast_type = (type, expectedType) => {
  * @arg {array} tokenList
  * @arg {number} index
  */
-var is_dtype = (tokenList, index) => {
+const is_dtype = (tokenList, index) => {
   try {
     let type = tokenList[index].type;
     return type === tokenType.i0 ||
@@ -363,7 +354,7 @@ var is_dtype = (tokenList, index) => {
  * @arg {array} tokenList
  * @arg {number} index
  */
-var is_logicalop = (tokenList, index) => {
+const is_logicalop = (tokenList, index) => {
   try {
     let type = tokenList[index].type;
     return type === tokenType.big || type === tokenType.less ? true : false;
@@ -378,7 +369,7 @@ var is_logicalop = (tokenList, index) => {
  * @arg {array} tokenList
  * @arg {number} index
  */
-var is_mathop = (tokenList, index) => {
+const is_mathop = (tokenList, index) => {
   try {
     let type = tokenList[index].type;
     return type === tokenType.add ||
@@ -400,7 +391,7 @@ var is_mathop = (tokenList, index) => {
  * @arg {array} tokenList
  * @arg {number} index
  */
-var is_assingop = (tokenList, index) => {
+const is_assingop = (tokenList, index) => {
   try {
     let type = tokenList[index].type;
     return type === tokenType.assingdiv ||
@@ -420,7 +411,7 @@ var is_assingop = (tokenList, index) => {
  * @global
  * @arg {array} tokenList
  */
-var list_eat_type = (tokenList) => {
+const list_eat_type = (tokenList) => {
   is_dtype(tokenList, glWalk) ? glWalk++ : parser_error(tokenList[glWalk]);
 };
 
@@ -429,7 +420,7 @@ var list_eat_type = (tokenList) => {
  * @global
  * @arg {array} tokenList
  */
-var list_eat_logical = (tokenList) => {
+const list_eat_logical = (tokenList) => {
   is_logicalop(tokenList, glWalk) ? glWalk++ : parser_error(tokenList[glWalk]);
 };
 
@@ -438,7 +429,7 @@ var list_eat_logical = (tokenList) => {
  * @global
  * @arg {array} tokenList
  */
-var list_eat_math = (tokenList) => {
+const list_eat_math = (tokenList) => {
   is_mathop(tokenList, glWalk) ? glWalk++ : parser_error(tokenList[glWalk]);
 };
 
@@ -447,7 +438,7 @@ var list_eat_math = (tokenList) => {
  * @global
  * @arg {array} tokenList
  */
-var list_eat_compassing = (tokenList) => {
+const list_eat_compassing = (tokenList) => {
   is_assingop(tokenList, glWalk) ? glWalk++ : parser_error(tokenList[glWalk]);
 };
 
@@ -456,7 +447,7 @@ var list_eat_compassing = (tokenList) => {
  * @global
  * @arg {number} val - token value
  */
-var get_type = (val) => {
+const get_type = (val) => {
   switch (val) {
     case "I0":
       return tokenType.i0;
@@ -538,10 +529,9 @@ function holyc_lex_type(tokenList, line, input, i) {
  * @arg {string} input - input string
  */
 function holyc_lex(input) {
+  outputstr = "";
   if (!input) {
-    throw new Error(
-      (document.getElementById("output").value += "nothing to compile\n")
-    );
+    throw alert("nothing to compile\n");
   }
   input = remove_tabs(input);
 
@@ -1505,19 +1495,18 @@ function holyc_parser(tokenList) {
  */
 function printf(ast) {
   let str = ast.token.value;
-  let output = document.getElementById("output");
 
   if (ast.token.value.includes("%")) {
     str = str.replace("%d", glSymTab[get_symtab(ast.left.right.token)].const);
   }
 
-  output.value += str.replace(/\\n|\\t/g, (e) => {
+  outputstr += str.replace(/\\n|\\t/g, (e) => {
     switch (e) {
       case "\\r":
       case "\\n":
         return "\n";
       case "\\t":
-        return "\t";
+        return "    ";
       default:
         return e;
     }
@@ -1793,4 +1782,5 @@ function code_gen(expList) {
 
     expListAux = expListAux.next;
   } while (expListAux);
+  alert(outputstr);
 }
