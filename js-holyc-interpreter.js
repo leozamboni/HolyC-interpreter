@@ -4,13 +4,11 @@
  * @fileoverview JS HolyC Interpreter
  * @version 0.0.0
  */
+
 /**
  * JS HolyC AST
  * @constructor
  */
-
-var outputstr = "";
-
 class Ast {
   token = null;
   next = null;
@@ -29,6 +27,12 @@ class ExpList {
   next = null;
   ast = null;
 }
+
+/**
+ * alert output string
+ * @global
+ */
+var outputstr = "";
 
 /**
  * symbol table
