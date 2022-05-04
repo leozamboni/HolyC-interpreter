@@ -76,11 +76,7 @@
   </style>
   <script type="text/javascript">
     function main() {
-      code_gen(
-        holyc_parser(
-          holyc_lex(document.getElementById("code").value)
-        )
-      );
+      alert(code_gen(holyc_parser(holyc_lex(document.getElementById("code").value))));
     }
   </script>
 </head>
@@ -157,6 +153,57 @@
         this.selectionStart = this.selectionEnd = start + 1;
       }
     });
+    const examples = () => {
+      let content = "";
+      switch (document.getElementById("examples").value) {
+        case "helloWorld":
+          content =
+            "// HolyC Hello world\n" +
+            '"Holy World\\n";\n\n' +
+            "U0\n" +
+            "HelloWorld()\n" +
+            "{\n" +
+            '\t"Holy World\\n";\n' +
+            "}\n\n" +
+            "U0\n" +
+            "World()\n" +
+            "{\n" +
+            "\t'World\\n';\n" +
+            "}\n\n" +
+            "U0\n" +
+            "Hello()\n" +
+            "{\n" +
+            "\t'Ho';\n\t'l', 'y';\n\t' ';\n" +
+            "\tWorld();\n" +
+            "}\n\n" +
+            "'\\t';\n" +
+            "Hello;\n" +
+            "'\\n';\n" +
+            'HelloWorld("*");';
+          break;
+        case "fibonacci":
+          content =
+            "// HolyC Fibonacci\n" +
+            "U0\n" +
+            "Fibonacci()\n" +
+            "{\n" +
+            "\tI32 a = 0, b = 1, c;\n\n" +
+            "\tfor (I32 i = 0; i < 20; i++)\n" +
+            "\t{\n" +
+            "\t\tc = a + b;\n" +
+            '\t\t"%d\\n", c;\n' +
+            "\t\ta = b;\n" +
+            "\t\tb = c;\n" +
+            "\t}\n" +
+            "}\n\n" +
+            "Fibonacci;";
+          break;
+        default:
+          content = "";
+      }
+      document.getElementById("code").value = content;
+      highlight(content);
+    };
   </script>
 </body>
 

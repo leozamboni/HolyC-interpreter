@@ -10,10 +10,10 @@
  * @constructor
  */
 class Ast {
-  token = null;
-  next = null;
-  left = null;
-  right = null;
+  token;
+  next;
+  left;
+  right;
   constructor(type) {
     this.type = type;
   }
@@ -24,15 +24,15 @@ class Ast {
  * @constructor
  */
 class ExpList {
-  next = null;
-  ast = null;
+  next;
+  ast;
 }
 
 /**
  * alert output string
  * @global
  */
-var outputstr = "";
+var outputstr;
 
 /**
  * symbol table
@@ -87,67 +87,11 @@ const tokenType = {
   assingsub: 33,
   assingdiv: 34,
   assingmul: 35,
-};
-
-/**
- * examples list of currently implemented features
- * @global
- */
-const examples = () => {
-  let content = "";
-  switch (document.getElementById("examples").value) {
-    case "helloWorld":
-      content =
-        "// HolyC Hello world\n" +
-        '"Holy World\\n";\n\n' +
-        "U0\n" +
-        "HelloWorld()\n" +
-        "{\n" +
-        '\t"Holy World\\n";\n' +
-        "}\n\n" +
-        "U0\n" +
-        "World()\n" +
-        "{\n" +
-        "\t'World\\n';\n" +
-        "}\n\n" +
-        "U0\n" +
-        "Hello()\n" +
-        "{\n" +
-        "\t'Ho';\n\t'l', 'y';\n\t' ';\n" +
-        "\tWorld();\n" +
-        "}\n\n" +
-        "'\\t';\n" +
-        "Hello;\n" +
-        "'\\n';\n" +
-        'HelloWorld("*");';
-      break;
-    case "fibonacci":
-      content =
-        "// HolyC Fibonacci\n" +
-        "U0\n" +
-        "Fibonacci()\n" +
-        "{\n" +
-        "\tI32 a = 0, b = 1, c;\n\n" +
-        "\tfor (I32 i = 0; i < 20; i++)\n" +
-        "\t{\n" +
-        "\t\tc = a + b;\n" +
-        '\t\t"%d\\n", c;\n' +
-        "\t\ta = b;\n" +
-        "\t\tb = c;\n" +
-        "\t}\n" +
-        "}\n\n" +
-        "Fibonacci;";
-      break;
-    default:
-      content = "";
-  }
-  document.getElementById("code").value = content;
-  highlight(content);
+  if: 36,
 };
 
 /**
  * get index of a symbol in symbol table
- * @global
  */
 const get_symtab = (token) => {
   for (let i = 0; i < glSymTab.length; ++i) {
@@ -157,7 +101,6 @@ const get_symtab = (token) => {
 
 /**
  * set arguments of a symbol in symbol table
- * @global
  */
 const set_argsymtab = (symtabNode, priorWalk, tokenList) => {
   symtabNode.args = [];
@@ -186,7 +129,6 @@ const set_argsymtab = (symtabNode, priorWalk, tokenList) => {
 
 /**
  * check if value is alphanumeric
- * @global
  * @arg {number} val - token value
  */
 const is_alpha = (val) => {
@@ -196,7 +138,6 @@ const is_alpha = (val) => {
 
 /**
  * check if value is alphanumeric
- * @global
  * @arg {number} val - token value
  */
 const is_digit = (val) => {
@@ -206,7 +147,6 @@ const is_digit = (val) => {
 
 /**
  * throw lexer error
- * @global
  * @arg {object} token
  */
 const lexer_error = (token) => {
@@ -217,7 +157,6 @@ const lexer_error = (token) => {
 
 /**
  * throw parser error
- * @global
  * @arg {object} token
  */
 const parser_error = (token) => {
@@ -228,7 +167,6 @@ const parser_error = (token) => {
 
 /**
  * remove tabulation from string
- * @global
  * @arg {number} val - token value
  */
 const remove_tabs = (val) => {
@@ -237,7 +175,6 @@ const remove_tabs = (val) => {
 
 /**
  * check if symbol is in symbol table or not
- * @global
  * @arg {array} tokenList
  * @arg {boolean} isin
  */
@@ -249,7 +186,6 @@ const check_symtab = (tokenList, isin) => {
 
 /**
  * throw parser error
- * @global
  * @arg {array} tokenList
  * @arg {number} expectedType
  */
@@ -266,7 +202,6 @@ const list_eat = (tokenList, expectedType) => {
 
 /**
  * check if token is in symbol table
- * @global
  * @arg {object} token
  */
 const symtab_contain = (token) => {
@@ -278,7 +213,6 @@ const symtab_contain = (token) => {
 
 /**
  * check token type
- * @global
  * @arg {array} tokenList
  * @arg {number} index
  * @arg {number} expectedType
@@ -293,7 +227,6 @@ const check_token = (tokenList, index, expectedType) => {
 
 /**
  * check ast type
- * @global
  * @arg {number} type
  * @arg {string} expectedType
  */
@@ -327,7 +260,6 @@ const check_ast_type = (type, expectedType) => {
 
 /**
  * check if token type is a data type
- * @global
  * @arg {array} tokenList
  * @arg {number} index
  */
@@ -354,7 +286,6 @@ const is_dtype = (tokenList, index) => {
 
 /**
  * check if token type is a logical operator
- * @global
  * @arg {array} tokenList
  * @arg {number} index
  */
@@ -369,7 +300,6 @@ const is_logicalop = (tokenList, index) => {
 
 /**
  * check if token type is a mathematical operator
- * @global
  * @arg {array} tokenList
  * @arg {number} index
  */
@@ -391,7 +321,6 @@ const is_mathop = (tokenList, index) => {
 
 /**
  * check if token type is a compound assignment operator
- * @global
  * @arg {array} tokenList
  * @arg {number} index
  */
@@ -412,7 +341,6 @@ const is_assingop = (tokenList, index) => {
 
 /**
  * increment glWalk to next node in token list if token type is data type
- * @global
  * @arg {array} tokenList
  */
 const list_eat_type = (tokenList) => {
@@ -421,7 +349,6 @@ const list_eat_type = (tokenList) => {
 
 /**
  * increment glWalk to next node in token list if token type is logical operator
- * @global
  * @arg {array} tokenList
  */
 const list_eat_logical = (tokenList) => {
@@ -430,7 +357,6 @@ const list_eat_logical = (tokenList) => {
 
 /**
  * increment glWalk to next node in token list if token type is mathematical operator
- * @global
  * @arg {array} tokenList
  */
 const list_eat_math = (tokenList) => {
@@ -439,7 +365,6 @@ const list_eat_math = (tokenList) => {
 
 /**
  * increment glWalk to next node in token list if token type is compound assignment operator
- * @global
  * @arg {array} tokenList
  */
 const list_eat_compassing = (tokenList) => {
@@ -447,12 +372,11 @@ const list_eat_compassing = (tokenList) => {
 };
 
 /**
- * number token data type to string
- * @global
- * @arg {number} val - token value
+ * lex data type
+ * @arg {string} str - token
  */
-const get_type = (val) => {
-  switch (val) {
+const lex_type = (str) => {
+  switch (str) {
     case "I0":
       return tokenType.i0;
     case "U0":
@@ -476,63 +400,30 @@ const get_type = (val) => {
     case "F64":
       return tokenType.f64;
     default:
-      console.log("UNKNOWN TYPE");
+      return null;
   }
 };
 
 /**
- * lexical analysis of HolyC data types
- * @arg {array} tokenList - current lexer token list
- * @arg {number} line - line of token
- * @arg {string} input - current input string
- * @arg {number} i - current string index
+ * lex keyword
+ * @arg {string} str - token
  */
-function holyc_lex_type(tokenList, line, input, i) {
-  if (input[i] === "U" || input[i] === "I" || input[i] === "F") {
-    if (input[i + 1] === "0" || input[i + 1] === "8") {
-      if (input[i + 1] === "0" && input[i] !== "U" && input[i] !== "I") {
-        return false;
-      }
-      aux = input[i++];
-      aux += input[i];
-      tokenList.push({
-        value: aux,
-        line: line,
-        type: get_type(aux),
-      });
-      return i;
-    } else if (
-      (input[i + 1] === "1" && input[i + 2] === "6") ||
-      (input[i + 1] === "3" && input[i + 2] === "2") ||
-      (input[i + 1] === "6" && input[i + 2] === "4")
-    ) {
-      if (
-        (input[i] === "F" && input[i + 1] !== "6") ||
-        (input[i] === "F" && input[i + 2] !== "4")
-      ) {
-        return false;
-      }
-      aux = input[i++];
-      aux += input[i++];
-      aux += input[i];
-      tokenList.push({
-        value: aux,
-        line: line,
-        type: get_type(aux),
-      });
-      return i;
-    } else {
-      return false;
-    }
+const lex_keyword = (str) => {
+  switch (str) {
+    case "for":
+      return tokenType.for;
+    case "if":
+      return tokenType.if;
+    default:
+      return tokenType.id;
   }
-  return false;
-}
+};
 
 /**
  * JS HolyC lexer
  * @arg {string} input - input string
  */
-function holyc_lex(input) {
+const holyc_lex = (input) => {
   outputstr = "";
   if (!input) {
     throw alert("nothing to compile\n");
@@ -611,25 +502,15 @@ function holyc_lex(input) {
     if (is_alpha(input[i])) {
       let aux = "";
 
-      if ((y = holyc_lex_type(tokenList, line, input, i))) {
-        i = y;
-        continue;
-      }
-
       while (is_alpha(input[i])) {
         aux += input[i++];
       }
-
       i--;
 
-      let type;
+      let type = lex_type(aux);
 
-      switch (aux) {
-        case "for":
-          type = tokenType.for;
-          break;
-        default:
-          type = tokenType.id;
+      if (!type) {
+        type = lex_keyword(aux);
       }
 
       tokenList.push({
@@ -790,13 +671,13 @@ function holyc_lex(input) {
     }
   }
   return tokenList;
-}
+};
 
 /**
  * semantic analysis of expresions
  * @arg {array} tokenList
  */
-function holyc_parser_parse_exp(tokenList, arg) {
+const holyc_parser_parse_exp = (tokenList, arg) => {
   if (
     check_token(tokenList, glWalk, tokenType.semi) ||
     check_token(tokenList, glWalk, tokenType.comma) ||
@@ -872,13 +753,13 @@ function holyc_parser_parse_exp(tokenList, arg) {
   ast.right = holyc_parser_parse_exp(tokenList, arg);
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of string arguments
  * @arg {array} tokenList
  */
-function holyc_parser_parse_str_args(tokenList) {
+const holyc_parser_parse_str_args = (tokenList) => {
   if (check_token(tokenList, glWalk, tokenType.semi)) return null;
 
   let ast;
@@ -913,13 +794,13 @@ function holyc_parser_parse_str_args(tokenList) {
   ast.right = holyc_parser_parse_str_args(tokenList);
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of inline strings
  * @arg {array} tokenList
  */
-function holyc_parser_parse_inline_str(tokenList) {
+const holyc_parser_parse_inline_str = (tokenList) => {
   if (check_token(tokenList, glWalk, tokenType.semi)) return null;
 
   let ast = new Ast(tokenType.str);
@@ -939,13 +820,13 @@ function holyc_parser_parse_inline_str(tokenList) {
   ast.right = holyc_parser_parse_inline_str(tokenList);
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of strings
  * @arg {array} tokenList
  */
-function holyc_parser_parse_str(tokenList) {
+const holyc_parser_parse_str = (tokenList) => {
   let symtabNode = tokenList[glWalk];
 
   let ast = new Ast(tokenType.str);
@@ -981,13 +862,13 @@ function holyc_parser_parse_str(tokenList) {
   }
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of blocks
  * @arg {array} tokenList
  */
-function holyc_parser_parse_block(tokenList) {
+const holyc_parser_parse_block = (tokenList) => {
   if (check_token(tokenList, glWalk, tokenType.lbrace)) return null;
 
   let ast;
@@ -1024,13 +905,13 @@ function holyc_parser_parse_block(tokenList) {
   ast.next = holyc_parser_parse_block(tokenList);
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of procedures arguments
  * @arg {array} tokenList
  */
-function holyc_parser_parse_args(tokenList = []) {
+const holyc_parser_parse_args = (tokenList = []) => {
   if (check_token(tokenList, glWalk, tokenType.lparen)) return null;
 
   let ast = new Ast(tokenList[glWalk]?.type);
@@ -1066,7 +947,7 @@ function holyc_parser_parse_args(tokenList = []) {
   ast.right = holyc_parser_parse_args(tokenList);
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of procedures call arguments
@@ -1074,7 +955,7 @@ function holyc_parser_parse_args(tokenList = []) {
  * @arg {number} symIndex - index of procedure symbol
  * @arg {number} i - number of arguments
  */
-function holyc_parser_parse_call_args(tokenList, symIndex, i) {
+const holyc_parser_parse_call_args = (tokenList, symIndex, i) => {
   if (check_token(tokenList, glWalk, tokenType.lparen)) return null;
 
   let ast;
@@ -1104,13 +985,13 @@ function holyc_parser_parse_call_args(tokenList, symIndex, i) {
   ast.right = holyc_parser_parse_call_args(tokenList, symIndex, ++i);
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of procedures call
  * @arg {array} tokenList
  */
-function holyc_parser_parse_call(tokenList) {
+const holyc_parser_parse_call = (tokenList) => {
   check_symtab(tokenList, true);
 
   let symIndex = get_symtab(tokenList[glWalk]);
@@ -1150,13 +1031,13 @@ function holyc_parser_parse_call(tokenList) {
   }
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of inline variables declaration
  * @arg {array} tokenList
  */
-function holyc_parser_parse_inline_vars(tokenList) {
+const holyc_parser_parse_inline_vars = (tokenList) => {
   if (
     check_token(tokenList, glWalk, tokenType.semi) &&
     !check_token(tokenList, glWalk - 1, tokenType.comma)
@@ -1194,13 +1075,13 @@ function holyc_parser_parse_inline_vars(tokenList) {
   ast.right = holyc_parser_parse_inline_vars(tokenList);
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of identifiers
  * @arg {array} tokenList
  */
-function holyc_parser_parse_id(tokenList) {
+const holyc_parser_parse_id = (tokenList) => {
   if (check_token(tokenList, glWalk, tokenType.id)) {
     if (is_assingop(tokenList, glWalk + 1)) {
       let ast = holyc_parser_parse_exp(tokenList, false);
@@ -1293,14 +1174,14 @@ function holyc_parser_parse_id(tokenList) {
   }
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of variable with pre/post fix operator
  * @arg {array} tokenList
  * @arg {boolean} block
  */
-function holyc_parser_parse_prepostfix(tokenList, block) {
+const holyc_parser_parse_prepostfix = (tokenList, block) => {
   let ast;
 
   if (is_mathop(tokenList, glWalk)) {
@@ -1344,13 +1225,13 @@ function holyc_parser_parse_prepostfix(tokenList, block) {
   }
 
   return ast;
-}
+};
 
 /**
  * semantic analysis of for statement
  * @arg {array} tokenList
  */
-function holyc_parser_parse_for(tokenList) {
+const holyc_parser_parse_for = (tokenList) => {
   let ast = new Ast(tokenType.for);
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.for);
@@ -1437,12 +1318,12 @@ function holyc_parser_parse_for(tokenList) {
   list_eat(tokenList, tokenType.lbrace);
 
   return ast;
-}
+};
 
 /**
  * @arg {array} tokenList
  */
-function holyc_parser_parse(tokenList) {
+const holyc_parser_parse = (tokenList) => {
   if (!tokenList[glWalk]) return null;
 
   let expList = new ExpList();
@@ -1481,23 +1362,23 @@ function holyc_parser_parse(tokenList) {
   expList.next = holyc_parser_parse(tokenList);
 
   return expList;
-}
+};
 
 /**
  * HolyC semantic analysis
  * @arg {array} tokenList
  */
-function holyc_parser(tokenList) {
+const holyc_parser = (tokenList) => {
   glWalk = 0;
   glSymTab = [];
   return holyc_parser_parse(tokenList);
-}
+};
 
 /**
  * printf function
  * @arg {object} ast
  */
-function printf(ast) {
+const printf = (ast) => {
   let str = ast.token.value;
 
   if (ast.token.value.includes("%")) {
@@ -1515,14 +1396,14 @@ function printf(ast) {
         return e;
     }
   });
-}
+};
 
 /**
  * code generation of expresions
  * @arg {object} ast
  * @arg {boolean} left
  */
-function code_gen_gen_exp(ast, left) {
+const code_gen_gen_exp = (ast, left) => {
   let symTabI;
   if (check_ast_type(ast.token.type, "data_type")) {
     symTabI = get_symtab(ast.left.token);
@@ -1594,14 +1475,14 @@ function code_gen_gen_exp(ast, left) {
   }
 
   return walk;
-}
+};
 
 /**
  * code generation of identifiers
  * @arg {object} ast
  * @arg {array} expList
  */
-function code_gen_gen_call(ast, expList) {
+const code_gen_gen_call = (ast, expList) => {
   if (!ast) return;
   if (ast.type === tokenType.lbrace) return ast;
 
@@ -1634,24 +1515,24 @@ function code_gen_gen_call(ast, expList) {
   code_gen_gen_call(ast.left, expList);
   code_gen_gen_call(ast.right, expList);
   code_gen_gen_call(ast.next, expList);
-}
+};
 
 /**
  * code generation check procedure ast
  * @arg {object} ast
  * @arg {object} id
  */
-function code_gen_get_ast_check(ast, id) {
+const code_gen_get_ast_check = (ast, id) => {
   if (ast.left.token.value === id.value) return true;
   return false;
-}
+};
 
 /**
  * code generation get ast procedure
  * @arg {object} ast
  * @arg {object} id
  */
-function code_gen_get_ast(expList, id) {
+const code_gen_get_ast = (expList, id) => {
   if (!expList) return null;
   if (check_ast_type(expList.ast.type, "data_type")) {
     let ret = code_gen_get_ast_check(expList.ast, id);
@@ -1660,14 +1541,14 @@ function code_gen_get_ast(expList, id) {
     }
   }
   return code_gen_get_ast(expList.next, id);
-}
+};
 
 /**
  * code generation of blocks
  * @arg {object} walk
  * @arg {array} expList
  */
-function code_gen_gen_block(walk, expList) {
+const code_gen_gen_block = (walk, expList) => {
   if (!walk) return;
 
   switch (walk.token.type) {
@@ -1700,14 +1581,14 @@ function code_gen_gen_block(walk, expList) {
 
   code_gen_gen_block(walk.right, expList);
   code_gen_gen_block(walk.next, expList);
-}
+};
 
 /**
  * code generation of for statement
  * @arg {object} ast
  * @arg {array} expList
  */
-function code_gen_gen_for(ast, expList) {
+const code_gen_gen_for = (ast, expList) => {
   let symTabI = get_symtab(ast.left.token);
   let val = parseInt(ast.right.right.token.value);
   let cond = ast.left.left.left.left.token;
@@ -1739,13 +1620,13 @@ function code_gen_gen_for(ast, expList) {
       }
       break;
   }
-}
+};
 
 /**
  * HolyC code generation
  * @arg {array} expList
  */
-function code_gen(expList) {
+const code_gen = (expList) => {
   let expListAux = expList;
 
   do {
@@ -1786,5 +1667,6 @@ function code_gen(expList) {
 
     expListAux = expListAux.next;
   } while (expListAux);
-  alert(outputstr);
-}
+
+  return outputstr;
+};
