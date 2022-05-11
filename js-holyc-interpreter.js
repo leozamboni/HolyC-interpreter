@@ -6,6 +6,13 @@
  */
 
 /**
+ * Run interpreter in website
+ */
+const web_jsholyc_run = () => {
+  alert(output(parser(lex(document.getElementById("stdin").value))));
+};
+
+/**
  * JS HolyC AST
  * @constructor
  */
@@ -423,7 +430,7 @@ const lex_keyword = (str) => {
  * JS HolyC lexer
  * @arg {string} input - input string
  */
-const holyc_lex = (input) => {
+const lex = (input) => {
   outputstr = "";
   if (!input) {
     throw alert("nothing to compile\n");
@@ -1368,7 +1375,7 @@ const holyc_parser_parse = (tokenList) => {
  * HolyC semantic analysis
  * @arg {array} tokenList
  */
-const holyc_parser = (tokenList) => {
+const parser = (tokenList) => {
   glWalk = 0;
   glSymTab = [];
   return holyc_parser_parse(tokenList);
@@ -1626,7 +1633,7 @@ const code_gen_gen_for = (ast, expList) => {
  * HolyC code generation
  * @arg {array} expList
  */
-const code_gen = (expList) => {
+const output = (expList) => {
   let expListAux = expList;
 
   do {

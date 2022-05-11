@@ -74,11 +74,6 @@
       background: rgb(107, 162, 235);
     }
   </style>
-  <script type="text/javascript">
-    function main() {
-      alert(code_gen(holyc_parser(holyc_lex(document.getElementById("code").value))));
-    }
-  </script>
 </head>
 
 <body>
@@ -104,7 +99,7 @@
     <br>
 
     <div id="textarea-container">
-      <textarea id="code" onmouseup="set_size()" onscroll="set_scroll()" oninput="highlight(this.value)"></textarea>
+      <textarea id="stdin" onscroll="set_scroll()" oninput="highlight(this.value)"></textarea>
       <div id="hl"></div>
     </div>
 
@@ -119,7 +114,7 @@
     <br>
     <br>
 
-    <button onclick="main()">RUN(▶)</button>
+    <button onclick="web_jsholyc_run()">RUN(▶)</button>
 
 
     <br>
@@ -137,9 +132,9 @@
     <p>HolyC and TempleOS are creations of Terry Davis.</p>
   </main>
   <script>
-    document.getElementById("code").value = '"hello world";';
+    document.getElementById("stdin").value = '"hello world";';
     highlight('"hello world";')
-    document.getElementById("code").addEventListener("keydown", function (e) {
+    document.getElementById("stdin").addEventListener("keydown", function (e) {
       if (e.key == "Tab") {
         e.preventDefault();
         let start = this.selectionStart;
@@ -201,7 +196,7 @@
         default:
           content = "";
       }
-      document.getElementById("code").value = content;
+      document.getElementById("stdin").value = content;
       highlight(content);
     };
   </script>
