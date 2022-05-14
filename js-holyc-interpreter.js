@@ -1247,16 +1247,6 @@ const holyc_parser_parse_for = (tokenList) => {
   ast.next.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.rparen);
 
-  if (is_dtype(tokenList, glWalk)) {
-    ast.next.next = new Ast(tokenList[glWalk]?.type);
-    ast.next.next.token = tokenList[glWalk];
-    list_eat_type(tokenList);
-
-    check_symtab(tokenList, false);
-
-    glSymTab.push(tokenList[glWalk]);
-  }
-
   check_symtab(tokenList, true);
 
   ast.left = new Ast(tokenType.id);
