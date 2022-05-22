@@ -1261,9 +1261,9 @@ const holyc_parser_parse_if = (tokenList) => {
   }
 
   if (is_logicalop(tokenList, glWalk)) {
-    ast.left.left = new Ast(tokenType.big);
+    ast.left.left = new Ast(tokenList[glWalk]?.type);
     ast.left.left.token = tokenList[glWalk];
-    list_eat(tokenList, tokenType.big);
+    list_eat_logical(tokenList);
   } else {
     ast.right = holyc_parser_parse_exp(tokenList, false);
   }
