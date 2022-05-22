@@ -9,6 +9,7 @@
  * Run interpreter in website
  */
 const web_jsholyc_run = () => {
+  //console.log(lex(document.getElementById("stdin").value));
   alert(output(parser(lex(document.getElementById("stdin").value))));
 };
 
@@ -1235,6 +1236,72 @@ const holyc_parser_parse_prepostfix = (tokenList, block) => {
 };
 
 /**
+ * semantic analysis of if statement
+ * @arg {array} tokenList
+ */
+const holyc_parser_parse_if = (tokenList) => {
+  let ast = new Ast(tokenType.if);
+  ast.token = tokenList[glWalk];
+  list_eat(tokenList, tokenType.if);
+
+  ast.next = new Ast(tokenType.rparen);
+  ast.next.token = tokenList[glWalk];
+  list_eat(tokenList, tokenType.rparen);
+
+  if (check_token(tokenList, glWalk, tokenType.const)) {
+    ast.left = new Ast(tokenType.const);
+    ast.left.token = tokenList[glWalk];
+    list_eat(tokenList, tokenType.const);
+  } else {
+    check_symtab(tokenList, true);
+
+    ast.left = new Ast(tokenType.id);
+    ast.left.token = tokenList[glWalk];
+    list_eat(tokenList, tokenType.id);
+  }
+
+  if (is_logicalop(tokenList, glWalk)) {
+    ast.left.left = new Ast(tokenType.big);
+    ast.left.left.token = tokenList[glWalk];
+    list_eat(tokenList, tokenType.big);
+  } else {
+    ast.right = holyc_parser_parse_exp(tokenList, false);
+  }
+
+  if (check_token(tokenList, glWalk, tokenType.const)) {
+    ast.left.left.left = new Ast(tokenType.const);
+    ast.left.left.left.token = tokenList[glWalk];
+    list_eat(tokenList, tokenType.const);
+  } else {
+    check_symtab(tokenList, true);
+
+    ast.left.left.left = new Ast(tokenType.id);
+    ast.left.left.left.token = tokenList[glWalk];
+    list_eat(tokenList, tokenType.id);
+  }
+
+  if (!check_token(tokenList, glWalk, tokenType.lparen)) {
+    ast.right.left = holyc_parser_parse_exp(tokenList, false);
+  }
+
+  ast.left.left.left.left = new Ast(tokenType.lparen);
+  ast.left.left.left.left.token = tokenList[glWalk];
+  list_eat(tokenList, tokenType.lparen);
+
+  ast.left.left.left.left.next = new Ast(tokenType.rbrace);
+  ast.left.left.left.left.next.token = tokenList[glWalk];
+  list_eat(tokenList, tokenType.rbrace);
+
+  ast.left.left.left.left.right = holyc_parser_parse_block(tokenList);
+
+  ast.left.left.left.left.next.next = new Ast(tokenType.lbrace);
+  ast.left.left.left.left.next.next.token = tokenList[glWalk];
+  list_eat(tokenList, tokenType.lbrace);
+
+  return ast;
+};
+
+/**
  * semantic analysis of for statement
  * @arg {array} tokenList
  */
@@ -1351,6 +1418,9 @@ const holyc_parser_parse = (tokenList) => {
       break;
     case tokenType.for:
       expList.ast = holyc_parser_parse_for(tokenList);
+      break;
+    case tokenType.if:
+      expList.ast = holyc_parser_parse_if(tokenList);
       break;
     default:
       parser_error(tokenList[glWalk]);
