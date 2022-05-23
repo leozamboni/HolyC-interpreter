@@ -96,6 +96,10 @@ const tokenType = {
   assingdiv: 34,
   assingmul: 35,
   if: 36,
+  or: 37,
+  and: 38,
+  not: 39,
+  else: 40,
 };
 
 /**
@@ -300,7 +304,13 @@ const is_dtype = (tokenList, index) => {
 const is_logicalop = (tokenList, index) => {
   try {
     let type = tokenList[index].type;
-    return type === tokenType.big || type === tokenType.less ? true : false;
+    return type === tokenType.big ||
+      type === tokenType.less ||
+      type === tokenType.or ||
+      type === tokenType.and ||
+      type === tokenType.not
+      ? true
+      : false;
   } catch {
     parser_error(tokenList[index - 1]);
   }
@@ -422,6 +432,8 @@ const lex_keyword = (str) => {
       return tokenType.for;
     case "if":
       return tokenType.if;
+    case "else":
+      return tokenType.else;
     default:
       return tokenType.id;
   }
@@ -673,6 +685,34 @@ const lex = (input) => {
           type: tokenType.big,
         });
         break;
+      case "!":
+        tokenList.push({
+          value: "!",
+          line: line,
+          type: tokenType.not,
+        });
+        break;
+      case "&":
+        if (input[i + 1] === "&") {
+          i++;
+          tokenList.push({
+            value: "&&",
+            line: line,
+            type: tokenType.and,
+          });
+        }
+        break;
+      case "|":
+        if (input[i + 1] === "|") {
+          i++;
+          tokenList.push({
+            value: "||",
+            line: line,
+            type: tokenType.or,
+          });
+        }
+        break;
+
       default:
         lexer_error({ value: input[i], line: line });
         break;
@@ -685,7 +725,7 @@ const lex = (input) => {
  * semantic analysis of logical expresions
  * @arg {array} tokenList
  */
- const holyc_parser_parse_logical_exp = (tokenList) => {
+const holyc_parser_parse_logical_exp = (tokenList) => {
   if (
     check_token(tokenList, glWalk, tokenType.semi) ||
     check_token(tokenList, glWalk, tokenType.comma) ||
@@ -703,7 +743,11 @@ const lex = (input) => {
     ast.token = tokenList[glWalk];
     list_eat_logical(tokenList);
   } else if (is_logicalop(tokenList, glWalk - 1)) {
-    if (check_token(tokenList, glWalk, tokenType.id)) {
+    if (check_token(tokenList, glWalk, tokenType.not)) {
+      ast = new Ast(tokenType.not);
+      ast.token = tokenList[glWalk];
+      list_eat(tokenList, tokenType.not);
+    } else if (check_token(tokenList, glWalk, tokenType.id)) {
       check_symtab(tokenList, true);
 
       ast = new Ast(tokenType.id);
