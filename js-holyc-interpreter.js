@@ -9,7 +9,6 @@
  * Run interpreter in website
  */
 const web_jsholyc_run = () => {
-  //console.log(lex(document.getElementById("stdin").value));
   alert(output(parser(lex(document.getElementById("stdin").value))));
 };
 
@@ -822,6 +821,12 @@ const holyc_parser_parse_exp = (tokenList, arg) => {
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
     } else {
+      glSymTab[get_symtab(tokenList[glWalk - 2])] = {
+        value: tokenList[glWalk - 2].value,
+        line: tokenList[glWalk - 2].line,
+        const: tokenList[glWalk].value,
+      };
+
       ast = new Ast(tokenType.const);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.const);
@@ -1705,6 +1710,9 @@ const code_gen_gen_block = (walk, expList) => {
     case tokenType.id:
       code_gen_gen_exp(walk, false);
       break;
+    case tokenType.if:
+      code_gen_gen_if(expListAux.ast, expList);
+      break;
     case tokenType.for:
       code_gen_gen_for(walk);
       break;
@@ -1723,15 +1731,61 @@ const code_gen_gen_block = (walk, expList) => {
 };
 
 /**
+ * code generation of if statement
+ * @arg {object} ast
+ */
+const code_gen_gen_if = (ast, expList) => {
+  let first = ast.left.token;
+  let second = ast.right.right.token;
+  const logical = ast.right.token.type;
+
+  if (first.type === tokenType.const) {
+    first = parseInt(first.value);
+  } else {
+    first = parseInt(glSymTab[get_symtab(first)].const);
+  }
+
+  if (second.type === tokenType.const) {
+    second = parseInt(second.value);
+  } else {
+    second = parseInt(glSymTab[get_symtab(second)].const);
+  }
+
+  switch (logical) {
+    default:
+    case tokenType.big:
+      if (first > second) {
+        code_gen_gen_block(ast.left.left.right, expList);
+      }
+      break;
+    case tokenType.less:
+      if (first < second) {
+        code_gen_gen_block(ast.left.left.right, expList);
+      }
+      break;
+    case tokenType.or:
+      if (first || second) {
+        code_gen_gen_block(ast.left.left.right, expList);
+      }
+      break;
+    case tokenType.and:
+      if (first && second) {
+        code_gen_gen_block(ast.left.left.right, expList);
+      }
+      break;
+  }
+};
+
+/**
  * code generation of for statement
  * @arg {object} ast
  * @arg {array} expList
  */
 const code_gen_gen_for = (ast, expList) => {
-  let symTabI = get_symtab(ast.left.token);
-  let val = parseInt(ast.right.right.token.value);
-  let cond = ast.left.left.left.left.token;
-  let condVal = parseInt(ast.left.left.left.left.left.token.value);
+  const symTabI = get_symtab(ast.left.token);
+  const val = parseInt(ast.right.right.token.value);
+  const cond = ast.left.left.left.left.token;
+  const condVal = parseInt(ast.left.left.left.left.left.token.value);
   let iterate = ast.left.left.left.left.left.left.left;
 
   if (iterate.type === tokenType.id) {
@@ -1783,6 +1837,9 @@ const output = (expList) => {
       case tokenType.f64:
       case tokenType.id:
         code_gen_gen_exp(expListAux.ast, false);
+        break;
+      case tokenType.if:
+        code_gen_gen_if(expListAux.ast, expList);
         break;
       case tokenType.for:
         code_gen_gen_for(expListAux.ast, expList);

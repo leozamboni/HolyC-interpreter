@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HOLYC INTERPRETER</title>
+  <title>HolyC Interpreter</title>
   <script src="js-holyc-highlighter/holyc-highlighter.js"></script>
   <script src="js-holyc-interpreter.js"></script>
   <style>
@@ -184,7 +184,7 @@
             "U0\n" +
             "Fibonacci()\n" +
             "{\n" +
-            "\tI32 a = 0, b = 1, c, i;\n\n" +
+            "\tU32 a = 0, b = 1, c, i;\n\n" +
             "\tfor (i = 0; i < 20; i++)\n" +
             "\t{\n" +
             "\t\tc = a + b;\n" +
@@ -198,8 +198,14 @@
         case "statements":
           content =
             "// HolyC Statements\n" +
-            "if (1 > 2) {\n" +
-            "\t\"1 greater than 2\";\n" +
+            "if (2 > 1) {\n" +
+            "\t\"2 greater than 1\\n\";\n" +
+            "}\n" +
+            "\n" +
+            "U8 A = 1;\n" +
+            "U8 B = 2;\n" +
+            "if (A < B) {\n" +
+            "\t\"A less than B\\n\";\n" +
             "}\n";
           break;
         default:
