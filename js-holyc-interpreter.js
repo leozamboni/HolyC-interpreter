@@ -101,6 +101,7 @@ const tokenType = {
   else: 40,
   true: 41,
   false: 42,
+  equal: 43,
 };
 
 /**
@@ -309,7 +310,8 @@ const is_logicalop = (tokenList, index) => {
       type === tokenType.less ||
       type === tokenType.or ||
       type === tokenType.and ||
-      type === tokenType.not
+      type === tokenType.not ||
+      type === tokenType.equal
       ? true
       : false;
   } catch {
@@ -670,11 +672,20 @@ const lex = (input) => {
         });
         break;
       case "=":
-        tokenList.push({
-          value: "=",
-          line: line,
-          type: tokenType.assig,
-        });
+        if (input[i + 1] === "=") {
+          i++;
+          tokenList.push({
+            value: "==",
+            line: line,
+            type: tokenType.equal,
+          });
+        } else {
+          tokenList.push({
+            value: "=",
+            line: line,
+            type: tokenType.assig,
+          });
+        }
         break;
       case "<":
         tokenList.push({
@@ -1386,25 +1397,25 @@ const holyc_parser_parse_ifelse = (tokenList) => {
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.if);
 
-  ast.next = new Ast(tokenType.rparen);
-  ast.next.token = tokenList[glWalk];
+  ast.left = new Ast(tokenType.rparen);
+  ast.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.rparen);
 
   if (check_token(tokenList, glWalk, tokenType.const)) {
-    ast.left = new Ast(tokenType.const);
-    ast.left.token = tokenList[glWalk];
+    ast.left.left = new Ast(tokenType.const);
+    ast.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.const);
   } else if (check_token(tokenList, glWalk, tokenType.true)) {
-    ast.left = new Ast(tokenType.true);
-    ast.left.token = {
+    ast.left.left = new Ast(tokenType.true);
+    ast.left.left.token = {
       value: 1,
       line: tokenList[glWalk].line,
       type: tokenType.const,
     };
     list_eat(tokenList, tokenType.true);
   } else if (check_token(tokenList, glWalk, tokenType.false)) {
-    ast.left = new Ast(tokenType.const);
-    ast.left.token = {
+    ast.left.left = new Ast(tokenType.const);
+    ast.left.left.token = {
       value: 0,
       line: tokenList[glWalk].line,
       type: tokenType.const,
@@ -1413,22 +1424,22 @@ const holyc_parser_parse_ifelse = (tokenList) => {
   } else {
     check_symtab(tokenList, true);
 
-    ast.left = new Ast(tokenType.id);
-    ast.left.token = tokenList[glWalk];
+    ast.left.left = new Ast(tokenType.id);
+    ast.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
   }
 
   ast.right = holyc_parser_parse_logical_exp(tokenList);
 
-  ast.left.left = new Ast(tokenType.lparen);
-  ast.left.left.token = tokenList[glWalk];
+  ast.left.left.left = new Ast(tokenType.lparen);
+  ast.left.left.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.lparen);
 
   ast.left.left.next = new Ast(tokenType.rbrace);
   ast.left.left.next.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.rbrace);
 
-  ast.left.left.right = holyc_parser_parse_block(tokenList);
+  ast.left.left.left.right = holyc_parser_parse_block(tokenList);
 
   ast.left.left.next.next = new Ast(tokenType.lbrace);
   ast.left.left.next.next.token = tokenList[glWalk];
@@ -1438,8 +1449,8 @@ const holyc_parser_parse_ifelse = (tokenList) => {
     glWalk < tokenList.length &&
     check_token(tokenList, glWalk, tokenType.else)
   ) {
-    ast.left.left.left = new Ast(tokenType.else);
-    ast.left.left.left.token = tokenList[glWalk];
+    ast.left.left.left.left = new Ast(tokenType.else);
+    ast.left.left.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.else);
 
     if (check_token(tokenList, glWalk, tokenType.if)) {
@@ -1449,7 +1460,7 @@ const holyc_parser_parse_ifelse = (tokenList) => {
       ast.left.left.left.next.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.rbrace);
 
-      ast.left.left.left.right = holyc_parser_parse_block(tokenList);
+      ast.left.left.left.left.right = holyc_parser_parse_block(tokenList);
 
       ast.left.left.left.next.next = new Ast(tokenType.lbrace);
       ast.left.left.left.next.next.token = tokenList[glWalk];
@@ -1634,11 +1645,11 @@ const code_gen_gen_logical_exp = (ast, inside) => {
   let walk;
   let value;
 
-  if (!inside && ast.left.token.type === tokenType.not) {
+  if (!inside && ast.left.left.token.type === tokenType.not) {
     first = ast.right.token;
     walk = ast.right.right;
   } else if (!inside) {
-    first = ast.left.token;
+    first = ast.left.left.token;
     walk = ast.right;
   } else if (inside && ast.right.token.type === tokenType.not) {
     first = ast.right.right.token;
@@ -1693,6 +1704,9 @@ const code_gen_gen_logical_exp = (ast, inside) => {
         break;
       case tokenType.not:
         value = !value;
+        break;
+      case tokenType.equal:
+        value = value === tokenValue ? true : false;
         break;
     }
     if (!walk) break;
@@ -1822,7 +1836,7 @@ const code_gen_gen_call = (ast, expList) => {
       break;
   }
 
-  code_gen_gen_call(ast.left, expList);
+  //code_gen_gen_call(ast.left, expList);
   code_gen_gen_call(ast.right, expList);
   code_gen_gen_call(ast.next, expList);
 };
@@ -1902,20 +1916,20 @@ const code_gen_gen_block = (walk, expList) => {
  */
 const code_gen_gen_ifelse = (ast, expList) => {
   const logical = code_gen_gen_logical_exp(ast, false);
- 
+
   let elseBlock;
-  if (ast.left?.left?.left) {
-    elseBlock = ast.left.left.left.right;
+  if (ast.left?.left?.left?.left) {
+    elseBlock = ast.left.left.left.left.right;
   }
 
   if (logical) {
-    code_gen_gen_block(ast.left.left.right, expList);
+    code_gen_gen_block(ast.left.left.left.right, expList);
   } else if (elseBlock) {
     code_gen_gen_block(elseBlock, expList);
   }
 
-  if (!logical && ast?.left?.left?.left?.next.token.type === tokenType.if) {
-    code_gen_gen_ifelse(ast?.left?.left?.left?.next, expList);
+  if (!logical && ast?.left?.left?.left?.next?.token.type === tokenType.if) {
+    code_gen_gen_ifelse(ast.left.left.left.next, expList);
   }
 };
 
