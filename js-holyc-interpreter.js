@@ -1960,13 +1960,15 @@ const code_gen_gen_for = (ast, expList) => {
     case tokenType.less:
       for (let i = val; i < condVal; i += iterateValue) {
         code_gen_gen_block(ast.left.left.left.left.left.left.right, expList);
-        glSymTab[symTabI].const += iterateValue;
+        glSymTab[symTabI].const =
+          parseInt(glSymTab[symTabI].const) + iterateValue;
       }
       break;
     case tokenType.big:
       for (let i = val; i > condVal; i += iterateValue) {
         code_gen_gen_block(ast.left.left.left.left.left.left.right, expList);
-        glSymTab[symTabI].const += iterateValue;
+        glSymTab[symTabI].const =
+          parseInt(glSymTab[symTabI].const) + iterateValue;
       }
       break;
   }
