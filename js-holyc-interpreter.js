@@ -1645,6 +1645,9 @@ const code_gen_gen_call = (ast, expList) => {
     case tokenType.id:
       code_gen_gen_exp(ast, false);
       break;
+    case tokenType.if:
+      code_gen_gen_if(expListAux.ast, expList);
+      break;
     case tokenType.for:
       code_gen_gen_for(ast);
       break;
