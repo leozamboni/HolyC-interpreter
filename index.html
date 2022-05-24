@@ -110,7 +110,7 @@
     <select onchange="examples()" id="examples">
       <option value="">Examples</option>
       <option value="helloWorld">Hello World</option>
-      <option value="statements">Statements</option>
+      <option value="conditionals">Conditionals</option>
       <option value="fibonacci">Fibonacci</option>
     </select>
 
@@ -196,14 +196,16 @@
             "}\n\n" +
             "Fibonacci;";
           break;
-        case "statements":
+        case "conditionals":
           content =
-            "// HolyC Statements\n" +
+            "// HolyC Conditionals\n" +
             "if (TRUE) {\n" +
-            "\tif (2 > 1) {\n" +
-            "\t\t\"2 > 1\\n\";\n" +
-            "\t} else {\n" +
+            "\tif (1 > 2) {\n" +
             "\t\t\"1 > 2\\n\";\n" +
+            "\t} else if (1 > 2 || 2 > 3) {\n" +
+            "\t\t\"2 > 3\\n\";\n" +
+            "\t} else {\n" +
+            "\t\t\"all false conditions\\n\";\n" +
             "\t}\n" +
             "}\n" +
             "\n" +

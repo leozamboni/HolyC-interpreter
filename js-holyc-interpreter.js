@@ -1442,15 +1442,19 @@ const holyc_parser_parse_ifelse = (tokenList) => {
     ast.left.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.else);
 
-    ast.left.left.left.next = new Ast(tokenType.rbrace);
-    ast.left.left.left.next.token = tokenList[glWalk];
-    list_eat(tokenList, tokenType.rbrace);
+    if (check_token(tokenList, glWalk, tokenType.if)) {
+      ast.left.left.left.next = holyc_parser_parse_ifelse(tokenList);
+    } else {
+      ast.left.left.left.next = new Ast(tokenType.rbrace);
+      ast.left.left.left.next.token = tokenList[glWalk];
+      list_eat(tokenList, tokenType.rbrace);
 
-    ast.left.left.left.right = holyc_parser_parse_block(tokenList);
+      ast.left.left.left.right = holyc_parser_parse_block(tokenList);
 
-    ast.left.left.left.next.next = new Ast(tokenType.lbrace);
-    ast.left.left.left.next.next.token = tokenList[glWalk];
-    list_eat(tokenList, tokenType.lbrace);
+      ast.left.left.left.next.next = new Ast(tokenType.lbrace);
+      ast.left.left.left.next.next.token = tokenList[glWalk];
+      list_eat(tokenList, tokenType.lbrace);
+    }
   }
 
   return ast;
@@ -1898,7 +1902,7 @@ const code_gen_gen_block = (walk, expList) => {
  */
 const code_gen_gen_ifelse = (ast, expList) => {
   const logical = code_gen_gen_logical_exp(ast, false);
-
+ 
   let elseBlock;
   if (ast.left?.left?.left) {
     elseBlock = ast.left.left.left.right;
@@ -1908,6 +1912,10 @@ const code_gen_gen_ifelse = (ast, expList) => {
     code_gen_gen_block(ast.left.left.right, expList);
   } else if (elseBlock) {
     code_gen_gen_block(elseBlock, expList);
+  }
+
+  if (!logical && ast?.left?.left?.left?.next.token.type === tokenType.if) {
+    code_gen_gen_ifelse(ast?.left?.left?.left?.next, expList);
   }
 };
 
