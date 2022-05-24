@@ -309,9 +309,7 @@ const is_logicalop = (tokenList, index) => {
       type === tokenType.less ||
       type === tokenType.or ||
       type === tokenType.and ||
-      type === tokenType.not ||
-      type === tokenType.true ||
-      type === tokenType.false
+      type === tokenType.not
       ? true
       : false;
   } catch {
@@ -744,7 +742,9 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
 
   if (
     check_token(tokenList, glWalk - 1, tokenType.id) ||
-    check_token(tokenList, glWalk - 1, tokenType.const)
+    check_token(tokenList, glWalk - 1, tokenType.const) ||
+    check_token(tokenList, glWalk - 1, tokenType.true) ||
+    check_token(tokenList, glWalk - 1, tokenType.false)
   ) {
     ast = new Ast(tokenList[glWalk]?.type);
     ast.token = tokenList[glWalk];
@@ -1652,7 +1652,7 @@ const code_gen_gen_logical_exp = (ast, inside) => {
   if (!value) {
     value = false;
   }
-  
+
   let tokenValue;
   while (walk) {
     if (walk.right.token.type === tokenType.id) {

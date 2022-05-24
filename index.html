@@ -118,7 +118,7 @@
     <br>
 
     <button onclick="web_jsholyc_run()">RUN(▶)</button>
-    
+
     <br>
     <br>
 
@@ -201,23 +201,26 @@
             "// HolyC Statements\n" +
             "if (TRUE) {\n" +
             "\tif (2 > 1) {\n" +
-            "\t\t\"2 greater than 1\\n\";\n" +
+            "\t\t\"2 > 1\\n\";\n" +
             "\t} else {\n" +
-            "\t\t\"1 greater than 2\\n\";\n" +
-            "\t}\n" + 
-            "}\n" + 
+            "\t\t\"1 > 2\\n\";\n" +
+            "\t}\n" +
+            "}\n" +
             "\n" +
+            "if (TRUE > FALSE) {\n" +
+            "\t\"TRUE > FALSE\\n\";\n" +
+            "}\n\n" +
             "U8 A = 1;\n" +
             "U8 B = 2;\n" +
             "if (A < B) {\n" +
-            "\t\"A less than B\\n\";\n" +
+            "\t\"A < B\\n\";\n" +
             "}\n\n" +
             "if (A) {\n" +
-            "\t\"TRUE\\n\";\n" +
-            "\tA = 0;\n" + 
+            "\t\"A != 0\\n\";\n" +
+            "\tA = 0;\n" +
             "}\n\n" +
             "if (A) {\n" +
-            "\t\"FALSE\\n\";\n" +
+            "\t\"A == 0\\n\";\n" +
             "}";
           break;
         default:
