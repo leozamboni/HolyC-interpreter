@@ -16,14 +16,16 @@
     }
 
     textarea {
+      background-color: #55FFFF;
       resize: none;
       text-align: left;
-      background-color: rgba(0, 0, 0, 0);
       position: relative;
       color: transparent;
       caret-color: black;
       font-size: large;
       white-space: break-spaces;
+      outline: 5px solid #0000AA;
+      border: 0px;
     }
 
     #hl {
@@ -71,7 +73,7 @@
 
     ::selection {
       color: rgb(43, 43, 43);
-      background: rgb(107, 162, 235);
+      background: rgb(255, 255, 255);
     }
   </style>
 </head>
@@ -206,7 +208,14 @@
             "U8 B = 2;\n" +
             "if (A < B) {\n" +
             "\t\"A less than B\\n\";\n" +
-            "}\n";
+            "}\n\n" +
+            "if (A) {\n" +
+            "\t\"TRUE\\n\";\n" +
+            "}\n\n" +
+            "A = 0;\n" +
+            "if (A) {\n" +
+            "\t\"FALSE\\n\";\n" +
+            "}";
           break;
         default:
           content = "";

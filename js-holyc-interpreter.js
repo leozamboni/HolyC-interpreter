@@ -1738,44 +1738,51 @@ const code_gen_gen_block = (walk, expList) => {
  * @arg {object} ast
  */
 const code_gen_gen_if = (ast, expList) => {
+  console.log(ast);
   let first = ast.left.token;
-  let second = ast.right.right.token;
-  const logical = ast.right.token.type;
-
   if (first.type === tokenType.const) {
     first = parseInt(first.value);
   } else {
     first = parseInt(glSymTab[get_symtab(first)].const);
   }
 
-  if (second.type === tokenType.const) {
-    second = parseInt(second.value);
-  } else {
-    second = parseInt(glSymTab[get_symtab(second)].const);
-  }
+  if (ast?.right?.right) {
+    let second = ast.right.right.token;
+    const logical = ast.right.token.type;
 
-  switch (logical) {
-    default:
-    case tokenType.big:
-      if (first > second) {
-        code_gen_gen_block(ast.left.left.right, expList);
-      }
-      break;
-    case tokenType.less:
-      if (first < second) {
-        code_gen_gen_block(ast.left.left.right, expList);
-      }
-      break;
-    case tokenType.or:
-      if (first || second) {
-        code_gen_gen_block(ast.left.left.right, expList);
-      }
-      break;
-    case tokenType.and:
-      if (first && second) {
-        code_gen_gen_block(ast.left.left.right, expList);
-      }
-      break;
+    if (second.type === tokenType.const) {
+      second = parseInt(second.value);
+    } else {
+      second = parseInt(glSymTab[get_symtab(second)].const);
+    }
+
+    switch (logical) {
+      default:
+      case tokenType.big:
+        if (first > second) {
+          code_gen_gen_block(ast.left.left.right, expList);
+        }
+        break;
+      case tokenType.less:
+        if (first < second) {
+          code_gen_gen_block(ast.left.left.right, expList);
+        }
+        break;
+      case tokenType.or:
+        if (first || second) {
+          code_gen_gen_block(ast.left.left.right, expList);
+        }
+        break;
+      case tokenType.and:
+        if (first && second) {
+          code_gen_gen_block(ast.left.left.right, expList);
+        }
+        break;
+    }
+  } else {
+    if (first) {
+      code_gen_gen_block(ast.left.left.right, expList);
+    }
   }
 };
 
