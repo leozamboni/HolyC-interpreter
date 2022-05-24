@@ -99,6 +99,8 @@ const tokenType = {
   and: 38,
   not: 39,
   else: 40,
+  true: 41,
+  false: 42,
 };
 
 /**
@@ -307,7 +309,9 @@ const is_logicalop = (tokenList, index) => {
       type === tokenType.less ||
       type === tokenType.or ||
       type === tokenType.and ||
-      type === tokenType.not
+      type === tokenType.not ||
+      type === tokenType.true ||
+      type === tokenType.false
       ? true
       : false;
   } catch {
@@ -433,6 +437,10 @@ const lex_keyword = (str) => {
       return tokenType.if;
     case "else":
       return tokenType.else;
+    case "TRUE":
+      return tokenType.true;
+    case "FALSE":
+      return tokenType.false;
     default:
       return tokenType.id;
   }
@@ -752,6 +760,22 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
       ast = new Ast(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
+    } else if (check_token(tokenList, glWalk, tokenType.true)) {
+      ast = new Ast(tokenType.true);
+      ast.token = {
+        value: 1,
+        line: tokenList[glWalk].line,
+        type: tokenType.const,
+      };
+      list_eat(tokenList, tokenType.true);
+    } else if (check_token(tokenList, glWalk, tokenType.false)) {
+      ast = new Ast(tokenType.const);
+      ast.token = {
+        value: 0,
+        line: tokenList[glWalk].line,
+        type: tokenType.const,
+      };
+      list_eat(tokenList, tokenType.false);
     } else {
       ast = new Ast(tokenType.const);
       ast.token = tokenList[glWalk];
@@ -763,6 +787,22 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
     ast = new Ast(tokenType.id);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
+  } else if (check_token(tokenList, glWalk, tokenType.true)) {
+    ast = new Ast(tokenType.true);
+    ast.token = {
+      value: 1,
+      line: tokenList[glWalk].line,
+      type: tokenType.const,
+    };
+    list_eat(tokenList, tokenType.true);
+  } else if (check_token(tokenList, glWalk, tokenType.false)) {
+    ast = new Ast(tokenType.const);
+    ast.token = {
+      value: 0,
+      line: tokenList[glWalk].line,
+      type: tokenType.const,
+    };
+    list_eat(tokenList, tokenType.false);
   } else {
     ast = new Ast(tokenType.const);
     ast.token = tokenList[glWalk];
@@ -1004,6 +1044,9 @@ const holyc_parser_parse_block = (tokenList) => {
       break;
     case tokenType.for:
       ast = holyc_parser_parse_for(tokenList);
+      break;
+    case tokenType.if:
+      ast = holyc_parser_parse_ifelse(tokenList);
       break;
     default:
       parser_error(tokenList[glWalk]);
@@ -1335,10 +1378,10 @@ const holyc_parser_parse_prepostfix = (tokenList, block) => {
 };
 
 /**
- * semantic analysis of if statement
+ * semantic analysis of if else statement
  * @arg {array} tokenList
  */
-const holyc_parser_parse_if = (tokenList) => {
+const holyc_parser_parse_ifelse = (tokenList) => {
   let ast = new Ast(tokenType.if);
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.if);
@@ -1351,6 +1394,22 @@ const holyc_parser_parse_if = (tokenList) => {
     ast.left = new Ast(tokenType.const);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.const);
+  } else if (check_token(tokenList, glWalk, tokenType.true)) {
+    ast.left = new Ast(tokenType.true);
+    ast.left.token = {
+      value: 1,
+      line: tokenList[glWalk].line,
+      type: tokenType.const,
+    };
+    list_eat(tokenList, tokenType.true);
+  } else if (check_token(tokenList, glWalk, tokenType.false)) {
+    ast.left = new Ast(tokenType.const);
+    ast.left.token = {
+      value: 0,
+      line: tokenList[glWalk].line,
+      type: tokenType.const,
+    };
+    list_eat(tokenList, tokenType.false);
   } else {
     check_symtab(tokenList, true);
 
@@ -1374,6 +1433,25 @@ const holyc_parser_parse_if = (tokenList) => {
   ast.left.left.next.next = new Ast(tokenType.lbrace);
   ast.left.left.next.next.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.lbrace);
+
+  if (
+    glWalk < tokenList.length &&
+    check_token(tokenList, glWalk, tokenType.else)
+  ) {
+    ast.left.left.left = new Ast(tokenType.else);
+    ast.left.left.left.token = tokenList[glWalk];
+    list_eat(tokenList, tokenType.else);
+
+    ast.left.left.left.next = new Ast(tokenType.rbrace);
+    ast.left.left.left.next.token = tokenList[glWalk];
+    list_eat(tokenList, tokenType.rbrace);
+
+    ast.left.left.left.right = holyc_parser_parse_block(tokenList);
+
+    ast.left.left.left.next.next = new Ast(tokenType.lbrace);
+    ast.left.left.left.next.next.token = tokenList[glWalk];
+    list_eat(tokenList, tokenType.lbrace);
+  }
 
   return ast;
 };
@@ -1497,7 +1575,7 @@ const holyc_parser_parse = (tokenList) => {
       expList.ast = holyc_parser_parse_for(tokenList);
       break;
     case tokenType.if:
-      expList.ast = holyc_parser_parse_if(tokenList);
+      expList.ast = holyc_parser_parse_ifelse(tokenList);
       break;
     default:
       parser_error(tokenList[glWalk]);
@@ -1540,6 +1618,87 @@ const printf = (ast) => {
         return e;
     }
   });
+};
+
+/**
+ * code generation of logical expresions
+ * @arg {object} ast
+ * @arg {boolean} inside
+ */
+const code_gen_gen_logical_exp = (ast, inside) => {
+  let first;
+  let walk;
+  let value;
+
+  if (!inside && ast.left.token.type === tokenType.not) {
+    first = ast.right.token;
+    walk = ast.right.right;
+  } else if (!inside) {
+    first = ast.left.token;
+    walk = ast.right;
+  } else if (inside && ast.right.token.type === tokenType.not) {
+    first = ast.right.right.token;
+    walk = ast.right.right.right;
+  } else if (inside) {
+    first = ast.right.token;
+    walk = ast.right.right;
+  }
+
+  if (first.type === tokenType.id) {
+    value = parseInt(glSymTab[get_symtab(first)].const);
+  } else {
+    value = parseInt(first.value);
+  }
+  if (!value) {
+    value = false;
+  }
+  
+  let tokenValue;
+  while (walk) {
+    if (walk.right.token.type === tokenType.id) {
+      tokenValue = parseInt(glSymTab[get_symtab(walk.right.token)].const);
+    } else if (walk.right.token.type === tokenType.const) {
+      tokenValue = parseInt(walk.right.token.value);
+    } else if (walk.right.token.type === tokenType.not) {
+      if (walk.right.right.token.type === tokenType.id) {
+        tokenValue = parseInt(
+          glSymTab[get_symtab(walk.right.right.token)].const
+        );
+      } else if (walk.right.right.token.type === tokenType.const) {
+        tokenValue = parseInt(walk.right.right.token.value);
+      }
+    }
+
+    switch (walk.type) {
+      case tokenType.less:
+        value = value < tokenValue ? true : false;
+        break;
+      case tokenType.big:
+        value = value > tokenValue ? true : false;
+        break;
+      case tokenType.or:
+        const inside = code_gen_gen_logical_exp(walk, true);
+        value = value || inside ? true : false;
+        while (walk) {
+          walk = walk.right;
+          if (walk && walk.token.type === tokenType.or) break;
+        }
+        break;
+      case tokenType.and:
+        value = value && (tokenValue ? true : false);
+        break;
+      case tokenType.not:
+        value = !value;
+        break;
+    }
+    if (!walk) break;
+    walk = walk.right.right;
+    if (walk && walk?.token?.type === tokenType.not) {
+      walk = walk.right;
+    }
+  }
+
+  return value;
 };
 
 /**
@@ -1646,7 +1805,7 @@ const code_gen_gen_call = (ast, expList) => {
       code_gen_gen_exp(ast, false);
       break;
     case tokenType.if:
-      code_gen_gen_if(expListAux.ast, expList);
+      code_gen_gen_ifelse(ast, expList);
       break;
     case tokenType.for:
       code_gen_gen_for(ast);
@@ -1714,7 +1873,7 @@ const code_gen_gen_block = (walk, expList) => {
       code_gen_gen_exp(walk, false);
       break;
     case tokenType.if:
-      code_gen_gen_if(expListAux.ast, expList);
+      code_gen_gen_ifelse(walk, expList);
       break;
     case tokenType.for:
       code_gen_gen_for(walk);
@@ -1737,52 +1896,18 @@ const code_gen_gen_block = (walk, expList) => {
  * code generation of if statement
  * @arg {object} ast
  */
-const code_gen_gen_if = (ast, expList) => {
-  console.log(ast);
-  let first = ast.left.token;
-  if (first.type === tokenType.const) {
-    first = parseInt(first.value);
-  } else {
-    first = parseInt(glSymTab[get_symtab(first)].const);
+const code_gen_gen_ifelse = (ast, expList) => {
+  const logical = code_gen_gen_logical_exp(ast, false);
+
+  let elseBlock;
+  if (ast.left?.left?.left) {
+    elseBlock = ast.left.left.left.right;
   }
 
-  if (ast?.right?.right) {
-    let second = ast.right.right.token;
-    const logical = ast.right.token.type;
-
-    if (second.type === tokenType.const) {
-      second = parseInt(second.value);
-    } else {
-      second = parseInt(glSymTab[get_symtab(second)].const);
-    }
-
-    switch (logical) {
-      default:
-      case tokenType.big:
-        if (first > second) {
-          code_gen_gen_block(ast.left.left.right, expList);
-        }
-        break;
-      case tokenType.less:
-        if (first < second) {
-          code_gen_gen_block(ast.left.left.right, expList);
-        }
-        break;
-      case tokenType.or:
-        if (first || second) {
-          code_gen_gen_block(ast.left.left.right, expList);
-        }
-        break;
-      case tokenType.and:
-        if (first && second) {
-          code_gen_gen_block(ast.left.left.right, expList);
-        }
-        break;
-    }
-  } else {
-    if (first) {
-      code_gen_gen_block(ast.left.left.right, expList);
-    }
+  if (logical) {
+    code_gen_gen_block(ast.left.left.right, expList);
+  } else if (elseBlock) {
+    code_gen_gen_block(elseBlock, expList);
   }
 };
 
@@ -1849,7 +1974,7 @@ const output = (expList) => {
         code_gen_gen_exp(expListAux.ast, false);
         break;
       case tokenType.if:
-        code_gen_gen_if(expListAux.ast, expList);
+        code_gen_gen_ifelse(expListAux.ast, expList);
         break;
       case tokenType.for:
         code_gen_gen_for(expListAux.ast, expList);
