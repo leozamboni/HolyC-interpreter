@@ -757,9 +757,27 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
     check_token(tokenList, glWalk - 1, tokenType.true) ||
     check_token(tokenList, glWalk - 1, tokenType.false)
   ) {
-    ast = new Ast(tokenList[glWalk]?.type);
-    ast.token = tokenList[glWalk];
-    list_eat_logical(tokenList);
+    if (is_logicalop(tokenList, glWalk)) {
+      ast = new Ast(tokenList[glWalk]?.type);
+      ast.token = tokenList[glWalk];
+      list_eat_logical(tokenList);
+    } else {
+      if (
+        check_token(tokenList, glWalk - 1, tokenType.id) ||
+        check_token(tokenList, glWalk - 1, tokenType.const)
+      ) {
+        if (is_mathop(tokenList, glWalk)) {
+          if (
+            check_token(tokenList, glWalk + 1, tokenType.id) ||
+            check_token(tokenList, glWalk + 1, tokenType.const)
+          ) {
+            ast = new Ast(tokenList[glWalk]?.type);
+            ast.token = tokenList[glWalk];
+            list_eat_math(tokenList);
+          }
+        }
+      }
+    }
   } else if (is_logicalop(tokenList, glWalk - 1)) {
     if (check_token(tokenList, glWalk, tokenType.not)) {
       ast = new Ast(tokenType.not);
@@ -1636,14 +1654,71 @@ const printf = (ast) => {
 };
 
 /**
+ * code generation of mathematical expresions
+ * @arg {object} ast
+ */
+const output_out_math_exp = (first, ast) => {
+  let value = first;
+  while (ast) {
+    switch (ast.type) {
+      case tokenType.div:
+        if (ast.right.token.type === tokenType.const) {
+          value /= parseInt(ast.right.token.value);
+        } else {
+          value /= parseInt(glSymTab[get_symtab(ast.right.token)].const);
+        }
+        break;
+      case tokenType.mul:
+        if (ast.right.token.type === tokenType.const) {
+          value *= parseInt(ast.right.token.value);
+        } else {
+          value *= parseInt(glSymTab[get_symtab(ast.right.token)].const);
+        }
+        break;
+      case tokenType.add:
+        if (ast.right.token.type === tokenType.const) {
+          value += parseInt(ast.right.token.value);
+        } else {
+          value += parseInt(glSymTab[get_symtab(ast.right.token)].const);
+        }
+        break;
+      case tokenType.sub:
+        if (ast.right.token.type === tokenType.const) {
+          value -= parseInt(ast.right.token.value);
+        } else {
+          value -= parseInt(glSymTab[get_symtab(ast.right.token)].const);
+        }
+        break;
+    }
+    if (ast?.right?.right) {
+      ast = ast.right.right;
+    } else {
+      break;
+    }
+    if (
+      ast.type !== tokenType.add &&
+      ast.type !== tokenType.sub &&
+      ast.type !== tokenType.div &&
+      ast.type !== tokenType.mul
+    ) {
+      break;
+    }
+  }
+  return value;
+};
+
+/**
  * code generation of logical expresions
  * @arg {object} ast
  * @arg {boolean} inside
  */
-const code_gen_gen_logical_exp = (ast, inside) => {
+const output_out_logical_exp = (ast, inside) => {
   let first;
   let walk;
-  let value;
+  let value = {
+    number: 0,
+    boolean: false,
+  };
 
   if (!inside && ast.left.left.token.type === tokenType.not) {
     first = ast.right.token;
@@ -1660,12 +1735,38 @@ const code_gen_gen_logical_exp = (ast, inside) => {
   }
 
   if (first.type === tokenType.id) {
-    value = parseInt(glSymTab[get_symtab(first)].const);
+    value.number = parseInt(glSymTab[get_symtab(first)].const);
   } else {
-    value = parseInt(first.value);
+    value.number = parseInt(first.value);
   }
-  if (!value) {
-    value = false;
+
+  if (
+    walk?.token.type === tokenType.add ||
+    walk?.token.type === tokenType.sub ||
+    walk?.token.type === tokenType.div ||
+    walk?.token.type === tokenType.mul
+  ) {
+    value.number = output_out_math_exp(value.number, walk);
+    console.log(value.number)
+    while (walk) {
+      walk = walk.right;
+      if (walk) {
+        if (
+          walk.token.type === tokenType.or ||
+          walk.token.type === tokenType.and ||
+          walk.token.type === tokenType.big ||
+          walk.token.type === tokenType.not ||
+          walk.token.type === tokenType.less ||
+          walk.token.type === tokenType.equal
+        ) {
+          break;
+        }
+      }
+    }
+  }
+
+  if (value.number) {
+    value.boolean = true;
   }
 
   let tokenValue;
@@ -1686,27 +1787,29 @@ const code_gen_gen_logical_exp = (ast, inside) => {
 
     switch (walk.type) {
       case tokenType.less:
-        value = value < tokenValue ? true : false;
+        value.boolean = value.number < tokenValue ? true : false;
+        value.number = tokenValue;
         break;
       case tokenType.big:
-        value = value > tokenValue ? true : false;
+        value.boolean = value.number > tokenValue ? true : false;
+        value.number = tokenValue;
         break;
       case tokenType.or:
-        const inside = code_gen_gen_logical_exp(walk, true);
-        value = value || inside ? true : false;
+        const inside = output_out_logical_exp(walk, true);
+        value.boolean = value.boolean || inside ? true : false;
         while (walk) {
           walk = walk.right;
           if (walk && walk.token.type === tokenType.or) break;
         }
         break;
       case tokenType.and:
-        value = value && (tokenValue ? true : false);
+        value.boolean = value.boolean && (tokenValue ? true : false);
         break;
       case tokenType.not:
-        value = !value;
+        value.boolean = !value.boolean;
         break;
       case tokenType.equal:
-        value = value === tokenValue ? true : false;
+        value.boolean = value.number === tokenValue ? true : false;
         break;
     }
     if (!walk) break;
@@ -1716,7 +1819,7 @@ const code_gen_gen_logical_exp = (ast, inside) => {
     }
   }
 
-  return value;
+  return value.boolean;
 };
 
 /**
@@ -1724,7 +1827,7 @@ const code_gen_gen_logical_exp = (ast, inside) => {
  * @arg {object} ast
  * @arg {boolean} left
  */
-const code_gen_gen_exp = (ast, left) => {
+const output_out_exp = (ast, left) => {
   let symTabI;
   if (check_ast_type(ast.token.type, "data_type")) {
     symTabI = get_symtab(ast.left.token);
@@ -1790,9 +1893,9 @@ const code_gen_gen_exp = (ast, left) => {
   }
 
   if (check_ast_type(ast?.left?.right?.token.type, "id")) {
-    code_gen_gen_exp(ast.left.right, true);
+    output_out_exp(ast.left.right, true);
   } else if (check_ast_type(ast?.right?.token.type, "id")) {
-    code_gen_gen_exp(ast.right, true);
+    output_out_exp(ast.right, true);
   }
 
   return walk;
@@ -1803,7 +1906,7 @@ const code_gen_gen_exp = (ast, left) => {
  * @arg {object} ast
  * @arg {array} expList
  */
-const code_gen_gen_call = (ast, expList) => {
+const output_out_call = (ast, expList) => {
   if (!ast) return;
   if (ast.type === tokenType.lbrace) return ast;
 
@@ -1820,25 +1923,25 @@ const code_gen_gen_call = (ast, expList) => {
     case tokenType.u64:
     case tokenType.f64:
     case tokenType.id:
-      code_gen_gen_exp(ast, false);
+      output_out_exp(ast, false);
       break;
     case tokenType.if:
-      code_gen_gen_ifelse(ast, expList);
+      output_out_ifelse(ast, expList);
       break;
     case tokenType.for:
-      code_gen_gen_for(ast);
+      output_out_for(ast);
       break;
     case tokenType.call:
-      code_gen_gen_call(code_gen_get_ast(expList, ast.token));
+      output_out_call(output_out_get_ast(expList, ast.token));
       break;
     case tokenType.str:
       printf(ast);
       break;
   }
 
-  //code_gen_gen_call(ast.left, expList);
-  code_gen_gen_call(ast.right, expList);
-  code_gen_gen_call(ast.next, expList);
+  //output_out_call(ast.left, expList);
+  output_out_call(ast.right, expList);
+  output_out_call(ast.next, expList);
 };
 
 /**
@@ -1846,7 +1949,7 @@ const code_gen_gen_call = (ast, expList) => {
  * @arg {object} ast
  * @arg {object} id
  */
-const code_gen_get_ast_check = (ast, id) => {
+const output_out_get_ast_check = (ast, id) => {
   if (ast.left.token.value === id.value) return true;
   return false;
 };
@@ -1856,15 +1959,15 @@ const code_gen_get_ast_check = (ast, id) => {
  * @arg {object} ast
  * @arg {object} id
  */
-const code_gen_get_ast = (expList, id) => {
+const output_out_get_ast = (expList, id) => {
   if (!expList) return null;
   if (check_ast_type(expList.ast.type, "data_type")) {
-    let ret = code_gen_get_ast_check(expList.ast, id);
+    let ret = output_out_get_ast_check(expList.ast, id);
     if (ret) {
       return expList.ast;
     }
   }
-  return code_gen_get_ast(expList.next, id);
+  return output_out_get_ast(expList.next, id);
 };
 
 /**
@@ -1872,7 +1975,7 @@ const code_gen_get_ast = (expList, id) => {
  * @arg {object} walk
  * @arg {array} expList
  */
-const code_gen_gen_block = (walk, expList) => {
+const output_out_block = (walk, expList) => {
   if (!walk) return;
 
   switch (walk.token.type) {
@@ -1888,34 +1991,34 @@ const code_gen_gen_block = (walk, expList) => {
     case tokenType.u64:
     case tokenType.f64:
     case tokenType.id:
-      code_gen_gen_exp(walk, false);
+      output_out_exp(walk, false);
       break;
     case tokenType.if:
-      code_gen_gen_ifelse(walk, expList);
+      output_out_ifelse(walk, expList);
       break;
     case tokenType.for:
-      code_gen_gen_for(walk);
+      output_out_for(walk);
       break;
     case tokenType.str:
       printf(walk);
       break;
     case tokenType.call:
-      code_gen_gen_call(code_gen_get_ast(expList, walk.token), expList);
+      output_out_call(output_out_get_ast(expList, walk.token), expList);
       break;
     default:
       break;
   }
 
-  code_gen_gen_block(walk.right, expList);
-  code_gen_gen_block(walk.next, expList);
+  output_out_block(walk.right, expList);
+  output_out_block(walk.next, expList);
 };
 
 /**
  * code generation of if statement
  * @arg {object} ast
  */
-const code_gen_gen_ifelse = (ast, expList) => {
-  const logical = code_gen_gen_logical_exp(ast, false);
+const output_out_ifelse = (ast, expList) => {
+  const logical = output_out_logical_exp(ast, false);
 
   let elseBlock;
   if (ast.left?.left?.left?.left) {
@@ -1923,13 +2026,13 @@ const code_gen_gen_ifelse = (ast, expList) => {
   }
 
   if (logical) {
-    code_gen_gen_block(ast.left.left.left.right, expList);
+    output_out_block(ast.left.left.left.right, expList);
   } else if (elseBlock) {
-    code_gen_gen_block(elseBlock, expList);
+    output_out_block(elseBlock, expList);
   }
 
   if (!logical && ast?.left?.left?.left?.next?.token.type === tokenType.if) {
-    code_gen_gen_ifelse(ast.left.left.left.next, expList);
+    output_out_ifelse(ast.left.left.left.next, expList);
   }
 };
 
@@ -1938,7 +2041,7 @@ const code_gen_gen_ifelse = (ast, expList) => {
  * @arg {object} ast
  * @arg {array} expList
  */
-const code_gen_gen_for = (ast, expList) => {
+const output_out_for = (ast, expList) => {
   const symTabI = get_symtab(ast.left.token);
   const val = parseInt(ast.right.right.token.value);
   const cond = ast.left.left.left.left.token;
@@ -1959,14 +2062,14 @@ const code_gen_gen_for = (ast, expList) => {
   switch (cond.type) {
     case tokenType.less:
       for (let i = val; i < condVal; i += iterateValue) {
-        code_gen_gen_block(ast.left.left.left.left.left.left.right, expList);
+        output_out_block(ast.left.left.left.left.left.left.right, expList);
         glSymTab[symTabI].const =
           parseInt(glSymTab[symTabI].const) + iterateValue;
       }
       break;
     case tokenType.big:
       for (let i = val; i > condVal; i += iterateValue) {
-        code_gen_gen_block(ast.left.left.left.left.left.left.right, expList);
+        output_out_block(ast.left.left.left.left.left.left.right, expList);
         glSymTab[symTabI].const =
           parseInt(glSymTab[symTabI].const) + iterateValue;
       }
@@ -1995,13 +2098,13 @@ const output = (expList) => {
       case tokenType.u64:
       case tokenType.f64:
       case tokenType.id:
-        code_gen_gen_exp(expListAux.ast, false);
+        output_out_exp(expListAux.ast, false);
         break;
       case tokenType.if:
-        code_gen_gen_ifelse(expListAux.ast, expList);
+        output_out_ifelse(expListAux.ast, expList);
         break;
       case tokenType.for:
-        code_gen_gen_for(expListAux.ast, expList);
+        output_out_for(expListAux.ast, expList);
         break;
       case tokenType.str:
         let walk = expListAux.ast;
@@ -2011,8 +2114,8 @@ const output = (expList) => {
         } while (walk);
         break;
       case tokenType.call:
-        code_gen_gen_call(
-          code_gen_get_ast(expList, expListAux.ast.token),
+        output_out_call(
+          output_out_get_ast(expList, expListAux.ast.token),
           expList
         );
         break;

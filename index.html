@@ -199,31 +199,37 @@
         case "conditionals":
           content =
             "// HolyC Conditionals\n" +
-            "if (TRUE) {\n" +
-            "\tif (1 > 2) {\n" +
+            "if (TRUE)\n{\n" +
+            "\tif (1 > 2)\n\t{\n" +
             "\t\t\"1 > 2\\n\";\n" +
-            "\t} else if (1 > 2 || 2 > 3) {\n" +
+            "\t}\n\telse if (1 > 2 || 2 > 3)\n\t{\n" +
             "\t\t\"2 > 3\\n\";\n" +
-            "\t} else {\n" +
+            "\t}\n\telse\n\t{\n" +
             "\t\t\"all false conditions\\n\";\n" +
-            "\t}\n" +
+            "\t\n\t}\n" +
             "}\n" +
             "\n" +
-            "if (TRUE > FALSE) {\n" +
+            "if (TRUE > FALSE)\n{\n" +
             "\t\"TRUE > FALSE\\n\";\n" +
             "}\n\n" +
+            "// Conditionals with variables\n" +
             "U8 A = 1;\n" +
             "U8 B = 2;\n" +
-            "if (A < B) {\n" +
+            "if (A < B)\n{\n" +
             "\t\"A < B\\n\";\n" +
             "}\n\n" +
-            "if (A) {\n" +
+            "if (A)\n{\n" +
             "\t\"A != 0\\n\";\n" +
             "\tA = 0;\n" +
             "}\n\n" +
-            "if (A) {\n" +
+            "if (A)\n{\n" +
             "\t\"A == 0\\n\";\n" +
-            "}";
+            "}\n\n" +
+            "// Conditionals with math expressions\n" +
+            "if (1 + 2 * 3 > 9)\n{\n" +
+            "\t\"1 + 2 * 3 > 9\\n\";\n" +
+            "}\nelse if (1 + 2 * 3 > A)\n{\n" +
+            "\t\"1 + 2 * 3 > A\\n\";\n}\n\n";
           break;
         default:
           content = "";
