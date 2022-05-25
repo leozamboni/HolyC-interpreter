@@ -1747,7 +1747,6 @@ const output_out_logical_exp = (ast, inside) => {
     walk?.token.type === tokenType.mul
   ) {
     value.number = output_out_math_exp(value.number, walk);
-    console.log(value.number)
     while (walk) {
       walk = walk.right;
       if (walk) {
@@ -1755,7 +1754,6 @@ const output_out_logical_exp = (ast, inside) => {
           walk.token.type === tokenType.or ||
           walk.token.type === tokenType.and ||
           walk.token.type === tokenType.big ||
-          walk.token.type === tokenType.not ||
           walk.token.type === tokenType.less ||
           walk.token.type === tokenType.equal
         ) {
@@ -1771,7 +1769,21 @@ const output_out_logical_exp = (ast, inside) => {
 
   let tokenValue;
   while (walk) {
-    if (walk.right.token.type === tokenType.id) {
+    if (
+      walk.right?.right?.token.type === tokenType.add ||
+      walk.right?.right?.token.type === tokenType.sub ||
+      walk.right?.right?.token.type === tokenType.div ||
+      walk.right?.right?.token.type === tokenType.mul ||
+      walk.right?.right?.token.type === tokenType.not
+    ) {
+      let mathFirst;
+      if (walk.right.token.type === tokenType.id) {
+        mathFirst = parseInt(glSymTab[get_symtab(walk.right.token)].const);
+      } else {
+        mathFirst = parseInt(walk.right.token.value);
+      }
+      tokenValue = output_out_math_exp(mathFirst, walk.right.right);
+    } else if (walk.right.token.type === tokenType.id) {
       tokenValue = parseInt(glSymTab[get_symtab(walk.right.token)].const);
     } else if (walk.right.token.type === tokenType.const) {
       tokenValue = parseInt(walk.right.token.value);
