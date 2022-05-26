@@ -111,6 +111,7 @@
       <option value="">Examples</option>
       <option value="helloWorld">Hello World</option>
       <option value="conditionals">Conditionals</option>
+      <option value="procedures">Procedures</option>
       <option value="fibonacci">Fibonacci</option>
     </select>
 
@@ -149,6 +150,8 @@
 
         // put caret at right position again
         this.selectionStart = this.selectionEnd = start + 1;
+        
+        highlight(document.getElementById("stdin").value)
       }
     });
     const examples = () => {
@@ -156,7 +159,7 @@
       switch (document.getElementById("examples").value) {
         case "helloWorld":
           content =
-            "// HolyC Hello world\n" +
+            "// Online HolyC: Hello world\n" +
             '"Holy World\\n";\n\n' +
             "U0\n" +
             "HelloWorld()\n" +
@@ -181,7 +184,7 @@
           break;
         case "fibonacci":
           content =
-            "// HolyC Fibonacci\n" +
+            "// Online HolyC: Fibonacci\n" +
             "U0\n" +
             "Fibonacci()\n" +
             "{\n" +
@@ -198,7 +201,7 @@
           break;
         case "conditionals":
           content =
-            "// HolyC Conditionals\n" +
+            "// Online HolyC: Conditionals\n" +
             "if (TRUE)\n{\n" +
             "\tif (1 > 2)\n\t{\n" +
             "\t\t\"1 > 2\\n\";\n" +
@@ -206,7 +209,7 @@
             "\t\t\"2 > 3\\n\";\n" +
             "\t}\n\telse\n\t{\n" +
             "\t\t\"all false conditions\\n\";\n" +
-            "\t\n\t}\n" +
+            "\t}\n" +
             "}\n" +
             "\n" +
             "if (TRUE > FALSE)\n{\n" +
@@ -230,6 +233,14 @@
             "\t\"1 + 2 * 3 > 9\\n\";\n" +
             "}\nelse if (1 + 2 * 3 > A + 8)\n{\n" +
             "\t\"1 + 2 * 3 > A + 8\\n\";\n}\n\n";
+          break;
+        case "procedures":
+          content =
+            "// Online HolyC: Procedures\n" +
+            "U0\nno_args_procedure()\n{\n" +
+            "\t\"no args procedure\\n\";\n" +
+            "}\n\n" + 
+            "no_args_procedure;\n";
           break;
         default:
           content = "";

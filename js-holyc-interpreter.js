@@ -147,7 +147,7 @@ const set_argsymtab = (symtabNode, priorWalk, tokenList) => {
  */
 const is_alpha = (val) => {
   if (val === " " || val === "\n") return false;
-  return /^[A-Z0-9]$/i.test(val);
+  return /^[A-Z0-9_]$/i.test(val);
 };
 
 /**
