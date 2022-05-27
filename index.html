@@ -12,7 +12,8 @@
       text-align: center;
       padding: 0;
       margin: 0;
-      font-family: monospace;
+      font-family: courier;
+      font-size: 10pt;
     }
 
     textarea {
@@ -22,7 +23,6 @@
       position: relative;
       color: transparent;
       caret-color: black;
-      font-size: large;
       white-space: break-spaces;
       outline: 5px solid #0000AA;
       border: 0px;
@@ -31,9 +31,8 @@
     #hl {
       overflow: hidden;
       pointer-events: none;
-      font-size: large;
       position: absolute;
-      top: 65px;
+      top: 75px;
       left: 25vw;
       -webkit-overflow-scrolling: touch;
       text-align: left;
@@ -237,7 +236,7 @@
             "// Online HolyC: Procedures\n" +
             "U0\nno_args_procedure()\n{\n" +
             "\t\"no args procedure\\n\";\n" +
-            "}\n\n" + 
+            "}\n\n" +
             "no_args_procedure;\n";
           break;
         default:
