@@ -125,10 +125,12 @@
       Not a complete HolyC language compiler yet. The source
       code is in GitHub you can contribute
       <a href="https://github.com/leozamboni/js-holyc-interpreter">here</a>. All currently implemented features are
-      exemplified in the select
+      exemplified in select.
     </p>
+    <p>If you want to learn HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/HolyC.html#l1">this</a> documentation.</p>
+    
     <p>This program is under MIT <a
-        href="https://github.com/leozamboni/js-holyc-interpreter/blob/master/LICENSE">license</a></p>
+        href="https://github.com/leozamboni/js-holyc-interpreter/blob/master/LICENSE">license</a>.</p>
     <br>
     <p>HolyC and TempleOS are creations of Terry Davis.</p>
   </main>
@@ -156,7 +158,7 @@
       switch (document.getElementById("examples").value) {
         case "helloWorld":
           content =
-            "// Online HolyC: Hello world\n" +
+            "// Online HolyC: Hello world:\n" +
             '"Holy World\\n";\n\n' +
             "U0\n" +
             "HelloWorld()\n" +
@@ -181,7 +183,7 @@
           break;
         case "fibonacci":
           content =
-            "// Online HolyC: Fibonacci\n" +
+            "// Online HolyC: Fibonacci:\n" +
             "U0\n" +
             "Fibonacci()\n" +
             "{\n" +
@@ -198,7 +200,7 @@
           break;
         case "conditionals":
           content =
-            "// Online HolyC: Conditionals\n" +
+            "// Online HolyC: Conditionals:\n" +
             "if (TRUE)\n{\n" +
             "\tif (1 > 2)\n\t{\n" +
             "\t\t\"1 > 2\\n\";\n" +
@@ -233,18 +235,19 @@
           break;
         case "procedures":
           content =
-            "// Online HolyC: Procedures\n" +
-            "U0\nno_arg_procedure()\n{\n" +
-            "\t\"no arg procedure\\n\";\n" +
+            "// Online HolyC: Procedures:\n" +
+            "U0\nno_args()\n{\n" +
+            "\t\"no args\\n\";\n" +
             "}\n\n" +
-            "no_arg_procedure();\n" +
-            "no_arg_procedure;\n\n" +
-            "U0\narg_procedure(U0 abc=1, U0 def=2, U0 ghi=3)\n{\n" +
-            "\t\"arg procedure\\n\";\n" +
+            "// Function with no args, or just default args can be called without parentheses.\n" +
+            "no_args(\"*\");\n" +
+            "no_args();\n" +
+            "no_args;\n\n" +
+            "U0\ndefault_args(U0 abc=1, U0 def, U0 ghi=3)\n{\n" +
+            "\t\"default args\\n\";\n" +
             "}\n\n" +
-            "arg_procedure(\"*\");\n" +
-            "arg_procedure();\n" +
-            "arg_procedure;\n";
+            "//Default args don't have to be on the end. This code is valid:\n"+
+            "default_args(,2);\n";
           break;
         default:
           content = "";

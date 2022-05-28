@@ -1132,14 +1132,14 @@ const holyc_parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => 
 
       check_symtab(tokenList, true);
 
-      glPrototypes[prototype].args[i].value = glSymTab[get_symtab(tokenList[glWalk])].const;
+      //glPrototypes[prototype].args[i].value = glSymTab[get_symtab(tokenList[glWalk])].const;
 
       ast = new Ast(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
     } else if (check_token(tokenList, glWalk, tokenType.const)) {
 
-      glPrototypes[prototype].args[i].value = tokenList[glWalk].value;
+      //glPrototypes[prototype].args[i].value = tokenList[glWalk].value;
 
       ast = new Ast(tokenType.const);
       ast.token = tokenList[glWalk];
@@ -1150,26 +1150,30 @@ const holyc_parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => 
 
       check_symtab(tokenList, true);
 
-      glPrototypes[prototype].args[i].value = glSymTab[get_symtab(tokenList[glWalk])].const;
+      //glPrototypes[prototype].args[i].value = glSymTab[get_symtab(tokenList[glWalk])].const;
 
       ast = new Ast(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
     } else {
 
-      glPrototypes[prototype].args[i].value = tokenList[glWalk].value;
+      //glPrototypes[prototype].args[i].value = tokenList[glWalk].value;
 
       ast = new Ast(tokenType.const);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.const);
     }
   }
-  i++;
-  if (i < glPrototypes[prototype].args.length) {
+
+  if (i < glPrototypes[prototype].args.length - 1) {
     if (ast) {
-      ast.left = new Ast(tokenType.comma);
-      ast.left.token = tokenList[glWalk];
-      list_eat(tokenList, tokenType.comma);
+      if (check_token(tokenList, glWalk, tokenType.comma)) {
+        ast.left = new Ast(tokenType.comma);
+        ast.left.token = tokenList[glWalk];
+        list_eat(tokenList, tokenType.comma);
+      } else {
+        return null;
+      }
     } else {
       if (notAssigArgs || check_token(tokenList, glWalk, tokenType.comma)) {
         ast = new Ast(tokenType.comma);
@@ -1183,7 +1187,7 @@ const holyc_parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => 
     return null;
   }
 
-  ast.right = holyc_parser_parse_call_args(tokenList, prototype, notAssigArgs, i);
+  ast.right = holyc_parser_parse_call_args(tokenList, prototype, notAssigArgs, ++i);
 
   return ast;
 };
@@ -1202,7 +1206,7 @@ const holyc_parser_parse_call = (tokenList) => {
   list_eat(tokenList, tokenType.id);
 
   if (glPrototypes[prototype].args.length) {
-    const notAssigArgs = glPrototypes[prototype].args.filter(e => e.value ? false : true).length
+    const notAssigArgs = glPrototypes[prototype].args.filter(e => { return e.value === undefined ? true : false }).length
 
     if (check_token(tokenList, glWalk, tokenType.semi) && !notAssigArgs) {
       ast.left = new Ast(tokenType.semi);
@@ -1237,6 +1241,12 @@ const holyc_parser_parse_call = (tokenList) => {
     ast.left = new Ast(tokenType.rparen);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.rparen);
+
+    if (check_token(tokenList, glWalk, tokenType.str) && tokenList[glWalk].value === "*") {
+      ast.left.next = new Ast(tokenType.str);
+      ast.left.next.token = tokenList[glWalk];
+      list_eat(tokenList, tokenType.str);
+    }
 
     ast.left.left = new Ast(tokenType.lparen);
     ast.left.left.token = tokenList[glWalk];
@@ -1375,7 +1385,7 @@ const holyc_parser_parse_id = (tokenList) => {
     let prototype = {
       id: tokenList[glWalk - 1].value,
       type: tokenList[glWalk - 2].type,
-      args: []
+      args: undefined,
     }
     glSymTab.push({ ...tokenList[glWalk - 1], const: 0 });
 
@@ -1392,7 +1402,7 @@ const holyc_parser_parse_id = (tokenList) => {
       let argProt = {
         type: tokenList[priorWalk].type,
         id: tokenList[priorWalk + 1].value,
-        value: 0,
+        value: undefined,
       }
       if (tokenList[priorWalk + 2].type === tokenType.assig) {
         argProt.value = tokenList[priorWalk + 3].value;
@@ -1682,7 +1692,6 @@ const holyc_parser_parse = (tokenList) => {
       expList.ast = holyc_parser_parse_ifelse(tokenList);
       break;
     default:
-      console.log(tokenList[glWalk])
       parser_error(tokenList[glWalk]);
   }
 
