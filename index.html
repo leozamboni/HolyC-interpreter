@@ -12,7 +12,7 @@
       text-align: center;
       padding: 0;
       margin: 0;
-      font-family: courier;
+      font-family: monospace;
       font-size: 10pt;
     }
 
@@ -32,7 +32,7 @@
       overflow: hidden;
       pointer-events: none;
       position: absolute;
-      top: 75px;
+      top: 90px;
       left: 25vw;
       -webkit-overflow-scrolling: touch;
       text-align: left;
@@ -234,10 +234,17 @@
         case "procedures":
           content =
             "// Online HolyC: Procedures\n" +
-            "U0\nno_args_procedure()\n{\n" +
-            "\t\"no args procedure\\n\";\n" +
+            "U0\nno_arg_procedure()\n{\n" +
+            "\t\"no arg procedure\\n\";\n" +
             "}\n\n" +
-            "no_args_procedure;\n";
+            "no_arg_procedure();\n" +
+            "no_arg_procedure;\n\n" +
+            "U0\narg_procedure(U0 abc=1, U0 def=2, U0 ghi=3)\n{\n" +
+            "\t\"arg procedure\\n\";\n" +
+            "}\n\n" +
+            "arg_procedure(\"*\");\n" +
+            "arg_procedure();\n" +
+            "arg_procedure;\n";
           break;
         default:
           content = "";
