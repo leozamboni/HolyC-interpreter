@@ -892,7 +892,9 @@ const holyc_parser_parse_exp = (tokenList, arg, procedureArgs) => {
     }
   } else if (is_mathop(tokenList, glWalk - 1)) {
     if (check_token(tokenList, glWalk, tokenType.id)) {
-      check_symtab(tokenList, true);
+      let procedureArg;
+      procedureArgs && (procedureArg = procedureArgs.find(e => e.id === tokenList[glWalk].value))
+      !procedureArg && check_symtab(tokenList, true);
 
       ast = new Ast(tokenType.id);
       ast.token = tokenList[glWalk];
@@ -1936,7 +1938,7 @@ const output_out_exp = (ast, left, prototypeIndex) => {
   let symTabI = -1;
   let prototypeArgIndex = 0;
   let procedureToken;
- 
+
   if (check_ast_type(ast.token.type, "data_type")) {
     procedureToken = ast.left.token
     if (prototypeIndex + 1 && glPrototypes[prototypeIndex]?.args?.find(e => e.id === procedureToken.value)) {
@@ -2026,7 +2028,6 @@ const output_out_exp = (ast, left, prototypeIndex) => {
         break;
       case tokenType.assingsub:
       case tokenType.sub:
-        console.log(walk)
         if (walk.right.token.type === tokenType.const) {
           value -= parseInt(walk.right.token.value);
         } else {
@@ -2101,7 +2102,9 @@ const output_out_block = (walk, expList, prototypeIndex) => {
     case tokenType.u64:
     case tokenType.f64:
     case tokenType.id:
-      output_out_exp(walk, false, prototypeIndex);
+      if (walk.left) { // fix two entries in exp
+        output_out_exp(walk, false, prototypeIndex);
+      }
       break;
     case tokenType.if:
       output_out_ifelse(walk, expList, prototypeIndex);
@@ -2208,7 +2211,7 @@ const output_out_procedures = (ast, expList) => {
     i++;
     aux = aux.right;
   }
-console.log(procedureAst.right)
+
   output_out_block(procedureAst.right, expList, prototypeIndex)
   //output_out_call(procedureAst, expList, procedure.args);
 };
