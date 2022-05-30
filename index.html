@@ -158,7 +158,7 @@
       switch (document.getElementById("examples").value) {
         case "helloWorld":
           content =
-            "// Online HolyC: Hello world:\n" +
+            "// Online HolyC Hello world:\n" +
             '"Holy World\\n";\n\n' +
             "U0\n" +
             "HelloWorld()\n" +
@@ -183,7 +183,7 @@
           break;
         case "fibonacci":
           content =
-            "// Online HolyC: Fibonacci:\n" +
+            "// Online HolyC Fibonacci:\n" +
             "U0\n" +
             "Fibonacci()\n" +
             "{\n" +
@@ -200,7 +200,12 @@
           break;
         case "conditionals":
           content =
-            "// Online HolyC: Conditionals:\n" +
+            "// Online HolyC Conditionals:\n" +
+            "// Allows \"5<1<2+1<20\" instead of \"5<1 && 1<2+1 && 1+1<20\";\n" +
+            "if (5<1<2+1<20)\n{\n" +
+            "\t\"true\\n\";\n" +
+            "}\n\n" +
+            "// Conditionals with logicals;\n" + 
             "if (TRUE)\n{\n" +
             "\tif (1 > 2)\n\t{\n" +
             "\t\t\"1 > 2\\n\";\n" +
@@ -214,7 +219,7 @@
             "if (TRUE > FALSE)\n{\n" +
             "\t\"TRUE > FALSE\\n\";\n" +
             "}\n\n" +
-            "// Conditionals with variables\n" +
+            "// Conditionals with variables;\n" +
             "U8 A = 1;\n" +
             "U8 B = 2;\n" +
             "if (A < B)\n{\n" +
@@ -227,7 +232,7 @@
             "if (A)\n{\n" +
             "\t\"A == 0\\n\";\n" +
             "}\n\n" +
-            "// Conditionals with math expressions\n" +
+            "// Conditionals with math expressions.\n" +
             "if (1 + 2 * 3 > 9)\n{\n" +
             "\t\"1 + 2 * 3 > 9\\n\";\n" +
             "}\nelse if (1 + 2 * 3 > A + 8)\n{\n" +
@@ -235,11 +240,11 @@
           break;
         case "procedures":
           content =
-            "// Online HolyC: Procedures:\n" +
+            "// Online HolyC Procedures:\n" +
             "U0\nno_args()\n{\n" +
             "\t\"no args\\n\";\n" +
             "}\n\n" +
-            "// Function with no args, or just default args can be called without parentheses.\n" +
+            "// Function with no args, or just default args can be called without parentheses;\n" +
             "no_args(\"*\");\n" +
             "no_args();\n" +
             "no_args;\n\n" +
