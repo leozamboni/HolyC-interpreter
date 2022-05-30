@@ -13,10 +13,10 @@ const web_jsholyc_run = () => {
 };
 
 /**
- * JS HolyC AST
+ * AST Node
  * @constructor
  */
-class Ast {
+class AstNode {
   token;
   next;
   left;
@@ -27,10 +27,10 @@ class Ast {
 }
 
 /**
- * JS HolyC expression list
+ * AST
  * @constructor
  */
-class ExpList {
+class Ast {
   next;
   ast;
 }
@@ -39,7 +39,7 @@ class ExpList {
  * alert output string
  * @global
  */
-var outputstr;
+var stdout;
 
 /**
  * symbol table
@@ -435,11 +435,11 @@ const lex_keyword = (str) => {
 };
 
 /**
- * JS HolyC lexer
+ * lexer
  * @arg {string} input - input string
  */
 const lex = (input) => {
-  outputstr = "";
+  stdout = "";
   if (!input) {
     throw alert("nothing to compile\n");
   }
@@ -729,7 +729,7 @@ const lex = (input) => {
  * semantic analysis of logical expresions
  * @arg {array} tokenList
  */
-const holyc_parser_parse_logical_exp = (tokenList) => {
+const parser_parse_logical_exp = (tokenList) => {
   if (
     check_token(tokenList, glWalk, tokenType.semi) ||
     check_token(tokenList, glWalk, tokenType.comma) ||
@@ -746,7 +746,7 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
     check_token(tokenList, glWalk - 1, tokenType.false)
   ) {
     if (is_logicalop(tokenList, glWalk)) {
-      ast = new Ast(tokenList[glWalk]?.type);
+      ast = new AstNode(tokenList[glWalk]?.type);
       ast.token = tokenList[glWalk];
       list_eat_logical(tokenList);
     } else {
@@ -759,7 +759,7 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
             check_token(tokenList, glWalk + 1, tokenType.id) ||
             check_token(tokenList, glWalk + 1, tokenType.const)
           ) {
-            ast = new Ast(tokenList[glWalk]?.type);
+            ast = new AstNode(tokenList[glWalk]?.type);
             ast.token = tokenList[glWalk];
             list_eat_math(tokenList);
           }
@@ -768,17 +768,17 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
     }
   } else if (is_logicalop(tokenList, glWalk - 1)) {
     if (check_token(tokenList, glWalk, tokenType.not)) {
-      ast = new Ast(tokenType.not);
+      ast = new AstNode(tokenType.not);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.not);
     } else if (check_token(tokenList, glWalk, tokenType.id)) {
       check_symtab(tokenList, true);
 
-      ast = new Ast(tokenType.id);
+      ast = new AstNode(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
     } else if (check_token(tokenList, glWalk, tokenType.true)) {
-      ast = new Ast(tokenType.true);
+      ast = new AstNode(tokenType.true);
       ast.token = {
         value: 1,
         line: tokenList[glWalk].line,
@@ -786,7 +786,7 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
       };
       list_eat(tokenList, tokenType.true);
     } else if (check_token(tokenList, glWalk, tokenType.false)) {
-      ast = new Ast(tokenType.const);
+      ast = new AstNode(tokenType.const);
       ast.token = {
         value: 0,
         line: tokenList[glWalk].line,
@@ -794,18 +794,18 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
       };
       list_eat(tokenList, tokenType.false);
     } else {
-      ast = new Ast(tokenType.const);
+      ast = new AstNode(tokenType.const);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.const);
     }
   } else if (check_token(tokenList, glWalk, tokenType.id)) {
     check_symtab(tokenList, true);
 
-    ast = new Ast(tokenType.id);
+    ast = new AstNode(tokenType.id);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
   } else if (check_token(tokenList, glWalk, tokenType.true)) {
-    ast = new Ast(tokenType.true);
+    ast = new AstNode(tokenType.true);
     ast.token = {
       value: 1,
       line: tokenList[glWalk].line,
@@ -813,7 +813,7 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
     };
     list_eat(tokenList, tokenType.true);
   } else if (check_token(tokenList, glWalk, tokenType.false)) {
-    ast = new Ast(tokenType.const);
+    ast = new AstNode(tokenType.const);
     ast.token = {
       value: 0,
       line: tokenList[glWalk].line,
@@ -821,12 +821,12 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
     };
     list_eat(tokenList, tokenType.false);
   } else {
-    ast = new Ast(tokenType.const);
+    ast = new AstNode(tokenType.const);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.const);
   }
 
-  ast.right = holyc_parser_parse_logical_exp(tokenList);
+  ast.right = parser_parse_logical_exp(tokenList);
 
   return ast;
 };
@@ -835,7 +835,7 @@ const holyc_parser_parse_logical_exp = (tokenList) => {
  * semantic analysis of expresions
  * @arg {array} tokenList
  */
-const holyc_parser_parse_exp = (tokenList, arg, procedureArgs) => {
+const parser_parse_exp = (tokenList, arg, procedureArgs) => {
   if (
     check_token(tokenList, glWalk, tokenType.semi) ||
     check_token(tokenList, glWalk, tokenType.comma) ||
@@ -854,16 +854,16 @@ const holyc_parser_parse_exp = (tokenList, arg, procedureArgs) => {
         check_token(tokenList, glWalk + 1, tokenType.id) ||
         check_token(tokenList, glWalk + 1, tokenType.const)
       ) {
-        ast = new Ast(tokenList[glWalk]?.type);
+        ast = new AstNode(tokenList[glWalk]?.type);
         ast.token = tokenList[glWalk];
         list_eat_math(tokenList);
       }
     } else if (is_assingop(tokenList, glWalk)) {
-      ast = new Ast(tokenList[glWalk]?.type);
+      ast = new AstNode(tokenList[glWalk]?.type);
       ast.token = tokenList[glWalk];
       list_eat_compassing(tokenList);
     } else {
-      ast = new Ast(tokenType.assig);
+      ast = new AstNode(tokenType.assig);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.assig);
     }
@@ -876,7 +876,7 @@ const holyc_parser_parse_exp = (tokenList, arg, procedureArgs) => {
       procedureArgs && (procedureArg = procedureArgs.find(e => e.id === tokenList[glWalk].value))
       !procedureArg && check_symtab(tokenList, true);
 
-      ast = new Ast(tokenType.id);
+      ast = new AstNode(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
     } else {
@@ -886,7 +886,7 @@ const holyc_parser_parse_exp = (tokenList, arg, procedureArgs) => {
         const: tokenList[glWalk].value,
       };
 
-      ast = new Ast(tokenType.const);
+      ast = new AstNode(tokenType.const);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.const);
     }
@@ -896,11 +896,11 @@ const holyc_parser_parse_exp = (tokenList, arg, procedureArgs) => {
       procedureArgs && (procedureArg = procedureArgs.find(e => e.id === tokenList[glWalk].value))
       !procedureArg && check_symtab(tokenList, true);
 
-      ast = new Ast(tokenType.id);
+      ast = new AstNode(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
     } else {
-      ast = new Ast(tokenType.const);
+      ast = new AstNode(tokenType.const);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.const);
     }
@@ -909,18 +909,18 @@ const holyc_parser_parse_exp = (tokenList, arg, procedureArgs) => {
     procedureArgs && (procedureArg = procedureArgs.find(e => e.id === tokenList[glWalk].value))
     !procedureArg && check_symtab(tokenList, true);
 
-    ast = new Ast(tokenType.id);
+    ast = new AstNode(tokenType.id);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
   } else if (!check_token(tokenList, glWalk, tokenType.semi)) {
-    ast = new Ast(tokenType.comma);
+    ast = new AstNode(tokenType.comma);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.comma);
   } else {
     parser_error(tokenList[glWalk]);
   }
 
-  ast.right = holyc_parser_parse_exp(tokenList, arg, procedureArgs);
+  ast.right = parser_parse_exp(tokenList, arg, procedureArgs);
 
   return ast;
 };
@@ -929,7 +929,7 @@ const holyc_parser_parse_exp = (tokenList, arg, procedureArgs) => {
  * semantic analysis of string arguments
  * @arg {array} tokenList
  */
-const holyc_parser_parse_str_args = (tokenList) => {
+const parser_parse_str_args = (tokenList) => {
   if (check_token(tokenList, glWalk, tokenType.semi)) return null;
 
   let ast;
@@ -938,30 +938,30 @@ const holyc_parser_parse_str_args = (tokenList) => {
     check_token(tokenList, glWalk, tokenType.id) ||
     check_token(tokenList, glWalk, tokenType.const)
   ) {
-    ast = new Ast(tokenList[glWalk]?.type);
+    ast = new AstNode(tokenList[glWalk]?.type);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenList[glWalk].type);
   } else if (check_token(tokenList, glWalk, tokenType.str)) {
-    ast = new Ast(tokenType.str);
+    ast = new AstNode(tokenType.str);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.str);
   } else {
-    ast = holyc_parser_parse_exp(tokenList, false);
+    ast = parser_parse_exp(tokenList, false);
   }
 
   if (check_token(tokenList, glWalk, tokenType.assig)) {
-    ast.left = new Ast(tokenType.assig);
+    ast.left = new AstNode(tokenType.assig);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.assig);
 
-    ast.left.right = holyc_parser_parse_exp(tokenList, false);
+    ast.left.right = parser_parse_exp(tokenList, false);
   } else if (!check_token(tokenList, glWalk, tokenType.semi)) {
-    ast.left = new Ast(tokenType.comma);
+    ast.left = new AstNode(tokenType.comma);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.comma);
   }
 
-  ast.right = holyc_parser_parse_str_args(tokenList);
+  ast.right = parser_parse_str_args(tokenList);
 
   return ast;
 };
@@ -970,15 +970,15 @@ const holyc_parser_parse_str_args = (tokenList) => {
  * semantic analysis of inline strings
  * @arg {array} tokenList
  */
-const holyc_parser_parse_inline_str = (tokenList) => {
+const parser_parse_inline_str = (tokenList) => {
   if (check_token(tokenList, glWalk, tokenType.semi)) return null;
 
-  let ast = new Ast(tokenType.str);
+  let ast = new AstNode(tokenType.str);
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.str);
 
   if (!check_token(tokenList, glWalk, tokenType.semi)) {
-    ast.next = new Ast(tokenType.comma);
+    ast.next = new AstNode(tokenType.comma);
     ast.next.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.comma);
 
@@ -987,7 +987,7 @@ const holyc_parser_parse_inline_str = (tokenList) => {
     }
   }
 
-  ast.right = holyc_parser_parse_inline_str(tokenList);
+  ast.right = parser_parse_inline_str(tokenList);
 
   return ast;
 };
@@ -996,36 +996,36 @@ const holyc_parser_parse_inline_str = (tokenList) => {
  * semantic analysis of strings
  * @arg {array} tokenList
  */
-const holyc_parser_parse_str = (tokenList) => {
+const parser_parse_str = (tokenList) => {
   let symtabNode = tokenList[glWalk];
 
-  let ast = new Ast(tokenType.str);
+  let ast = new AstNode(tokenType.str);
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.str);
 
   if (check_token(tokenList, glWalk, tokenType.semi)) {
-    ast.left = new Ast(tokenType.semi);
+    ast.left = new AstNode(tokenType.semi);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.semi);
   } else {
-    ast.left = new Ast(tokenType.comma);
+    ast.left = new AstNode(tokenType.comma);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.comma);
 
     if (check_token(tokenList, glWalk, tokenType.str)) {
-      ast.right = holyc_parser_parse_inline_str(tokenList);
+      ast.right = parser_parse_inline_str(tokenList);
 
-      ast.left.left = new Ast(tokenType.semi);
+      ast.left.left = new AstNode(tokenType.semi);
       ast.left.left.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.semi);
     } else {
       //let priorWalk = glWalk;
 
-      ast.left.right = holyc_parser_parse_str_args(tokenList);
+      ast.left.right = parser_parse_str_args(tokenList);
 
       //set_argsymtab(symtabNode, priorWalk, tokenList);
 
-      ast.left.left = new Ast(tokenType.semi);
+      ast.left.left = new AstNode(tokenType.semi);
       ast.left.left.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.semi);
     }
@@ -1038,7 +1038,7 @@ const holyc_parser_parse_str = (tokenList) => {
  * semantic analysis of blocks
  * @arg {array} tokenList
  */
-const holyc_parser_parse_block = (tokenList, procedureArgs) => {
+const parser_parse_block = (tokenList, procedureArgs) => {
   if (check_token(tokenList, glWalk, tokenType.lbrace)) return null;
 
   let ast;
@@ -1056,26 +1056,26 @@ const holyc_parser_parse_block = (tokenList, procedureArgs) => {
     case tokenType.u64:
     case tokenType.f64:
     case tokenType.id:
-      ast = holyc_parser_parse_id(tokenList, procedureArgs);
+      ast = parser_parse_id(tokenList, procedureArgs);
       break;
     case tokenType.increment:
     case tokenType.decrement:
-      ast = holyc_parser_parse_prepostfix(tokenList, false);
+      ast = parser_parse_prepostfix(tokenList, false);
       break;
     case tokenType.str:
-      ast = holyc_parser_parse_str(tokenList, procedureArgs);
+      ast = parser_parse_str(tokenList, procedureArgs);
       break;
     case tokenType.for:
-      ast = holyc_parser_parse_for(tokenList, procedureArgs);
+      ast = parser_parse_for(tokenList, procedureArgs);
       break;
     case tokenType.if:
-      ast = holyc_parser_parse_ifelse(tokenList, procedureArgs);
+      ast = parser_parse_ifelse(tokenList, procedureArgs);
       break;
     default:
       parser_error(tokenList[glWalk]);
   }
 
-  ast.next = holyc_parser_parse_block(tokenList, procedureArgs);
+  ast.next = parser_parse_block(tokenList, procedureArgs);
 
   return ast;
 };
@@ -1084,40 +1084,40 @@ const holyc_parser_parse_block = (tokenList, procedureArgs) => {
  * semantic analysis of procedures arguments
  * @arg {array} tokenList
  */
-const holyc_parser_parse_args = (tokenList = []) => {
+const parser_parse_args = (tokenList = []) => {
   if (check_token(tokenList, glWalk, tokenType.lparen)) return null;
 
-  let ast = new Ast(tokenList[glWalk]?.type);
+  let ast = new AstNode(tokenList[glWalk]?.type);
   ast.token = tokenList[glWalk];
   list_eat_type(tokenList);
 
-  ast.next = new Ast(tokenType.id);
+  ast.next = new AstNode(tokenType.id);
   ast.next.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.id);
 
   if (check_token(tokenList, glWalk, tokenType.assig)) {
-    ast.next.next = new Ast(tokenType.assig);
+    ast.next.next = new AstNode(tokenType.assig);
     ast.next.next.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.assig);
 
     if (check_token(tokenList, glWalk, tokenType.const)) {
-      ast.next.next.next = new Ast(tokenType.const);
+      ast.next.next.next = new AstNode(tokenType.const);
       ast.next.next.next.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.const);
     } else {
-      ast.next.next.next = new Ast(tokenType.str);
+      ast.next.next.next = new AstNode(tokenType.str);
       ast.next.next.next.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.str);
     }
   }
 
   if (!check_token(tokenList, glWalk, tokenType.lparen)) {
-    ast.next.next = new Ast(tokenType.comma);
+    ast.next.next = new AstNode(tokenType.comma);
     ast.next.next.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.comma);
   }
 
-  ast.right = holyc_parser_parse_args(tokenList);
+  ast.right = parser_parse_args(tokenList);
 
   return ast;
 };
@@ -1128,7 +1128,7 @@ const holyc_parser_parse_args = (tokenList = []) => {
  * @arg {number} prototype
  * @arg {number} i - number of arguments
  */
-const holyc_parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => {
+const parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => {
   if (glPrototypes[prototype].args.length === i) return null;
 
   let ast;
@@ -1140,14 +1140,14 @@ const holyc_parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => 
 
       //glPrototypes[prototype].args[i].value = glSymTab[get_symtab(tokenList[glWalk])].const;
 
-      ast = new Ast(tokenType.id);
+      ast = new AstNode(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
     } else if (check_token(tokenList, glWalk, tokenType.const)) {
 
       //glPrototypes[prototype].args[i].value = tokenList[glWalk].value;
 
-      ast = new Ast(tokenType.const);
+      ast = new AstNode(tokenType.const);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.const);
     }
@@ -1158,14 +1158,14 @@ const holyc_parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => 
 
       //glPrototypes[prototype].args[i].value = glSymTab[get_symtab(tokenList[glWalk])].const;
 
-      ast = new Ast(tokenType.id);
+      ast = new AstNode(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
     } else {
 
       //glPrototypes[prototype].args[i].value = tokenList[glWalk].value;
 
-      ast = new Ast(tokenType.const);
+      ast = new AstNode(tokenType.const);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.const);
     }
@@ -1174,7 +1174,7 @@ const holyc_parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => 
   if (i < glPrototypes[prototype].args.length - 1) {
     if (ast) {
       if (check_token(tokenList, glWalk, tokenType.comma)) {
-        ast.left = new Ast(tokenType.comma);
+        ast.left = new AstNode(tokenType.comma);
         ast.left.token = tokenList[glWalk];
         list_eat(tokenList, tokenType.comma);
       } else {
@@ -1182,7 +1182,7 @@ const holyc_parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => 
       }
     } else {
       if (notAssigArgs || check_token(tokenList, glWalk, tokenType.comma)) {
-        ast = new Ast(tokenType.comma);
+        ast = new AstNode(tokenType.comma);
         ast.token = tokenList[glWalk];
         list_eat(tokenList, tokenType.comma);
       } else if (!notAssigArgs || check_token(tokenList, glWalk, tokenType.rparen)) {
@@ -1193,7 +1193,7 @@ const holyc_parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => 
     return ast;
   }
 
-  ast.right = holyc_parser_parse_call_args(tokenList, prototype, notAssigArgs, ++i);
+  ast.right = parser_parse_call_args(tokenList, prototype, notAssigArgs, ++i);
 
   return ast;
 };
@@ -1202,12 +1202,12 @@ const holyc_parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => 
  * semantic analysis of procedures call
  * @arg {array} tokenList
  */
-const holyc_parser_parse_call = (tokenList) => {
+const parser_parse_call = (tokenList) => {
   check_symtab(tokenList, true);
 
   const prototype = get_prototype(tokenList[glWalk]);
 
-  let ast = new Ast(tokenType.call);
+  let ast = new AstNode(tokenType.call);
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.id);
 
@@ -1215,54 +1215,54 @@ const holyc_parser_parse_call = (tokenList) => {
     const notAssigArgs = glPrototypes[prototype].args.filter(e => { return e.value === undefined ? true : false }).length
 
     if (check_token(tokenList, glWalk, tokenType.semi) && !notAssigArgs) {
-      ast.left = new Ast(tokenType.semi);
+      ast.left = new AstNode(tokenType.semi);
       ast.left.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.semi);
 
       return ast;
     }
 
-    ast.left = new Ast(tokenType.rparen);
+    ast.left = new AstNode(tokenType.rparen);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.rparen);
 
     if (check_token(tokenList, glWalk, tokenType.str) && !notAssigArgs && tokenList[glWalk].value === "*") {
-      ast.left.left = new Ast(tokenType.str);
+      ast.left.left = new AstNode(tokenType.str);
       ast.left.left.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.str);
     } else {
       if (glPrototypes[prototype].args.length) {
-        ast.right = holyc_parser_parse_call_args(tokenList, prototype, notAssigArgs, 0);
+        ast.right = parser_parse_call_args(tokenList, prototype, notAssigArgs, 0);
       }
     }
 
-    ast.left.left = new Ast(tokenType.lparen);
+    ast.left.left = new AstNode(tokenType.lparen);
     ast.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.lparen);
 
-    ast.left.left.left = new Ast(tokenType.semi);
+    ast.left.left.left = new AstNode(tokenType.semi);
     ast.left.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.semi);
   } else if (check_token(tokenList, glWalk, tokenType.rparen)) {
-    ast.left = new Ast(tokenType.rparen);
+    ast.left = new AstNode(tokenType.rparen);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.rparen);
 
     if (check_token(tokenList, glWalk, tokenType.str) && tokenList[glWalk].value === "*") {
-      ast.left.next = new Ast(tokenType.str);
+      ast.left.next = new AstNode(tokenType.str);
       ast.left.next.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.str);
     }
 
-    ast.left.left = new Ast(tokenType.lparen);
+    ast.left.left = new AstNode(tokenType.lparen);
     ast.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.lparen);
 
-    ast.left.left.left = new Ast(tokenType.semi);
+    ast.left.left.left = new AstNode(tokenType.semi);
     ast.left.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.semi);
   } else {
-    ast.left = new Ast(tokenType.semi);
+    ast.left = new AstNode(tokenType.semi);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.semi);
   }
@@ -1274,7 +1274,7 @@ const holyc_parser_parse_call = (tokenList) => {
  * semantic analysis of inline variables declaration
  * @arg {array} tokenList
  */
-const holyc_parser_parse_inline_vars = (tokenList) => {
+const parser_parse_inline_vars = (tokenList) => {
   if (
     check_token(tokenList, glWalk, tokenType.semi) &&
     !check_token(tokenList, glWalk - 1, tokenType.comma)
@@ -1285,31 +1285,31 @@ const holyc_parser_parse_inline_vars = (tokenList) => {
 
   let symtabNode = tokenList[glWalk];
 
-  let ast = new Ast(tokenType.id);
+  let ast = new AstNode(tokenType.id);
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.id);
 
   if (check_token(tokenList, glWalk, tokenType.assig)) {
     glSymTab.push({ ...symtabNode, const: 0 });
 
-    ast.left = holyc_parser_parse_exp(tokenList, false);
+    ast.left = parser_parse_exp(tokenList, false);
 
     if (!check_token(tokenList, glWalk, tokenType.semi)) {
-      ast.left.left = new Ast(tokenType.comma);
+      ast.left.left = new AstNode(tokenType.comma);
       ast.left.left.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.comma);
     }
   } else if (!check_token(tokenList, glWalk, tokenType.semi)) {
     glSymTab.push({ ...symtabNode, const: 0 });
 
-    ast.left = new Ast(tokenType.comma);
+    ast.left = new AstNode(tokenType.comma);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.comma);
   } else {
     glSymTab.push({ ...symtabNode, const: 0 });
   }
 
-  ast.right = holyc_parser_parse_inline_vars(tokenList);
+  ast.right = parser_parse_inline_vars(tokenList);
 
   return ast;
 };
@@ -1318,12 +1318,12 @@ const holyc_parser_parse_inline_vars = (tokenList) => {
  * semantic analysis of identifiers
  * @arg {array} tokenList
  */
-const holyc_parser_parse_id = (tokenList, procedureArgs) => {
+const parser_parse_id = (tokenList, procedureArgs) => {
   if (check_token(tokenList, glWalk, tokenType.id)) {
     if (is_assingop(tokenList, glWalk + 1)) {
-      let ast = holyc_parser_parse_exp(tokenList, false, procedureArgs);
+      let ast = parser_parse_exp(tokenList, false, procedureArgs);
 
-      ast.left = new Ast(tokenType.semi);
+      ast.left = new AstNode(tokenType.semi);
       ast.left.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.semi);
 
@@ -1332,13 +1332,13 @@ const holyc_parser_parse_id = (tokenList, procedureArgs) => {
       check_token(tokenList, glWalk + 1, tokenType.increment) ||
       check_token(tokenList, glWalk + 1, tokenType.decrement)
     ) {
-      return holyc_parser_parse_prepostfix(tokenList, false);
+      return parser_parse_prepostfix(tokenList, false);
     } else {
-      return holyc_parser_parse_call(tokenList);
+      return parser_parse_call(tokenList);
     }
   }
 
-  let ast = new Ast(tokenList[glWalk]?.type);
+  let ast = new AstNode(tokenList[glWalk]?.type);
   ast.token = tokenList[glWalk];
   list_eat_type(tokenList);
 
@@ -1346,42 +1346,42 @@ const holyc_parser_parse_id = (tokenList, procedureArgs) => {
 
   let symtabNode = tokenList[glWalk];
 
-  ast.left = new Ast(tokenType.id);
+  ast.left = new AstNode(tokenType.id);
   ast.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.id);
 
   if (check_token(tokenList, glWalk, tokenType.semi)) {
     glSymTab.push({ ...symtabNode, const: 0 });
 
-    ast.right = new Ast(tokenType.semi);
+    ast.right = new AstNode(tokenType.semi);
     ast.right.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.semi);
   } else if (check_token(tokenList, glWalk, tokenType.comma)) {
     glSymTab.push({ ...symtabNode, const: 0 });
 
-    ast.left.left = new Ast(tokenType.comma);
+    ast.left.left = new AstNode(tokenType.comma);
     ast.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.comma);
 
-    ast.right = holyc_parser_parse_inline_vars(tokenList);
+    ast.right = parser_parse_inline_vars(tokenList);
 
-    ast.left.left.left = new Ast(tokenType.semi);
+    ast.left.left.left = new AstNode(tokenType.semi);
     ast.left.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.semi);
   } else if (check_token(tokenList, glWalk, tokenType.assig)) {
     glSymTab.push({ ...symtabNode, const: 0 });
 
-    ast.right = holyc_parser_parse_exp(tokenList, false, procedureArgs);
+    ast.right = parser_parse_exp(tokenList, false, procedureArgs);
 
     if (check_token(tokenList, glWalk, tokenType.comma)) {
-      ast.left.left = new Ast(tokenType.comma);
+      ast.left.left = new AstNode(tokenType.comma);
       ast.left.left.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.comma);
 
-      ast.left.right = holyc_parser_parse_inline_vars(tokenList);
+      ast.left.right = parser_parse_inline_vars(tokenList);
     }
 
-    ast.right.left = new Ast(tokenType.semi);
+    ast.right.left = new AstNode(tokenType.semi);
     ast.right.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.semi);
   } else {
@@ -1395,13 +1395,13 @@ const holyc_parser_parse_id = (tokenList, procedureArgs) => {
     }
     glSymTab.push({ ...tokenList[glWalk - 1], const: 0 });
 
-    ast.left.left = new Ast(tokenType.rparen);
+    ast.left.left = new AstNode(tokenType.rparen);
     ast.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.rparen);
 
     let priorWalk = glWalk;
 
-    ast.left.left.right = holyc_parser_parse_args(tokenList);
+    ast.left.left.right = parser_parse_args(tokenList);
 
     let args = [];
     while (priorWalk < glWalk) {
@@ -1424,17 +1424,17 @@ const holyc_parser_parse_id = (tokenList, procedureArgs) => {
 
     glPrototypes.push(prototype)
 
-    ast.left.left.left = new Ast(tokenType.lparen);
+    ast.left.left.left = new AstNode(tokenType.lparen);
     ast.left.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.lparen);
 
-    ast.left.left.left.left = new Ast(tokenType.rbrace);
+    ast.left.left.left.left = new AstNode(tokenType.rbrace);
     ast.left.left.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.rbrace);
 
-    ast.right = holyc_parser_parse_block(tokenList, prototype.args);
+    ast.right = parser_parse_block(tokenList, prototype.args);
 
-    ast.left.left.left.left.left = new Ast(tokenType.lbrace);
+    ast.left.left.left.left.left = new AstNode(tokenType.lbrace);
     ast.left.left.left.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.lbrace);
   }
@@ -1447,45 +1447,45 @@ const holyc_parser_parse_id = (tokenList, procedureArgs) => {
  * @arg {array} tokenList
  * @arg {boolean} block
  */
-const holyc_parser_parse_prepostfix = (tokenList, block) => {
+const parser_parse_prepostfix = (tokenList, block) => {
   let ast;
 
   if (is_mathop(tokenList, glWalk)) {
     if (check_token(tokenList, glWalk, tokenType.increment)) {
-      ast = new Ast(tokenType.increment);
+      ast = new AstNode(tokenType.increment);
       ast.token = tokenList[glWalk];
       list_eat_math(tokenList);
     } else {
-      ast = new Ast(tokenType.decrement);
+      ast = new AstNode(tokenType.decrement);
       ast.token = tokenList[glWalk];
       list_eat_math(tokenList);
     }
 
     check_symtab(tokenList, true);
 
-    ast.right = new Ast(tokenType.id);
+    ast.right = new AstNode(tokenType.id);
     ast.right.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
   } else {
     check_symtab(tokenList, true);
 
-    ast = new Ast(tokenType.id);
+    ast = new AstNode(tokenType.id);
     ast.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
 
     if (check_token(tokenList, glWalk, tokenType.increment)) {
-      ast.right = new Ast(tokenType.increment);
+      ast.right = new AstNode(tokenType.increment);
       ast.right.token = tokenList[glWalk];
       list_eat_math(tokenList);
     } else {
-      ast.right = new Ast(tokenType.decrement);
+      ast.right = new AstNode(tokenType.decrement);
       ast.right.token = tokenList[glWalk];
       list_eat_math(tokenList);
     }
   }
 
   if (!block) {
-    ast.left = new Ast(tokenType.semi);
+    ast.left = new AstNode(tokenType.semi);
     ast.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.semi);
   }
@@ -1497,21 +1497,21 @@ const holyc_parser_parse_prepostfix = (tokenList, block) => {
  * semantic analysis of if else statement
  * @arg {array} tokenList
  */
-const holyc_parser_parse_ifelse = (tokenList) => {
-  let ast = new Ast(tokenType.if);
+const parser_parse_ifelse = (tokenList) => {
+  let ast = new AstNode(tokenType.if);
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.if);
 
-  ast.left = new Ast(tokenType.rparen);
+  ast.left = new AstNode(tokenType.rparen);
   ast.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.rparen);
 
   if (check_token(tokenList, glWalk, tokenType.const)) {
-    ast.left.left = new Ast(tokenType.const);
+    ast.left.left = new AstNode(tokenType.const);
     ast.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.const);
   } else if (check_token(tokenList, glWalk, tokenType.true)) {
-    ast.left.left = new Ast(tokenType.true);
+    ast.left.left = new AstNode(tokenType.true);
     ast.left.left.token = {
       value: 1,
       line: tokenList[glWalk].line,
@@ -1519,7 +1519,7 @@ const holyc_parser_parse_ifelse = (tokenList) => {
     };
     list_eat(tokenList, tokenType.true);
   } else if (check_token(tokenList, glWalk, tokenType.false)) {
-    ast.left.left = new Ast(tokenType.const);
+    ast.left.left = new AstNode(tokenType.const);
     ast.left.left.token = {
       value: 0,
       line: tokenList[glWalk].line,
@@ -1529,24 +1529,24 @@ const holyc_parser_parse_ifelse = (tokenList) => {
   } else {
     check_symtab(tokenList, true);
 
-    ast.left.left = new Ast(tokenType.id);
+    ast.left.left = new AstNode(tokenType.id);
     ast.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
   }
 
-  ast.right = holyc_parser_parse_logical_exp(tokenList);
+  ast.right = parser_parse_logical_exp(tokenList);
 
-  ast.left.left.left = new Ast(tokenType.lparen);
+  ast.left.left.left = new AstNode(tokenType.lparen);
   ast.left.left.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.lparen);
 
-  ast.left.left.next = new Ast(tokenType.rbrace);
+  ast.left.left.next = new AstNode(tokenType.rbrace);
   ast.left.left.next.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.rbrace);
 
-  ast.left.left.left.right = holyc_parser_parse_block(tokenList);
+  ast.left.left.left.right = parser_parse_block(tokenList);
 
-  ast.left.left.next.next = new Ast(tokenType.lbrace);
+  ast.left.left.next.next = new AstNode(tokenType.lbrace);
   ast.left.left.next.next.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.lbrace);
 
@@ -1554,20 +1554,20 @@ const holyc_parser_parse_ifelse = (tokenList) => {
     glWalk < tokenList.length &&
     check_token(tokenList, glWalk, tokenType.else)
   ) {
-    ast.left.left.left.left = new Ast(tokenType.else);
+    ast.left.left.left.left = new AstNode(tokenType.else);
     ast.left.left.left.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.else);
 
     if (check_token(tokenList, glWalk, tokenType.if)) {
-      ast.left.left.left.next = holyc_parser_parse_ifelse(tokenList);
+      ast.left.left.left.next = parser_parse_ifelse(tokenList);
     } else {
-      ast.left.left.left.next = new Ast(tokenType.rbrace);
+      ast.left.left.left.next = new AstNode(tokenType.rbrace);
       ast.left.left.left.next.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.rbrace);
 
-      ast.left.left.left.left.right = holyc_parser_parse_block(tokenList);
+      ast.left.left.left.left.right = parser_parse_block(tokenList);
 
-      ast.left.left.left.next.next = new Ast(tokenType.lbrace);
+      ast.left.left.left.next.next = new AstNode(tokenType.lbrace);
       ast.left.left.left.next.next.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.lbrace);
     }
@@ -1580,42 +1580,42 @@ const holyc_parser_parse_ifelse = (tokenList) => {
  * semantic analysis of for statement
  * @arg {array} tokenList
  */
-const holyc_parser_parse_for = (tokenList) => {
-  let ast = new Ast(tokenType.for);
+const parser_parse_for = (tokenList) => {
+  let ast = new AstNode(tokenType.for);
   ast.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.for);
 
-  ast.next = new Ast(tokenType.rparen);
+  ast.next = new AstNode(tokenType.rparen);
   ast.next.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.rparen);
 
   check_symtab(tokenList, true);
 
-  ast.left = new Ast(tokenType.id);
+  ast.left = new AstNode(tokenType.id);
   ast.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.id);
 
-  ast.right = holyc_parser_parse_exp(tokenList, false);
+  ast.right = parser_parse_exp(tokenList, false);
 
-  ast.left.left = new Ast(tokenType.semi);
+  ast.left.left = new AstNode(tokenType.semi);
   ast.left.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.semi);
 
   check_symtab(tokenList, true);
 
-  ast.left.left.left = new Ast(tokenType.id);
+  ast.left.left.left = new AstNode(tokenType.id);
   ast.left.left.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.id);
 
-  ast.left.left.left.left = new Ast(tokenList[glWalk]?.type);
+  ast.left.left.left.left = new AstNode(tokenList[glWalk]?.type);
   ast.left.left.left.left.token = tokenList[glWalk];
   list_eat_logical(tokenList);
 
-  ast.left.left.left.left.left = new Ast(tokenType.const);
+  ast.left.left.left.left.left = new AstNode(tokenType.const);
   ast.left.left.left.left.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.const);
 
-  ast.left.left.left.left.left.left = new Ast(tokenType.semi);
+  ast.left.left.left.left.left.left = new AstNode(tokenType.semi);
   ast.left.left.left.left.left.left.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.semi);
 
@@ -1625,34 +1625,34 @@ const holyc_parser_parse_for = (tokenList) => {
     check_token(tokenList, glWalk + 1, tokenType.decrement) ||
     check_token(tokenList, glWalk + 1, tokenType.increment)
   ) {
-    ast.left.left.left.left.left.left.left = holyc_parser_parse_prepostfix(
+    ast.left.left.left.left.left.left.left = parser_parse_prepostfix(
       tokenList,
       true
     );
   } else {
     check_symtab(tokenList, true);
 
-    ast.left.left.left.left.left.left.next = new Ast(tokenType.id);
+    ast.left.left.left.left.left.left.next = new AstNode(tokenType.id);
     ast.left.left.left.left.left.left.next.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.id);
 
-    ast.left.left.left.left.left.left.left = holyc_parser_parse_exp(
+    ast.left.left.left.left.left.left.left = parser_parse_exp(
       tokenList,
       true
     );
   }
 
-  ast.left.left.left.left.left.left.left.next = new Ast(tokenType.lparen);
+  ast.left.left.left.left.left.left.left.next = new AstNode(tokenType.lparen);
   ast.left.left.left.left.left.left.left.next.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.lparen);
 
-  ast.left.left.left.left.left.left.next = new Ast(tokenType.rbrace);
+  ast.left.left.left.left.left.left.next = new AstNode(tokenType.rbrace);
   ast.left.left.left.left.left.left.next.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.rbrace);
 
-  ast.left.left.left.left.left.left.right = holyc_parser_parse_block(tokenList);
+  ast.left.left.left.left.left.left.right = parser_parse_block(tokenList);
 
-  ast.left.left.left.left.left.left.next.next = new Ast(tokenType.lbrace);
+  ast.left.left.left.left.left.left.next.next = new AstNode(tokenType.lbrace);
   ast.left.left.left.left.left.left.next.next.token = tokenList[glWalk];
   list_eat(tokenList, tokenType.lbrace);
 
@@ -1662,10 +1662,10 @@ const holyc_parser_parse_for = (tokenList) => {
 /**
  * @arg {array} tokenList
  */
-const holyc_parser_parse = (tokenList) => {
+const parser_parse = (tokenList) => {
   if (!tokenList[glWalk]) return null;
 
-  let expList = new ExpList();
+  let expList = new Ast();
 
   ttype = tokenList[glWalk].type;
 
@@ -1682,32 +1682,32 @@ const holyc_parser_parse = (tokenList) => {
     case tokenType.u64:
     case tokenType.f64:
     case tokenType.id:
-      expList.ast = holyc_parser_parse_id(tokenList);
+      expList.ast = parser_parse_id(tokenList);
       break;
     case tokenType.increment:
     case tokenType.decrement:
-      expList.ast = holyc_parser_parse_prepostfix(tokenList, false);
+      expList.ast = parser_parse_prepostfix(tokenList, false);
       break;
     case tokenType.str:
-      expList.ast = holyc_parser_parse_str(tokenList);
+      expList.ast = parser_parse_str(tokenList);
       break;
     case tokenType.for:
-      expList.ast = holyc_parser_parse_for(tokenList);
+      expList.ast = parser_parse_for(tokenList);
       break;
     case tokenType.if:
-      expList.ast = holyc_parser_parse_ifelse(tokenList);
+      expList.ast = parser_parse_ifelse(tokenList);
       break;
     default:
       parser_error(tokenList[glWalk]);
   }
 
-  expList.next = holyc_parser_parse(tokenList);
+  expList.next = parser_parse(tokenList);
 
   return expList;
 };
 
 /**
- * HolyC semantic analysis
+ * Semantic analysis
  * @arg {array} tokenList
  */
 const parser = (tokenList) => {
@@ -1715,36 +1715,7 @@ const parser = (tokenList) => {
   glSymTab = [];
   glPrototypes = []
 
-  return holyc_parser_parse(tokenList);
-};
-
-/**
- * printf function
- * @arg {object} ast
- */
-const printf = (ast, prototypeIndex) => {
-  let str = ast.token.value;
-
-  if (ast.token.value.includes("%")) {
-    let procedureArg;
-    if (prototypeIndex + 1 && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === ast.left.right.token.value))) {
-      str = str.replace("%d", procedureArg.value);
-    } else {
-      str = str.replace("%d", glSymTab[get_symtab(ast.left.right.token)].const);
-    }
-  }
-
-  outputstr += str.replace(/\\n|\\t/g, (e) => {
-    switch (e) {
-      case "\\r":
-      case "\\n":
-        return "\n";
-      case "\\t":
-        return "    ";
-      default:
-        return e;
-    }
-  });
+  return parser_parse(tokenList);
 };
 
 /**
@@ -2217,7 +2188,7 @@ const output_out_procedures = (ast, expList) => {
 };
 
 /**
- * HolyC code generation
+ * output generation
  * @arg {array} expList
  */
 const output = (expList) => {
@@ -2262,5 +2233,38 @@ const output = (expList) => {
     expListAux = expListAux.next;
   } while (expListAux);
 
-  return outputstr;
+  return stdout;
+};
+
+/**
+ * STDIO
+ */
+
+/**
+ * printf function
+ * @arg {object} ast
+ */
+const printf = (ast, prototypeIndex) => {
+  let str = ast.token.value;
+
+  if (ast.token.value.includes("%")) {
+    let procedureArg;
+    if (prototypeIndex + 1 && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === ast.left.right.token.value))) {
+      str = str.replace("%d", procedureArg.value);
+    } else {
+      str = str.replace("%d", glSymTab[get_symtab(ast.left.right.token)].const);
+    }
+  }
+
+  stdout += str.replace(/\\n|\\t/g, (e) => {
+    switch (e) {
+      case "\\r":
+      case "\\n":
+        return "\n";
+      case "\\t":
+        return "    ";
+      default:
+        return e;
+    }
+  });
 };
