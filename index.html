@@ -244,10 +244,12 @@
             "no_args();\n" +
             "no_args;\n\n" +
             "U0\ndefault_args(U0 abc=1, U0 def, U0 ghi=3)\n{\n" +
-            "\t\"default args\\n\";\n" +
+            "\t\"arg 1: %d\\n\", abc;\n" +
+            "\t\"arg 2: %d\\n\", def;\n" +
+            "\t\"arg 3: %d\\n\", ghi;\n" +
             "}\n\n" +
-            "//Default args don't have to be on the end. This code is valid:\n"+
-            "default_args(,2);\n";
+            "// Default args don't have to be on the end. This code is valid:\n"+
+            "default_args(,4);\n";
           break;
         default:
           content = "";
