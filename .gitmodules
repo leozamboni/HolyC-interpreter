@@ -1,3 +1,3 @@
-[submodule "holyc-online-highlighter"] 
-  path = holyc-online-highlighter
-  url = https://github.com/leozamboni/holyc-online-highlighter
+[submodule "holyc-highlighter"] 
+  path = holyc-highlighter
+  url = https://github.com/leozamboni/holyc-highlighter
