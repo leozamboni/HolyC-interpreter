@@ -1231,7 +1231,9 @@ const parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => {
  * @arg {array} tokenList
  */
 const parser_parse_call = (tokenList) => {
-  check_symtab(tokenList, true);
+  if (glPrototypes.findIndex(e => e.id === tokenList[glWalk].value) < 0) {
+    check_symtab(tokenList, true);
+  }
 
   const prototype = get_prototype(tokenList[glWalk]);
 
@@ -1370,7 +1372,7 @@ const parser_parse_id = (tokenList, procedureArgs) => {
   ast.token = tokenList[glWalk];
   list_eat_type(tokenList);
 
-  if (!glPrototypes.findIndex(e => e.id === tokenList[glWalk].value)) {
+  if (glPrototypes.findIndex(e => e.id === tokenList[glWalk].value) < 0) {
     check_symtab(tokenList, false);
   }
 
@@ -2245,7 +2247,8 @@ const output_out_procedures = (ast, expList) => {
 
   let aux = ast.right;
   let i = 0;
-  while (glPrototypes[prototypeIndex].args[i]) {
+
+  while (glPrototypes[prototypeIndex].args[i] && aux) {
     if (aux.token.type === tokenType.id) {
       glPrototypes[prototypeIndex].args[i].value = get_symtab(aux.token).const
     } else if (aux.token.type === tokenType.const) {
