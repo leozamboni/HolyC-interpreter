@@ -1416,7 +1416,7 @@ const parser_parse_id = (tokenList, procedureArgs) => {
     ast.right.left = new AstNode(tokenType.semi);
     ast.right.left.token = tokenList[glWalk];
     list_eat(tokenList, tokenType.semi);
-  } else {
+  } else if (!procedureArgs) {
     /**
      * parse procedures 
      */
