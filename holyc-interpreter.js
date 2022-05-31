@@ -876,7 +876,11 @@ const parser_parse_exp = (tokenList, arg, procedureArgs) => {
   ) {
     if (check_token(tokenList, glWalk, tokenType.id)) {
       let procedureArg;
-      procedureArgs && (procedureArg = procedureArgs.find(e => e.id === tokenList[glWalk].value))
+      if (procedureArgs) {
+        procedureArg = procedureArgs.find(e => e.id === tokenList[glWalk].value)
+      } else {
+        procedureArg = glPrototypes.find(e => e.id === tokenList[glWalk].value)
+      }
       !procedureArg && check_symtab(tokenList, true);
 
       ast = new AstNode(tokenType.id);
@@ -1366,7 +1370,9 @@ const parser_parse_id = (tokenList, procedureArgs) => {
   ast.token = tokenList[glWalk];
   list_eat_type(tokenList);
 
-  check_symtab(tokenList, false);
+  if (!glPrototypes.findIndex(e => e.id === tokenList[glWalk].value)) {
+    check_symtab(tokenList, false);
+  }
 
   let symtabNode = tokenList[glWalk];
 
@@ -1418,7 +1424,7 @@ const parser_parse_id = (tokenList, procedureArgs) => {
       args: undefined,
       return: undefined,
     }
-    glSymTab.push({ ...tokenList[glWalk - 1], const: 0 });
+    //glSymTab.push({ ...tokenList[glWalk - 1], const: 0 });
 
     ast.left.left = new AstNode(tokenType.rparen);
     ast.left.left.token = tokenList[glWalk];
@@ -1929,7 +1935,7 @@ const output_out_logical_exp = (ast, inside) => {
  * @arg {object} ast
  * @arg {boolean} left
  */
-const output_out_exp = (ast, left, prototypeIndex, procedureReturn) => {
+const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => {
   if (ast?.left?.left?.token.value === "(") return;
   let symTabI = -1;
   let prototypeArgIndex = 0;
@@ -1982,8 +1988,11 @@ const output_out_exp = (ast, left, prototypeIndex, procedureReturn) => {
           value /= parseInt(walk.right.token.value);
         } else {
           let procedureArg;
-          if (prototypeIndex && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.value))) {
+          if (prototypeIndex + 1 && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.value))) {
             value /= parseInt(procedureArg.value);
+          } else if ((procedureArg = glPrototypes.find(e => e.id === walk.right.token.value))) {
+            output_out_procedures(walk.right, expList)
+            value /= procedureArg.return;
           } else {
             value /= parseInt(glSymTab[get_symtab(walk.right.token)].const);
           }
@@ -1998,10 +2007,13 @@ const output_out_exp = (ast, left, prototypeIndex, procedureReturn) => {
           value *= parseInt(walk.right.token.value);
         } else {
           let procedureArg;
-          if (prototypeIndex && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.value))) {
-            value *= parseInt(procedureArg.value);
+          if (prototypeIndex + 1 && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.value))) {
+            value += parseInt(procedureArg.value);
+          } else if ((procedureArg = glPrototypes.find(e => e.id === walk.right.token.value))) {
+            output_out_procedures(walk.right, expList)
+            value += procedureArg.return;
           } else {
-            value *= parseInt(glSymTab[get_symtab(walk.right.token)].const);
+            value += parseInt(glSymTab[get_symtab(walk.right.token)].const);
           }
         }
         if (!procedureReturn) {
@@ -2015,6 +2027,9 @@ const output_out_exp = (ast, left, prototypeIndex, procedureReturn) => {
           let procedureArg;
           if (prototypeIndex + 1 && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.value))) {
             value = parseInt(procedureArg.value);
+          } else if ((procedureArg = glPrototypes.find(e => e.id === walk.right.token.value))) {
+            output_out_procedures(walk.right, expList)
+            value = procedureArg.return;
           } else {
             value = parseInt(glSymTab[get_symtab(walk.right.token)].const);
           }
@@ -2029,8 +2044,11 @@ const output_out_exp = (ast, left, prototypeIndex, procedureReturn) => {
           value += parseInt(walk.right.token.value);
         } else {
           let procedureArg;
-          if (prototypeIndex && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.value))) {
+          if (prototypeIndex + 1 && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.value))) {
             value += parseInt(procedureArg.value);
+          } else if ((procedureArg = glPrototypes.find(e => e.id === walk.right.token.value))) {
+            output_out_procedures(walk.right, expList)
+            value += procedureArg.return;
           } else {
             value += parseInt(glSymTab[get_symtab(walk.right.token)].const);
           }
@@ -2047,6 +2065,9 @@ const output_out_exp = (ast, left, prototypeIndex, procedureReturn) => {
           let procedureArg;
           if (prototypeIndex + 1 && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.value))) {
             value -= parseInt(procedureArg.value);
+          } else if ((procedureArg = glPrototypes.find(e => e.id === walk.right.token.value))) {
+            output_out_procedures(walk.right, expList)
+            value -= procedureArg.return;
           } else {
             value -= parseInt(glSymTab[get_symtab(walk.right.token)].const);
           }
@@ -2062,9 +2083,9 @@ const output_out_exp = (ast, left, prototypeIndex, procedureReturn) => {
   }
 
   if (check_ast_type(ast?.left?.right?.token.type, "id")) {
-    output_out_exp(ast.left.right, true, prototypeIndex, procedureReturn);
+    output_out_exp(ast.left.right, expList, true, prototypeIndex, procedureReturn);
   } else if (check_ast_type(ast?.right?.token.type, "id")) {
-    output_out_exp(ast.right, true, prototypeIndex, procedureReturn);
+    output_out_exp(ast.right, expList, true, prototypeIndex, procedureReturn);
   }
 
   if (procedureReturn) {
@@ -2122,7 +2143,7 @@ const output_out_block = (walk, expList, prototypeIndex) => {
     case tokenType.f64:
     case tokenType.id:
       if (walk.left) { // fix two entries in exp
-        output_out_exp(walk, false, prototypeIndex);
+        output_out_exp(walk, expList, false, prototypeIndex);
       }
       break;
     case tokenType.if:
@@ -2139,7 +2160,7 @@ const output_out_block = (walk, expList, prototypeIndex) => {
       //output_out_call(output_out_get_ast(expList, walk.token), expList);
       break;
     case tokenType.return:
-      output_out_return(walk, prototypeIndex);
+      output_out_return(walk, expList, prototypeIndex);
       return;
     default:
       break;
@@ -2220,11 +2241,11 @@ const output_out_for = (ast, expList, prototypeIndex) => {
  */
 const output_out_procedures = (ast, expList) => {
   const procedureAst = output_out_get_ast(expList, ast.token)
-  const prototypeIndex = get_prototype(procedureAst.left?.token)
+  const prototypeIndex = get_prototype(procedureAst?.left?.token)
 
   let aux = ast.right;
   let i = 0;
-  while (aux) {
+  while (glPrototypes[prototypeIndex].args[i]) {
     if (aux.token.type === tokenType.id) {
       glPrototypes[prototypeIndex].args[i].value = get_symtab(aux.token).const
     } else if (aux.token.type === tokenType.const) {
@@ -2243,8 +2264,8 @@ const output_out_procedures = (ast, expList) => {
  * @arg {object} expListAux
  * @arg {number} prototypeIndex
  */
-const output_out_return = (ast, prototypeIndex) => {
-  output_out_exp(ast.right, false, prototypeIndex, true);
+const output_out_return = (ast, expList, prototypeIndex) => {
+  output_out_exp(ast.right, expList, false, prototypeIndex, true);
   return;
 };
 
@@ -2269,7 +2290,7 @@ const output = (expList) => {
       case tokenType.u64:
       case tokenType.f64:
       case tokenType.id:
-        output_out_exp(expListAux.ast);
+        output_out_exp(expListAux.ast, expList);
         break;
       case tokenType.if:
         output_out_ifelse(expListAux.ast, expList);
