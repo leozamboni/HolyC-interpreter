@@ -109,6 +109,8 @@ const tokenType = {
   false: 42,
   equal: 43,
   return: 44,
+  bigequal: 45,
+  lessequal: 46,
 };
 
 /**
@@ -679,18 +681,36 @@ const lex = (input) => {
         }
         break;
       case "<":
-        tokenList.push({
-          value: "<",
-          line: line,
-          type: tokenType.less,
-        });
+        if (input[i + 1] === "=") {
+          i++;
+          tokenList.push({
+            value: "<=",
+            line: line,
+            type: tokenType.lessequal,
+          });
+        } else {
+          tokenList.push({
+            value: "<",
+            line: line,
+            type: tokenType.less,
+          });
+        }
         break;
       case ">":
-        tokenList.push({
-          value: ">",
-          line: line,
-          type: tokenType.big,
-        });
+        if (input[i + 1] === "=") {
+          i++;
+          tokenList.push({
+            value: ">=",
+            line: line,
+            type: tokenType.bigequal,
+          });
+        } else {
+          tokenList.push({
+            value: ">",
+            line: line,
+            type: tokenType.big,
+          });
+        }
         break;
       case "!":
         tokenList.push({
@@ -1171,6 +1191,9 @@ const parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => {
       ast = new AstNode(tokenType.id);
       ast.token = tokenList[glWalk];
       list_eat(tokenList, tokenType.id);
+
+      if (is_mathop(tokenList, glWalk)) ast
+
     } else if (check_token(tokenList, glWalk, tokenType.const)) {
 
       //glPrototypes[prototype].args[i].value = tokenList[glWalk].value;
@@ -1373,7 +1396,11 @@ const parser_parse_id = (tokenList, procedureArgs) => {
   list_eat_type(tokenList);
 
   if (glPrototypes.findIndex(e => e.id === tokenList[glWalk].value) < 0) {
-    check_symtab(tokenList, false);
+    if (!procedureArgs) {
+      check_symtab(tokenList, false);
+    }
+  } else {
+    check_symtab(tokenList, true);
   }
 
   let symtabNode = tokenList[glWalk];
@@ -1853,6 +1880,8 @@ const output_out_logical_exp = (ast, inside) => {
           walk.token.type === tokenType.and ||
           walk.token.type === tokenType.big ||
           walk.token.type === tokenType.less ||
+          walk.token.type === tokenType.bigequal ||
+          walk.token.type === tokenType.lessequal ||
           walk.token.type === tokenType.equal
         ) {
           break;
@@ -1900,8 +1929,16 @@ const output_out_logical_exp = (ast, inside) => {
         value.boolean = value.number < tokenValue ? true : false;
         value.number = tokenValue;
         break;
+      case tokenType.lessequal:
+        value.boolean = value.number <= tokenValue ? true : false;
+        value.number = tokenValue;
+        break;
       case tokenType.big:
         value.boolean = value.number > tokenValue ? true : false;
+        value.number = tokenValue;
+        break;
+      case tokenType.bigequal:
+        value.boolean = value.number >= tokenValue ? true : false;
         value.number = tokenValue;
         break;
       case tokenType.or:
@@ -2244,13 +2281,12 @@ const output_out_for = (ast, expList, prototypeIndex) => {
 const output_out_procedures = (ast, expList) => {
   const procedureAst = output_out_get_ast(expList, ast.token)
   const prototypeIndex = get_prototype(procedureAst?.left?.token)
-
   let aux = ast.right;
   let i = 0;
 
   while (glPrototypes[prototypeIndex].args[i] && aux) {
     if (aux.token.type === tokenType.id) {
-      glPrototypes[prototypeIndex].args[i].value = get_symtab(aux.token).const
+      glPrototypes[prototypeIndex].args[i].value = glSymTab[get_symtab(aux.token)].const
     } else if (aux.token.type === tokenType.const) {
       glPrototypes[prototypeIndex].args[i].value = aux.token.value
     }
@@ -2331,7 +2367,6 @@ const output = (expList) => {
  */
 const printf = (ast, prototypeIndex) => {
   let str = ast.token.value;
-
   if (ast.token.value.includes("%")) {
     let procedureArg;
     if (prototypeIndex + 1 && (procedureArg = glPrototypes[prototypeIndex]?.args.find(e => e.id === ast.left.right.token.value))) {
