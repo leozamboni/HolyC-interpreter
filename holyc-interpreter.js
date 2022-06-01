@@ -7,8 +7,15 @@
 
 /**
  * Run interpreter in website
- * @description make sure you have a input tag with "stdin" id in your HTML DOM 
  * @requires
+ * @description 
+ * Make sure you have a input tag with "stdin" id in your HTML DOM;
+ * You can call this procedure for run the stdin text with a button, for example:
+ * 
+ *  <button onclick="web_jsholyc_run()">RUN(▶)</button>
+ * 
+ * After run the stdout will appear in the alert box in your site, 
+ * so make sure you have it enabled in your browser. 
  */
 const web_jsholyc_run = () => {
   alert(output(parser(lex(document.getElementById("stdin").value))));
