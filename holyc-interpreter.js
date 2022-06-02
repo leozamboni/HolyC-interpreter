@@ -891,7 +891,7 @@ const parser_parse_logical_exp = (tokenList) => {
  * semantic analysis of expresions
  * @arg {array} tokenList
  */
-const parser_parse_exp = (tokenList, arg, procedureArgs) => {
+const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
   if (
     check_token(tokenList, tokenListIndexWalk, tokenType.semi) ||
     check_token(tokenList, tokenListIndexWalk, tokenType.comma) ||
@@ -901,7 +901,9 @@ const parser_parse_exp = (tokenList, arg, procedureArgs) => {
 
   let ast;
 
-  if (
+  if (proceduresPrototypes.find(e => e.id === tokenList[tokenListIndexWalk].id)) {
+    return parser_parse_call(tokenList)
+  } else if (
     check_token(tokenList, tokenListIndexWalk - 1, tokenType.id) ||
     check_token(tokenList, tokenListIndexWalk - 1, tokenType.const)
   ) {
@@ -929,8 +931,8 @@ const parser_parse_exp = (tokenList, arg, procedureArgs) => {
   ) {
     if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
       let procedureArg;
-      if (procedureArgs) {
-        procedureArg = procedureArgs.find(e => e.id === tokenList[tokenListIndexWalk].id)
+      if (prototypeIndex) {
+        procedureArg = proceduresPrototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[tokenListIndexWalk].id)
       } else {
         procedureArg = proceduresPrototypes.find(e => e.id === tokenList[tokenListIndexWalk].id)
       }
@@ -953,7 +955,7 @@ const parser_parse_exp = (tokenList, arg, procedureArgs) => {
   } else if (is_mathop(tokenList, tokenListIndexWalk - 1) || check_token(tokenList, tokenListIndexWalk - 1, tokenType.return)) {
     if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
       let procedureArg;
-      procedureArgs && (procedureArg = procedureArgs.find(e => e.id === tokenList[tokenListIndexWalk].id))
+      prototypeIndex && (procedureArg = proceduresPrototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[tokenListIndexWalk].id))
       !procedureArg && check_symtab(tokenList, true);
 
       ast = new AstNode(tokenType.id);
@@ -966,7 +968,7 @@ const parser_parse_exp = (tokenList, arg, procedureArgs) => {
     }
   } else if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
     let procedureArg;
-    procedureArgs && (procedureArg = procedureArgs.find(e => e.id === tokenList[tokenListIndexWalk].id))
+    prototypeIndex && (procedureArg = proceduresPrototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[tokenListIndexWalk].id))
     !procedureArg && check_symtab(tokenList, true);
 
     ast = new AstNode(tokenType.id);
@@ -980,7 +982,7 @@ const parser_parse_exp = (tokenList, arg, procedureArgs) => {
     parser_error(tokenList[tokenListIndexWalk]);
   }
 
-  ast.right = parser_parse_exp(tokenList, arg, procedureArgs);
+  ast.right = parser_parse_exp(tokenList, arg, prototypeIndex);
 
   return ast;
 };
@@ -1056,12 +1058,12 @@ const parser_parse_inline_str = (tokenList) => {
  * semantic analysis of procedure return
  * @arg {array} tokenList
  */
-const parser_parse_return = (tokenList, procedureArgs) => {
+const parser_parse_return = (tokenList, prototypeIndex) => {
   let ast = new AstNode(tokenType.return);
   ast.token = tokenList[tokenListIndexWalk];
   list_eat(tokenList, tokenType.return);
 
-  ast.right = parser_parse_exp(tokenList, false, procedureArgs)
+  ast.right = parser_parse_exp(tokenList, false, prototypeIndex)
 
   ast.left = new AstNode(tokenType.semi);
   ast.left.token = tokenList[tokenListIndexWalk];
@@ -1116,7 +1118,7 @@ const parser_parse_str = (tokenList) => {
  * semantic analysis of blocks
  * @arg {array} tokenList
  */
-const parser_parse_block = (tokenList, procedureArgs) => {
+const parser_parse_block = (tokenList, prototypeIndex) => {
   if (check_token(tokenList, tokenListIndexWalk, tokenType.lbrace)) return null;
 
   let ast;
@@ -1134,29 +1136,29 @@ const parser_parse_block = (tokenList, procedureArgs) => {
     case tokenType.u64:
     case tokenType.f64:
     case tokenType.id:
-      ast = parser_parse_id(tokenList, procedureArgs);
+      ast = parser_parse_id(tokenList, prototypeIndex);
       break;
     case tokenType.increment:
     case tokenType.decrement:
       ast = parser_parse_prepostfix(tokenList, false);
       break;
     case tokenType.str:
-      ast = parser_parse_str(tokenList, procedureArgs);
+      ast = parser_parse_str(tokenList);
       break;
     case tokenType.for:
-      ast = parser_parse_for(tokenList, procedureArgs);
+      ast = parser_parse_for(tokenList);
       break;
     case tokenType.if:
-      ast = parser_parse_ifelse(tokenList, procedureArgs);
+      ast = parser_parse_ifelse(tokenList);
       break;
     case tokenType.return:
-      ast = parser_parse_return(tokenList, procedureArgs);
+      ast = parser_parse_return(tokenList, prototypeIndex);
       break;
     default:
       parser_error(tokenList[tokenListIndexWalk]);
   }
 
-  ast.next = parser_parse_block(tokenList, procedureArgs);
+  ast.next = parser_parse_block(tokenList, prototypeIndex);
 
   return ast;
 };
@@ -1326,9 +1328,9 @@ const parser_parse_call = (tokenList) => {
     ast.left.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, tokenType.lparen);
 
-    ast.left.left.left = new AstNode(tokenType.semi);
-    ast.left.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.semi);
+    // ast.left.left.left = new AstNode(tokenType.semi);
+    // ast.left.left.left.token = tokenList[tokenListIndexWalk];
+    // list_eat(tokenList, tokenType.semi);
   } else if (check_token(tokenList, tokenListIndexWalk, tokenType.rparen)) {
     ast.left = new AstNode(tokenType.rparen);
     ast.left.token = tokenList[tokenListIndexWalk];
@@ -1344,13 +1346,13 @@ const parser_parse_call = (tokenList) => {
     ast.left.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, tokenType.lparen);
 
-    ast.left.left.left = new AstNode(tokenType.semi);
-    ast.left.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.semi);
+    // ast.left.left.left = new AstNode(tokenType.semi);
+    // ast.left.left.left.token = tokenList[tokenListIndexWalk];
+    // list_eat(tokenList, tokenType.semi);
   } else {
-    ast.left = new AstNode(tokenType.semi);
-    ast.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.semi);
+    // ast.left = new AstNode(tokenType.semi);
+    // ast.left.token = tokenList[tokenListIndexWalk];
+    // list_eat(tokenList, tokenType.semi);
   }
 
   return ast;
@@ -1404,10 +1406,10 @@ const parser_parse_inline_vars = (tokenList) => {
  * semantic analysis of identifiers
  * @arg {array} tokenList
  */
-const parser_parse_id = (tokenList, procedureArgs) => {
+const parser_parse_id = (tokenList, prototypeIndex) => {
   if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
     if (is_assingop(tokenList, tokenListIndexWalk + 1)) {
-      let ast = parser_parse_exp(tokenList, false, procedureArgs);
+      let ast = parser_parse_exp(tokenList, false, prototypeIndex);
 
       ast.left = new AstNode(tokenType.semi);
       ast.left.token = tokenList[tokenListIndexWalk];
@@ -1420,7 +1422,9 @@ const parser_parse_id = (tokenList, procedureArgs) => {
     ) {
       return parser_parse_prepostfix(tokenList, false);
     } else {
-      return parser_parse_call(tokenList);
+      let ast = parser_parse_call(tokenList);
+      list_eat(tokenList, tokenType.semi);
+      return ast
     }
   }
 
@@ -1429,7 +1433,7 @@ const parser_parse_id = (tokenList, procedureArgs) => {
   list_eat_type(tokenList);
 
   if (proceduresPrototypes.findIndex(e => e.id === tokenList[tokenListIndexWalk].id) < 0) {
-    if (!procedureArgs) {
+    if (!prototypeIndex) {
       check_symtab(tokenList, false);
     }
   } else {
@@ -1445,8 +1449,8 @@ const parser_parse_id = (tokenList, procedureArgs) => {
   if (check_token(tokenList, tokenListIndexWalk, tokenType.semi)) {
     symbolTable.push({ ...symtabNode, const: 0 });
 
-    ast.right = new AstNode(tokenType.semi);
-    ast.right.token = tokenList[tokenListIndexWalk];
+    ast.left.left = new AstNode(tokenType.semi);
+    ast.left.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, tokenType.semi);
   } else if (check_token(tokenList, tokenListIndexWalk, tokenType.comma)) {
     symbolTable.push({ ...symtabNode, const: 0 });
@@ -1463,7 +1467,19 @@ const parser_parse_id = (tokenList, procedureArgs) => {
   } else if (check_token(tokenList, tokenListIndexWalk, tokenType.assig)) {
     symbolTable.push({ ...symtabNode, const: 0 });
 
-    ast.right = parser_parse_exp(tokenList, false, procedureArgs);
+    // if (check_token(tokenList, tokenListIndexWalk + 2, tokenType.rparen)) {
+    //   ast.right = new AstNode(tokenType.assig);
+    //   ast.left.left.token = tokenList[tokenListIndexWalk];
+    //   list_eat(tokenList, tokenType.assig);
+
+    //   ast.right = parser_parse_call(tokenList);
+
+    //   return ast;
+
+    // } else {
+    // }
+
+    ast.right = parser_parse_exp(tokenList, false, prototypeIndex);
 
     if (check_token(tokenList, tokenListIndexWalk, tokenType.comma)) {
       ast.left.left = new AstNode(tokenType.comma);
@@ -1471,22 +1487,26 @@ const parser_parse_id = (tokenList, procedureArgs) => {
       list_eat(tokenList, tokenType.comma);
 
       ast.left.right = parser_parse_inline_vars(tokenList);
-    }
 
-    ast.right.left = new AstNode(tokenType.semi);
-    ast.right.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.semi);
-  } else if (!procedureArgs) {
+      ast.left.left.left = new AstNode(tokenType.semi);
+      ast.left.left.left.token = tokenList[tokenListIndexWalk];
+      list_eat(tokenList, tokenType.semi);
+    } else {
+      ast.left.left = new AstNode(tokenType.semi);
+      ast.left.left.token = tokenList[tokenListIndexWalk];
+      list_eat(tokenList, tokenType.semi);
+    }
+  } else if (!prototypeIndex) {
     /**
      * parse procedures 
      */
+    const prototypeId = tokenList[tokenListIndexWalk - 1].id
     let prototype = {
-      id: tokenList[tokenListIndexWalk - 1].id,
+      id: prototypeId,
       type: tokenList[tokenListIndexWalk - 2].type,
       args: undefined,
       return: undefined,
     }
-    //symbolTable.push({ ...tokenList[tokenListIndexWalk - 1], const: 0 });
 
     ast.left.left = new AstNode(tokenType.rparen);
     ast.left.left.token = tokenList[tokenListIndexWalk];
@@ -1517,6 +1537,8 @@ const parser_parse_id = (tokenList, procedureArgs) => {
 
     proceduresPrototypes.push(prototype)
 
+    const prototypeIndex = proceduresPrototypes.findIndex(e => e.id === prototypeId) + 1;
+
     ast.left.left.left = new AstNode(tokenType.lparen);
     ast.left.left.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, tokenType.lparen);
@@ -1525,7 +1547,7 @@ const parser_parse_id = (tokenList, procedureArgs) => {
     ast.left.left.left.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, tokenType.rbrace);
 
-    ast.right = parser_parse_block(tokenList, prototype.args);
+    ast.right = parser_parse_block(tokenList, prototypeIndex);
 
     ast.left.left.left.left.left = new AstNode(tokenType.lbrace);
     ast.left.left.left.left.left.token = tokenList[tokenListIndexWalk];
@@ -2036,7 +2058,7 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
   if (prototypeIndex + 1 && (procedureArg = proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === procedureToken.id))) {
     value = parseInt(procedureArg.value);
   } else {
-    if (symTabI >= 0) {
+    if (symTabI > -1) {
       value = parseInt(symbolTable[symTabI].value);
     } else {
       value = parseInt(procedureToken.id)
@@ -2405,7 +2427,11 @@ const printf = (ast, prototypeIndex) => {
     if (prototypeIndex + 1 && (procedureArg = proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === ast.left.right.token.id))) {
       str = str.replace("%d", procedureArg.value);
     } else {
-      str = str.replace("%d", symbolTable[get_symtab(ast.left.right.token)].const);
+      if (ast.left.right.token.type === tokenType.const) {
+        str = str.replace("%d", ast.left.right.token.id);
+      } else {
+        str = str.replace("%d", symbolTable[get_symtab(ast.left.right.token)].const);
+      }
     }
   }
 
