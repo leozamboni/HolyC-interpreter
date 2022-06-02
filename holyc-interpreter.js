@@ -4,6 +4,28 @@
  * @fileoverview JS HolyC Interpreter
  * @version 0.0.0
  */
+/*
+How interpreter works:            
+                               +--------+
+                               | stdin  |
+                               +---+----+
+                                   |
+                               +---v----+
+                  +------------+ lexer  | // Lex input and create a token list;
++---------+  +----v--------+   +---+----+
+| stderr  <--+error handler|       | 
++---------+  +----^--------+   +---v----+
+                  +------------+ parser | // Token list iteration and AST generate;
+                               +---+----+
+                                   |
+                               +---v----+
+                               | output | // Run AST and return stdout.
+                               +---+----+
+                                   |
+                               +---v----+
+                               | stdout | 
+                               +--------+
+*/
 
 /**
  * Run interpreter in website
