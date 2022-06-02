@@ -5,7 +5,7 @@
  * @version 0.0.0
  */
 /*
-How interpreter works:            
+How the interpreter works:            
                                +--------+
                                | stdin  |
                                +---+----+
@@ -28,20 +28,32 @@ How interpreter works:
 */
 
 /**
- * Run interpreter in website
+ * Run interpreter in web front-end
  * @requires
  * @description 
  * Make sure you have a input tag with "stdin" id in your HTML DOM;
- * You can call this procedure for run the stdin text with a button, for example:
+ * You can call this procedure for run the stdin with a button, for example:
  * 
- *  <button onclick="web_jsholyc_run()">RUN(▶)</button>
+ *  <button onclick="holyc_run()">RUN(▶)</button>
  * 
  * After run the stdout will appear in the alert box in your site, 
  * so make sure you have it enabled in your browser. 
  */
-const web_jsholyc_run = () => {
+const holyc_run = () => {
   alert(output(parser(lex(document.getElementById("stdin").value))));
 };
+
+/**
+ * Back-end runtime 
+ * @arg {string} stdin
+ * @requires
+ * @description 
+ * This procedure is only for holy node (the CLI JS HolyC interpreter for back-ends);
+ * Check github.com/leozamboni/holy-node
+ */
+const cli_runtime = (stdin) => {
+  console.log(output(parser(lex(stdin))));
+}
 
 /**
  * AST Node
@@ -210,9 +222,12 @@ const is_digit = (val) => {
  * @arg {object} token
  */
 const lexer_error = (token) => {
-  throw alert(
-    `compile failure\nlexer: '${token.id}' unexpected token in line ${token.line}\n`
-  );
+  const stderr = `compile failure\nlexer: '${token.id}' unexpected token in line ${token.line}\n`;
+  try {
+    throw alert(stderr);
+  } catch {
+    throw new Error(stderr)
+  }
 };
 
 /**
@@ -220,9 +235,12 @@ const lexer_error = (token) => {
  * @arg {object} token
  */
 const parser_error = (token) => {
-  throw alert(
-    `compile failure\nparser: '${token.id}' unexpected token in line ${token.line}\n`
-  );
+  const stderr = `compile failure\nparser: '${token.id}' unexpected token in line ${token.line}\n`;
+  try {
+    throw alert(stderr);
+  } catch {
+    throw new Error(stderr)
+  }
 };
 
 /**
