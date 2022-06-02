@@ -39,7 +39,7 @@ How the interpreter works:
  * After run the stdout will appear in the alert box in your site, 
  * so make sure you have it enabled in your browser. 
  */
-const holyc_run = () => {
+ const holyc_run = () => {
   alert(output(parser(lex(document.getElementById("stdin").value))));
 };
 
@@ -51,9 +51,10 @@ const holyc_run = () => {
  * This procedure is only for holy node (the CLI JS HolyC interpreter for back-ends);
  * Check github.com/leozamboni/holy-node
  */
-const cli_runtime = (stdin) => {
-  console.log(output(parser(lex(stdin))));
+const clruntime = (stdin) => {
+  return output(parser(lex(stdin)));
 }
+exports = { clruntime };
 
 /**
  * AST Node
@@ -519,7 +520,12 @@ const lex_keyword = (str) => {
 const lex = (input) => {
   stdout = "";
   if (!input) {
-    throw alert("nothing to compile\n");
+    const stderr = "compile failure\nlexer: nothing to compile\n"; 
+    try {
+      throw alert(stderr);
+    } catch {
+      throw new Error(stderr);
+    }
   }
   input = remove_tabs(input);
 
@@ -1822,9 +1828,9 @@ const parser_parse = (tokenList) => {
 
   let expList = new Ast();
 
-  ttype = tokenList[tokenListIndexWalk].type;
+  const type = tokenList[tokenListIndexWalk].type;
 
-  switch (ttype) {
+  switch (type) {
     case tokenType.i0:
     case tokenType.u0:
     case tokenType.i8:
