@@ -39,7 +39,7 @@ How the interpreter works:
  * After run the stdout will appear in the alert box in your site, 
  * so make sure you have it enabled in your browser. 
  */
- const holyc_run = () => {
+export const holyc_web_run = () => {
   alert(output(parser(lex(document.getElementById("stdin").value))));
 };
 
@@ -51,10 +51,9 @@ How the interpreter works:
  * This procedure is only for holy node (the CLI JS HolyC interpreter for back-ends);
  * Check github.com/leozamboni/holy-node
  */
-const clruntime = (stdin) => {
+export const holy_node = (stdin) => {
   return output(parser(lex(stdin)));
 }
-exports = { clruntime };
 
 /**
  * AST Node

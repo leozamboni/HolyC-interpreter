@@ -6,7 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HolyC Interpreter</title>
     <script src="holyc-highlighter/holyc-highlighter.js"></script>
-    <script src="holyc-interpreter.js"></script>
+    <script type="module" src="holyc-interpreter.js"></script>
+    <script type="module">
+        import { holyc_web_run } from "./holyc-interpreter.js"
+        window.holyc_web_run = holyc_web_run;
+      </script>
     <style>
         * {
             margin: 0;
@@ -122,7 +126,7 @@
         <br>
         <br>
 
-        <button onclick="holyc_run()">RUN(▶)</button>
+        <button onclick="holyc_web_run()">RUN(▶)</button>
 
         <br>
         <br>
