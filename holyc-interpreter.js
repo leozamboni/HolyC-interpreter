@@ -46,7 +46,7 @@ How the interpreter works:
  * so make sure you have it enabled in your browser;
  * For local run you need a HTTP server.
  */
- export const holyc_web_run = () => {
+export const holyc_web_run = () => {
   alert(output(parser(lex(document.getElementById("stdin").value))));
 };
 
@@ -61,12 +61,7 @@ How the interpreter works:
 let keepSymTabAndPrototypes = false;
 
 export const holy_node_cli = (stdin) => {
-  if (!keepSymTabAndPrototypes) {
-    symbolTable = [];
-    proceduresPrototypes = []
-  }
-  keepSymTabAndPrototypes = true;
-  return output(parser(lex(stdin), true));
+  return output(() => { const ast = parser(lex(stdin)); keepSymTabAndPrototypes = true; return ast; });
 }
 
 export const holy_node_scan = (stdin) => {
@@ -1860,13 +1855,12 @@ const parser_parse = (tokenList) => {
  * Semantic analysis
  * @arg {array} tokenList
  */
-const parser = (tokenList, keepSymTab) => {
+const parser = (tokenList) => {
   tokenListIndexWalk = 0;
-  if (!keepSymTab) {
+  if (!keepSymTabAndPrototypes) {
     symbolTable = [];
     proceduresPrototypes = []
   }
-
   return parser_parse(tokenList);
 };
 
