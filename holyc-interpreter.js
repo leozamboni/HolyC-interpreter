@@ -31,7 +31,7 @@ How the interpreter works:
  * @requires
  * @description 
  * Make sure you have a input tag with "stdin" id in your HTML DOM;
- * You need to import this procedure in your HTML BOM:
+ * You need to import this procedure in your BOM:
  * 
  *  <script type="module">
  *    import { holyc_web_run } from "./holyc-interpreter.js"
@@ -40,11 +40,11 @@ How the interpreter works:
  * 
  * You can call this procedure for run the stdin with a button, for example:
  * 
- *  <button onclick="holyc_run()">RUN(▶)</button>
+ *  <button onclick="holyc_web_run()">RUN(▶)</button>
  * 
  * After run the stdout will appear in the alert box in your site, 
  * so make sure you have it enabled in your browser;
- * For local run you need a HTTP server.
+ * You need a HTTP server for local run.
  */
 export const holyc_web_run = () => {
   alert(output(parser(lex(document.getElementById("stdin").value))));
