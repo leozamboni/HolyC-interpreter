@@ -26,18 +26,25 @@ How the interpreter works:
                                | stdout | 
                                +--------+
 */
-
 /**
  * Run interpreter in web front-end
  * @requires
  * @description 
  * Make sure you have a input tag with "stdin" id in your HTML DOM;
+ * You need to import this procedure in your HTML BOM:
+ * 
+ *  <script type="module">
+ *    import { holyc_web_run } from "./holyc-interpreter.js"
+ *    window.holyc_web_run = holyc_web_run;
+ *  </script>  
+ * 
  * You can call this procedure for run the stdin with a button, for example:
  * 
  *  <button onclick="holyc_run()">RUN(▶)</button>
  * 
  * After run the stdout will appear in the alert box in your site, 
- * so make sure you have it enabled in your browser. 
+ * so make sure you have it enabled in your browser;
+ * For local run you need a HTTP server.
  */
 export const holyc_web_run = () => {
   alert(output(parser(lex(document.getElementById("stdin").value))));
@@ -518,14 +525,16 @@ const lex_keyword = (str) => {
  */
 const lex = (input) => {
   stdout = "";
+
   if (!input) {
-    const stderr = "compile failure\nlexer: nothing to compile\n"; 
+    const stderr = "compile failure\nlexer: nothing to compile\n";
     try {
       throw alert(stderr);
     } catch {
       throw new Error(stderr);
     }
   }
+
   input = remove_tabs(input);
 
   var tokenList = [];
@@ -533,90 +542,60 @@ const lex = (input) => {
 
   for (let i = 0; i < input.length; ++i) {
     if (input[i] === "\n") line++;
+
     if (input[i] === " " || input[i] === "\n") continue;
 
     if (input[i] === "/" && input[i + 1] === "/") {
-      i++;
-      while (input[i] !== "\n") {
-        i++;
-      }
-      continue;
+      i++; while (1) { if (input[i] === "\n") break; i++; } line++; continue;
     }
 
     if (input[i] === "'") {
-      let aux = "";
-
-      i++;
-
-      while (input[i] !== "'" && input[i]) {
-        aux += input[i++];
-      }
-
+      let aux = ""; i++;
+      while (input[i] !== "'" && input[i]) { aux += input[i++]; }
       tokenList.push({
         id: aux,
         line: line,
         type: tokenType.str,
       });
-
       continue;
     }
 
     if (input[i] === '"') {
-      let aux = "";
-
-      i++;
-
-      while (input[i] !== '"' && input[i]) {
-        aux += input[i++];
-      }
-
+      let aux = ""; i++;
+      while (input[i] !== '"' && input[i]) { aux += input[i++]; }
       tokenList.push({
         id: aux,
         line: line,
         type: tokenType.str,
       });
-
       continue;
     }
 
     if (is_digit(input[i])) {
       let aux = "";
-
-      while (is_digit(input[i])) {
-        aux += input[i++];
-      }
-
+      while (is_digit(input[i])) { aux += input[i++]; }
       i--;
-
       tokenList.push({
         id: aux,
         line: line,
         type: tokenType.const,
       });
-
       continue;
     }
 
     if (is_alpha(input[i])) {
       let aux = "";
-
-      while (is_alpha(input[i])) {
-        aux += input[i++];
-      }
+      while (is_alpha(input[i])) { aux += input[i++]; }
       i--;
-
       let type = lex_type(aux);
-
       if (!type) {
         type = lex_keyword(aux);
       }
-
       tokenList.push({
         id: aux,
         line: line,
         type: type,
       });
-
       continue;
     }
 
