@@ -191,6 +191,7 @@ const tokenType = {
   return: 44,
   bigequal: 45,
   lessequal: 46,
+  bool: 47,
 };
 
 /**
@@ -336,7 +337,8 @@ const check_ast_type = (type, expectedType) => {
         type === tokenType.u32 ||
         type === tokenType.i64 ||
         type === tokenType.u64 ||
-        type === tokenType.f64
+        type === tokenType.f64 ||
+        type === tokenType.bool 
         ? true
         : false;
     case "assignment_operator":
@@ -367,7 +369,8 @@ const is_dtype = (tokenList, index) => {
       type === tokenType.u32 ||
       type === tokenType.i64 ||
       type === tokenType.u64 ||
-      type === tokenType.f64
+      type === tokenType.f64 ||
+      type === tokenType.bool 
       ? true
       : false;
   } catch {
@@ -475,6 +478,8 @@ const list_eat_compassing = (tokenList) => {
  */
 const lex_type = (str) => {
   switch (str) {
+    case "Bool":
+      return tokenType.bool;
     case "I0":
       return tokenType.i0;
     case "U0":
@@ -975,12 +980,30 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
       symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])] = {
         id: tokenList[tokenListIndexWalk - 2].id,
         line: tokenList[tokenListIndexWalk - 2].line,
-        value: tokenList[tokenListIndexWalk].id,
+        const: tokenList[tokenListIndexWalk].id,
       };
+      console.log(tokenList[tokenListIndexWalk])
+      if (check_token(tokenList, tokenListIndexWalk, tokenType.true)) {
+        symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])].const = 1;
+        tokenList[tokenListIndexWalk].type = tokenType.const
+        tokenList[tokenListIndexWalk].id = 1;
 
-      ast = new AstNode(tokenType.const);
-      ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.const);
+        ast = new AstNode(tokenType.const);
+        ast.token = tokenList[tokenListIndexWalk];
+        list_eat(tokenList, tokenType.const);
+      } else if (check_token(tokenList, tokenListIndexWalk, tokenType.false)) {
+        symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])].const = 0;
+        tokenList[tokenListIndexWalk].type = tokenType.const
+        tokenList[tokenListIndexWalk].id = 0; 
+
+        ast = new AstNode(tokenType.const);
+        ast.token = tokenList[tokenListIndexWalk];
+        list_eat(tokenList, tokenType.const);
+      } else {
+        ast = new AstNode(tokenType.const);
+        ast.token = tokenList[tokenListIndexWalk];
+        list_eat(tokenList, tokenType.const);
+      }
     }
   } else if (is_mathop(tokenList, tokenListIndexWalk - 1) || check_token(tokenList, tokenListIndexWalk - 1, tokenType.return)) {
     if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
@@ -1154,6 +1177,7 @@ const parser_parse_block = (tokenList, prototypeIndex) => {
   let ast;
 
   switch (tokenList[tokenListIndexWalk].type) {
+    case tokenType.bool:
     case tokenType.i0:
     case tokenType.u0:
     case tokenType.i8:
@@ -1815,6 +1839,7 @@ const parser_parse = (tokenList) => {
   const type = tokenList[tokenListIndexWalk].type;
 
   switch (type) {
+    case tokenType.bool:
     case tokenType.i0:
     case tokenType.u0:
     case tokenType.i8:
@@ -2255,6 +2280,7 @@ const output_out_block = (walk, expList, prototypeIndex) => {
   if (!walk) return;
 
   switch (walk.type) {
+    case tokenType.bool:
     case tokenType.i0:
     case tokenType.u0:
     case tokenType.i8:
@@ -2403,6 +2429,7 @@ const output = (expList) => {
 
   do {
     switch (expListAux.ast.type) {
+      case tokenType.bool:
       case tokenType.i0:
       case tokenType.u0:
       case tokenType.i8:
