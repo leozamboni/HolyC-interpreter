@@ -40,7 +40,7 @@ How the interpreter works:
  * 
  * You can call this procedure for run the stdin with a button, for example:
  * 
- *  <button onclick="holyc_run()">RUN(▶)</button>
+ *  <button onclick="holyc_web_run()">RUN(▶)</button>
  * 
  * After run the stdout will appear in the alert box in your site, 
  * so make sure you have it enabled in your browser;
@@ -338,7 +338,7 @@ const check_ast_type = (type, expectedType) => {
         type === tokenType.i64 ||
         type === tokenType.u64 ||
         type === tokenType.f64 ||
-        type === tokenType.bool 
+        type === tokenType.bool
         ? true
         : false;
     case "assignment_operator":
@@ -370,7 +370,7 @@ const is_dtype = (tokenList, index) => {
       type === tokenType.i64 ||
       type === tokenType.u64 ||
       type === tokenType.f64 ||
-      type === tokenType.bool 
+      type === tokenType.bool
       ? true
       : false;
   } catch {
@@ -391,7 +391,9 @@ const is_logicalop = (tokenList, index) => {
       type === tokenType.or ||
       type === tokenType.and ||
       type === tokenType.not ||
-      type === tokenType.equal
+      type === tokenType.equal ||
+      type === tokenType.bigequal ||
+      type === tokenType.lessequal 
       ? true
       : false;
   } catch {
@@ -982,9 +984,9 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
         line: tokenList[tokenListIndexWalk - 2].line,
         const: tokenList[tokenListIndexWalk].id,
       };
-      console.log(tokenList[tokenListIndexWalk])
+  
       if (check_token(tokenList, tokenListIndexWalk, tokenType.true)) {
-        symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])].const = 1;
+        symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])].value = 1;
         tokenList[tokenListIndexWalk].type = tokenType.const
         tokenList[tokenListIndexWalk].id = 1;
 
@@ -992,9 +994,9 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
         ast.token = tokenList[tokenListIndexWalk];
         list_eat(tokenList, tokenType.const);
       } else if (check_token(tokenList, tokenListIndexWalk, tokenType.false)) {
-        symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])].const = 0;
+        symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])].value = 0;
         tokenList[tokenListIndexWalk].type = tokenType.const
-        tokenList[tokenListIndexWalk].id = 0; 
+        tokenList[tokenListIndexWalk].id = 0;
 
         ast = new AstNode(tokenType.const);
         ast.token = tokenList[tokenListIndexWalk];
@@ -1130,8 +1132,6 @@ const parser_parse_return = (tokenList, prototypeIndex) => {
  * @arg {array} tokenList
  */
 const parser_parse_str = (tokenList) => {
-  //let symtabNode = tokenList[tokenListIndexWalk];
-
   let ast = new AstNode(tokenType.str);
   ast.token = tokenList[tokenListIndexWalk];
   list_eat(tokenList, tokenType.str);
@@ -1152,11 +1152,7 @@ const parser_parse_str = (tokenList) => {
       ast.left.left.token = tokenList[tokenListIndexWalk];
       list_eat(tokenList, tokenType.semi);
     } else {
-      //let priorWalk = tokenListIndexWalk;
-
       ast.left.right = parser_parse_str_args(tokenList);
-
-      //set_argsymtab(symtabNode, priorWalk, tokenList);
 
       ast.left.left = new AstNode(tokenType.semi);
       ast.left.left.token = tokenList[tokenListIndexWalk];
@@ -1272,10 +1268,7 @@ const parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => {
 
   if (proceduresPrototypes[prototype].args[i]?.id) {
     if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
-
       check_symtab(tokenList, true);
-
-      //proceduresPrototypes[prototype].args[i].value = symbolTable[get_symtab(tokenList[tokenListIndexWalk])].const;
 
       ast = new AstNode(tokenType.id);
       ast.token = tokenList[tokenListIndexWalk];
@@ -1284,27 +1277,18 @@ const parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => {
       if (is_mathop(tokenList, tokenListIndexWalk)) ast
 
     } else if (check_token(tokenList, tokenListIndexWalk, tokenType.const)) {
-
-      //proceduresPrototypes[prototype].args[i].value = tokenList[tokenListIndexWalk].value;
-
       ast = new AstNode(tokenType.const);
       ast.token = tokenList[tokenListIndexWalk];
       list_eat(tokenList, tokenType.const);
     }
   } else {
     if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
-
       check_symtab(tokenList, true);
-
-      //proceduresPrototypes[prototype].args[i].value = symbolTable[get_symtab(tokenList[tokenListIndexWalk])].const;
 
       ast = new AstNode(tokenType.id);
       ast.token = tokenList[tokenListIndexWalk];
       list_eat(tokenList, tokenType.id);
     } else {
-
-      //proceduresPrototypes[prototype].args[i].value = tokenList[tokenListIndexWalk].value;
-
       ast = new AstNode(tokenType.const);
       ast.token = tokenList[tokenListIndexWalk];
       list_eat(tokenList, tokenType.const);
@@ -1432,7 +1416,7 @@ const parser_parse_inline_vars = (tokenList) => {
   list_eat(tokenList, tokenType.id);
 
   if (check_token(tokenList, tokenListIndexWalk, tokenType.assig)) {
-    symbolTable.push({ ...symtabNode, const: 0 });
+    symbolTable.push({ ...symtabNode, value: 0 });
 
     ast.left = parser_parse_exp(tokenList, false);
 
@@ -1442,13 +1426,13 @@ const parser_parse_inline_vars = (tokenList) => {
       list_eat(tokenList, tokenType.comma);
     }
   } else if (!check_token(tokenList, tokenListIndexWalk, tokenType.semi)) {
-    symbolTable.push({ ...symtabNode, const: 0 });
+    symbolTable.push({ ...symtabNode, value: 0 });
 
     ast.left = new AstNode(tokenType.comma);
     ast.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, tokenType.comma);
   } else {
-    symbolTable.push({ ...symtabNode, const: 0 });
+    symbolTable.push({ ...symtabNode, value: 0 });
   }
 
   ast.right = parser_parse_inline_vars(tokenList);
@@ -1501,13 +1485,13 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
   list_eat(tokenList, tokenType.id);
 
   if (check_token(tokenList, tokenListIndexWalk, tokenType.semi)) {
-    symbolTable.push({ ...symtabNode, const: 0 });
+    symbolTable.push({ ...symtabNode, value: 0 });
 
     ast.left.left = new AstNode(tokenType.semi);
     ast.left.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, tokenType.semi);
   } else if (check_token(tokenList, tokenListIndexWalk, tokenType.comma)) {
-    symbolTable.push({ ...symtabNode, const: 0 });
+    symbolTable.push({ ...symtabNode, value: 0 });
 
     ast.left.left = new AstNode(tokenType.comma);
     ast.left.left.token = tokenList[tokenListIndexWalk];
@@ -1519,19 +1503,7 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
     ast.left.left.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, tokenType.semi);
   } else if (check_token(tokenList, tokenListIndexWalk, tokenType.assig)) {
-    symbolTable.push({ ...symtabNode, const: 0 });
-
-    // if (check_token(tokenList, tokenListIndexWalk + 2, tokenType.rparen)) {
-    //   ast.right = new AstNode(tokenType.assig);
-    //   ast.left.left.token = tokenList[tokenListIndexWalk];
-    //   list_eat(tokenList, tokenType.assig);
-
-    //   ast.right = parser_parse_call(tokenList);
-
-    //   return ast;
-
-    // } else {
-    // }
+    symbolTable.push({ ...symtabNode, value: 0 });
 
     ast.right = parser_parse_exp(tokenList, false, prototypeIndex);
 
@@ -1901,28 +1873,28 @@ const output_out_math_exp = (first, ast) => {
         if (ast.right.token.type === tokenType.const) {
           value /= parseInt(ast.right.token.id);
         } else {
-          value /= parseInt(symbolTable[get_symtab(ast.right.token)].const);
+          value /= parseInt(symbolTable[get_symtab(ast.right.token)].value);
         }
         break;
       case tokenType.mul:
         if (ast.right.token.type === tokenType.const) {
           value *= parseInt(ast.right.token.id);
         } else {
-          value *= parseInt(symbolTable[get_symtab(ast.right.token)].const);
+          value *= parseInt(symbolTable[get_symtab(ast.right.token)].value);
         }
         break;
       case tokenType.add:
         if (ast.right.token.type === tokenType.const) {
           value += parseInt(ast.right.token.id);
         } else {
-          value += parseInt(symbolTable[get_symtab(ast.right.token)].const);
+          value += parseInt(symbolTable[get_symtab(ast.right.token)].value);
         }
         break;
       case tokenType.sub:
         if (ast.right.token.type === tokenType.const) {
           value -= parseInt(ast.right.token.id);
         } else {
-          value -= parseInt(symbolTable[get_symtab(ast.right.token)].const);
+          value -= parseInt(symbolTable[get_symtab(ast.right.token)].value);
         }
         break;
     }
@@ -1971,7 +1943,7 @@ const output_out_logical_exp = (ast, inside) => {
   }
 
   if (first.type === tokenType.id) {
-    value.number = parseInt(symbolTable[get_symtab(first)].const);
+    value.number = parseInt(symbolTable[get_symtab(first)].value);
   } else {
     value.number = parseInt(first.id);
   }
@@ -2016,19 +1988,19 @@ const output_out_logical_exp = (ast, inside) => {
     ) {
       let mathFirst;
       if (walk.right.token.type === tokenType.id) {
-        mathFirst = parseInt(symbolTable[get_symtab(walk.right.token)].const);
+        mathFirst = parseInt(symbolTable[get_symtab(walk.right.token)].value);
       } else {
         mathFirst = parseInt(walk.right.token.id);
       }
       tokenValue = output_out_math_exp(mathFirst, walk.right.right);
     } else if (walk.right.token.type === tokenType.id) {
-      tokenValue = parseInt(symbolTable[get_symtab(walk.right.token)].const);
+      tokenValue = parseInt(symbolTable[get_symtab(walk.right.token)].value);
     } else if (walk.right.token.type === tokenType.const) {
       tokenValue = parseInt(walk.right.token.id);
     } else if (walk.right.token.type === tokenType.not) {
       if (walk.right.right.token.type === tokenType.id) {
         tokenValue = parseInt(
-          symbolTable[get_symtab(walk.right.right.token)].const
+          symbolTable[get_symtab(walk.right.right.token)].value
         );
       } else if (walk.right.right.token.type === tokenType.const) {
         tokenValue = parseInt(walk.right.right.token.id);
@@ -2144,11 +2116,11 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
             output_out_procedures(walk.right, expList)
             value /= procedureArg.return;
           } else {
-            value /= parseInt(symbolTable[get_symtab(walk.right.token)].const);
+            value /= parseInt(symbolTable[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? symbolTable[symTabI].const = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
       case tokenType.mul:
@@ -2163,11 +2135,11 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
             output_out_procedures(walk.right, expList)
             value += procedureArg.return;
           } else {
-            value += parseInt(symbolTable[get_symtab(walk.right.token)].const);
+            value += parseInt(symbolTable[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? symbolTable[symTabI].const = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
       case tokenType.assig:
@@ -2181,11 +2153,11 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
             output_out_procedures(walk.right, expList)
             value = procedureArg.return;
           } else {
-            value = parseInt(symbolTable[get_symtab(walk.right.token)].const);
+            value = parseInt(symbolTable[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? symbolTable[symTabI].const = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
       case tokenType.assingsum:
@@ -2200,11 +2172,11 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
             output_out_procedures(walk.right, expList)
             value += procedureArg.return;
           } else {
-            value += parseInt(symbolTable[get_symtab(walk.right.token)].const);
+            value += parseInt(symbolTable[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? symbolTable[symTabI].const = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
       case tokenType.assingsub:
@@ -2219,11 +2191,11 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
             output_out_procedures(walk.right, expList)
             value -= procedureArg.return;
           } else {
-            value -= parseInt(symbolTable[get_symtab(walk.right.token)].const);
+            value -= parseInt(symbolTable[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? symbolTable[symTabI].const = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break
       case tokenType.semi:
@@ -2371,15 +2343,15 @@ const output_out_for = (ast, expList, prototypeIndex) => {
     case tokenType.less:
       for (let i = val; i < condVal; i += iterateValue) {
         output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
-        symbolTable[symTabI].const =
-          parseInt(symbolTable[symTabI].const) + iterateValue;
+        symbolTable[symTabI].value =
+          parseInt(symbolTable[symTabI].value) + iterateValue;
       }
       break;
     case tokenType.big:
       for (let i = val; i > condVal; i += iterateValue) {
         output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
-        symbolTable[symTabI].const =
-          parseInt(symbolTable[symTabI].const) + iterateValue;
+        symbolTable[symTabI].value =
+          parseInt(symbolTable[symTabI].value) + iterateValue;
       }
       break;
   }
@@ -2398,7 +2370,7 @@ const output_out_procedures = (ast, expList) => {
 
   while (proceduresPrototypes[prototypeIndex].args[i] && aux) {
     if (aux.token.type === tokenType.id) {
-      proceduresPrototypes[prototypeIndex].args[i].value = symbolTable[get_symtab(aux.token)].const
+      proceduresPrototypes[prototypeIndex].args[i].value = symbolTable[get_symtab(aux.token)].value
     } else if (aux.token.type === tokenType.const) {
       proceduresPrototypes[prototypeIndex].args[i].value = aux.token.id
     }
@@ -2488,7 +2460,7 @@ const printf = (ast, prototypeIndex) => {
       if (ast.left.right.token.type === tokenType.const) {
         str = str.replace("%d", ast.left.right.token.id);
       } else {
-        str = str.replace("%d", symbolTable[get_symtab(ast.left.right.token)].const);
+        str = str.replace("%d", symbolTable[get_symtab(ast.left.right.token)].value);
       }
     }
   }
