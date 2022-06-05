@@ -37,7 +37,7 @@ export const holyc_web_run = () => {
  * Check github.com/leozamboni/holy-node
  */
 export const holy_node_cli = (stdin) => {
-  return output(() => { const ast = parser(lexer(stdin)); hc.symtab.keep = true; return ast; });
+  return output(hc.symtab.keep = true && parser(lexer(stdin)));
 }
 
 export const holy_node_scan = (stdin) => {
@@ -348,8 +348,8 @@ const init_hc = (stdin) => {
   hc.lexer.index = 0;
   hc.lexer.line = 1;
   hc.parser.index = 0;
-  hc.symtab.global = [];
-  hc.symtab.prototypes = [];
+  !hc.symtab.keep && (hc.symtab.global = []);
+  !hc.symtab.keep && (hc.symtab.prototypes = []);
 
   if (!stdin) {
     hc.files.stderr += "compile failure\nlexer: nothing to compile\n";
@@ -364,7 +364,7 @@ const init_hc = (stdin) => {
 // TODO: create a one step lexer
 const lexer = (stdin) => {
   init_hc(stdin)
-  let token_list = []; 
+  let token_list = [];
 
   while (1) {
     const token = lexer_lex(hc)
