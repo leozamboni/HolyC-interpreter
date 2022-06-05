@@ -1203,14 +1203,11 @@ const parser_parse_call = (tokenList) => {
     ast.left.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, token_type.lparen);
 
-    // ast.left.left.left = new AstNode(token_type.semi);
-    // ast.left.left.left.token = tokenList[tokenListIndexWalk];
-    // list_eat(tokenList, token_type.semi);
   } else if (check_token(tokenList, tokenListIndexWalk, token_type.rparen)) {
     ast.left = new AstNode(token_type.rparen);
     ast.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, token_type.rparen);
-    console.log("--> ", tokenList[tokenListIndexWalk])
+
     if (check_token(tokenList, tokenListIndexWalk, token_type.str) && tokenList[tokenListIndexWalk].id === "*") {
       ast.left.next = new AstNode(token_type.str);
       ast.left.next.token = tokenList[tokenListIndexWalk];
@@ -1220,15 +1217,7 @@ const parser_parse_call = (tokenList) => {
     ast.left.left = new AstNode(token_type.lparen);
     ast.left.left.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, token_type.lparen);
-
-    // ast.left.left.left = new AstNode(token_type.semi);
-    // ast.left.left.left.token = tokenList[tokenListIndexWalk];
-    // list_eat(tokenList, token_type.semi);
-  } else {
-    // ast.left = new AstNode(token_type.semi);
-    // ast.left.token = tokenList[tokenListIndexWalk];
-    // list_eat(tokenList, token_type.semi);
-  }
+  } 
 
   return ast;
 };
