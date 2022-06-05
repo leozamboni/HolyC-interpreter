@@ -39,11 +39,11 @@ export const holyc_web_run = () => {
 let keepSymTabAndPrototypes = false;
 
 export const holy_node_cli = (stdin) => {
-  return output(() => { const ast = parser(lex(stdin)); keepSymTabAndPrototypes = true; return ast; });
+  return output(() => { const ast = parser(lexer(stdin)); keepSymTabAndPrototypes = true; return ast; });
 }
 
 export const holy_node_scan = (stdin) => {
-  return output(parser(lex(stdin)));
+  return output(parser(lexer(stdin)));
 }
 
 /**
