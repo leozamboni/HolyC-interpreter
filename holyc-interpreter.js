@@ -4,28 +4,6 @@
  * @fileoverview JS HolyC Interpreter
  * @version 0.0.0
  */
-/*
-How the interpreter works:            
-                               +--------+
-                               | stdin  |
-                               +---+----+
-                                   |
-                               +---v----+
-                  +------------+ lexer  | // Lex input and create a token list;
-+---------+  +----v--------+   +---+----+
-| stderr  <--+error handler|       | 
-+---------+  +----^--------+   +---v----+
-                  +------------+ parser | // Token list iteration and AST generate;
-                               +---+----+
-                                   |
-                               +---v----+
-                               | output | // Run AST and return stdout.
-                               +---+----+
-                                   |
-                               +---v----+
-                               | stdout | 
-                               +--------+
-*/
 /**
  * Run interpreter in web front-end
  * @requires
@@ -47,7 +25,7 @@ How the interpreter works:
  * For local run you need a HTTP server.
  */
 export const holyc_web_run = () => {
-  alert(output(parser(lex(document.getElementById("stdin").value))));
+  alert(output(parser(lexer(document.getElementById("stdin").value))));
 };
 
 /**
@@ -76,7 +54,7 @@ export const holy_node_scan = (stdin) => {
  *  next: AstNode, 
  *  left: AstNode, 
  *  right: AstNode,
- *  type: tokenType, 
+ *  type: token_type, 
  * }}
  */
 class AstNode {
@@ -108,17 +86,10 @@ class Ast {
  * @param {{
  *  id: string, 
  *  line: number, 
- *  type: tokenType 
+ *  type: token_type 
  * }} token
  */
 var symbolTable;
-
-/**
- * alert output string
- * @global
- * @type {string}
- */
-var stdout;
 
 /**
  * procedures prototypes
@@ -126,7 +97,7 @@ var stdout;
  * @param {{
  *  id: string, 
  *  line: number, 
- *  type: tokenType,
+ *  type: token_type,
  *  value: number | string | boolean, 
  * }} prototype
  */
@@ -139,13 +110,34 @@ var proceduresPrototypes;
  */
 var tokenListIndexWalk;
 
-/**
- * enum for token types.
- * @readonly
- * @enum {number}
- */
-const tokenType = {
-  const: 1,
+
+let _files = {
+  stdin: '',
+  stdout: '',
+  stderr: '',
+}
+
+let _lexer = {
+  char: '',
+  line: 1,
+  index: 0,
+}
+
+let hc = {
+  files: _files,
+  lexer: _lexer,
+}
+
+class Token {
+  constructor(id, type, line) {
+    this.id = id;
+    this.type = type;
+    this.line = line;
+  }
+}
+
+const token_type = {
+  number: 1,
   str: 2,
   id: 3,
   add: 4,
@@ -194,6 +186,221 @@ const tokenType = {
   bool: 47,
 };
 
+const token_cases = [
+  {
+    char: '/', renderer: (hc) => {
+
+      if (hc.files.stdin[hc.lexer.index] === '/') {
+        while (hc.files.stdin[hc.lexer.index++]
+          && hc.files.stdin[hc.lexer.index] !== '\n') { };
+        return "{comment}";
+      } else if (hc.files.stdin[hc.lexer.index] === '=') {
+        hc.lexer.index++
+        return new Token('/=', token_type.assingdiv, hc.lexer.line)
+      } else {
+        return new Token('/', token_type.div, hc.lexer.line)
+      }
+    }
+  },
+  {
+    char: "'", renderer: (hc) => lex_simple_quote_string(hc)
+  },
+  {
+    char: '"', renderer: (hc) => lex_string(hc)
+  },
+  {
+    char: "+", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "+"
+      && hc.lexer.index++
+      && (new Token('++', token_type.increment, hc.lexer.line))
+      || hc.files.stdin[hc.lexer.index] === "="
+      && hc.lexer.index++
+      && (new Token('+=', token_type.assingsum, hc.lexer.line))
+      || (new Token('+', token_type.add, hc.lexer.line))
+  },
+  {
+    char: "-", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "-"
+      && hc.lexer.index++
+      && (new Token('--', token_type.increment, hc.lexer.decrement))
+      || hc.files.stdin[hc.lexer.index] === "="
+      && hc.lexer.index++
+      && (new Token('-=', token_type.assingsub, hc.lexer.line))
+      || (new Token('-', token_type.sub, hc.lexer.line))
+  },
+  {
+    char: "*", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "="
+      && hc.lexer.index++
+      && (new Token('*=', token_type.assingmul, hc.lexer.line))
+      || (new Token('*', token_type.mul, hc.lexer.line))
+  },
+  {
+    char: ";", renderer: (hc) => new Token(';', token_type.semi, hc.lexer.line)
+  },
+  {
+    char: "{", renderer: (hc) => new Token('{', token_type.rbrace, hc.lexer.line)
+  },
+  {
+    char: "}", renderer: (hc) => new Token('}', token_type.lbrace, hc.lexer.line)
+  },
+  {
+    char: "(", renderer: (hc) => new Token('(', token_type.rparen, hc.lexer.line)
+  },
+  {
+    char: ")", renderer: (hc) => new Token(')', token_type.lparen, hc.lexer.line)
+  },
+  {
+    char: ",", renderer: (hc) => new Token(',', token_type.comma, hc.lexer.line)
+  },
+  {
+    char: "!", renderer: (hc) => new Token('!', token_type.not, hc.lexer.line)
+  },
+  {
+    char: "=", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "="
+      && hc.lexer.index++
+      && (new Token('==', token_type.equal, hc.lexer.line))
+      || (new Token('=', token_type.assig, hc.lexer.line))
+  },
+  {
+    char: "<", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "="
+      && hc.lexer.index++
+      && (new Token('<=', token_type.lessequal, hc.lexer.line))
+      || (new Token('<', token_type.less, hc.lexer.line))
+  },
+  {
+    char: ">", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "="
+      && hc.lexer.index++
+      && (new Token('>=', token_type.bigequal, hc.lexer.line))
+      || (new Token('>', token_type.big, hc.lexer.line))
+  },
+  {
+    char: "&", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "&"
+      && hc.lexer.index++
+      && (new Token('&&', token_type.and, hc.lexer.line))
+  },
+  {
+    char: "|", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "|"
+      && hc.lexer.index++
+      && (new Token('||', token_type.or, hc.lexer.line))
+  },
+]
+
+const token_keywords = [
+  { id: "for", type: token_type.for },
+  { id: "if", type: token_type.if },
+  { id: "else", type: token_type.else },
+  { id: "return", type: token_type.return },
+  { id: "TRUE", type: token_type.true },
+  { id: "FALSE", type: token_type.false },
+  { id: "Bool", type: token_type.bool },
+  { id: "I0", type: token_type.i0 },
+  { id: "U0", type: token_type.u0 },
+  { id: "I8", type: token_type.i8 },
+  { id: "U8", type: token_type.u8 },
+  { id: "I16", type: token_type.i16 },
+  { id: "U16", type: token_type.u16 },
+  { id: "I32", type: token_type.i32 },
+  { id: "U32", type: token_type.u32 },
+  { id: "I64", type: token_type.i64 },
+  { id: "U64", type: token_type.u64 },
+  { id: "F64", type: token_type.f64 },
+]
+
+const is_alpha = (char) => {
+  return /^[A-Z0-9_]$/i.test(char);
+};
+
+const is_number = (char) => {
+  return /^[0-9]$/.test(char);
+};
+
+const is_ignored = (char) => {
+  char === '\n' && hc.lexer.line++;
+  return /[ \n\t]/.test(char);
+}
+
+const lex_alpha = (hc) => {
+  let id = '';
+  do {
+    id += hc.lexer.char
+  }
+  while (is_alpha(hc.lexer.char = hc.files.stdin[hc.lexer.index++]));
+  hc.lexer.index--;
+  return new Token(id, token_keywords.find(e => e.id === id)?.type || token_type.id, hc.lexer.line);
+}
+
+const lex_number = (hc) => {
+  let id = '';
+  do {
+    id += hc.lexer.char
+  }
+  while (is_number(hc.lexer.char = hc.files.stdin[hc.lexer.index++]));
+  hc.lexer.index--;
+  return new Token(id, token_type.number, hc.lexer.line);
+}
+
+const lex_simple_quote_string = (hc) => {
+  hc.lexer.char = hc.files.stdin[hc.lexer.index++]
+  let id = '';
+  do {
+    id += hc.lexer.char
+  }
+  while ((hc.lexer.char = hc.files.stdin[hc.lexer.index++]) !== "'");
+  return new Token(id, token_type.str, hc.lexer.line);
+}
+
+const lex_string = (hc) => {
+  hc.lexer.char = hc.files.stdin[hc.lexer.index++]
+  let id = '';
+  do {
+    id += hc.lexer.char
+  }
+  while ((hc.lexer.char = hc.files.stdin[hc.lexer.index++]) !== '"');
+  return new Token(id, token_type.str, hc.lexer.line);
+}
+
+const lexer_lex = (hc) => {
+  while ((hc.lexer.char = hc.files.stdin[hc.lexer.index++])
+    && hc.lexer.char) {
+    if (is_ignored(hc.lexer.char)) continue;
+    if (is_number(hc.lexer.char)) return lex_number(hc);
+    if (is_alpha(hc.lexer.char)) return lex_alpha(hc);
+    const token = token_cases.find(e => e.char === hc.lexer.char)?.renderer(hc)
+    if (token === "{comment}") continue;
+    else if (token) return token;
+    else lexer_error({ id: hc.lexer.char, line: hc.lexer.line })
+  }
+}
+
+const init_hc = (stdin) => {
+  hc.files.stdin = stdin;
+  hc.files.stdout = '';
+  hc.files.stderr = '';
+  hc.lexer.char = '';
+  hc.lexer.index = 0;
+  hc.lexer.line = 1;
+
+  if (!stdin) {
+    hc.files.stderr += "lexer: nothing to compile\n";
+    try {
+      throw alert(hc.files.stderr);
+    } catch {
+      throw new Error(hc.files.stderr);
+    }
+  }
+}
+
+const lexer = (stdin) => {
+  init_hc(stdin)
+  let token_list = [];
+
+  while (1) {
+    const token = lexer_lex(hc)
+    if (!token) break;
+    token_list.push(token)
+  }
+
+  return token_list;
+}
+
 /**
  * get index of a symbol in symbol table
  */
@@ -214,33 +421,15 @@ const get_prototype = (token) => {
 };
 
 /**
- * check if value is alphanumeric
- * @arg {number} val - token value
- */
-const is_alpha = (val) => {
-  if (val === " " || val === "\n") return false;
-  return /^[A-Z0-9_]$/i.test(val);
-};
-
-/**
- * check if value is alphanumeric
- * @arg {number} val - token value
- */
-const is_digit = (val) => {
-  if (val === " " || val === "\n") return false;
-  return !isNaN(val);
-};
-
-/**
  * throw lexer error
  * @arg {object} token
  */
 const lexer_error = (token) => {
-  const stderr = `compile failure\nlexer: '${token.id}' unexpected token in line ${token.line}\n`;
+  hc.files.stderr = `compile failure\nlexer: '${token.id}' unexpected token in line ${token.line}\n`;
   try {
-    throw alert(stderr);
+    throw alert(hc.files.stderr);
   } catch {
-    throw new Error(stderr)
+    throw new Error(hc.files.stderr)
   }
 };
 
@@ -249,20 +438,12 @@ const lexer_error = (token) => {
  * @arg {object} token
  */
 const parser_error = (token) => {
-  const stderr = `compile failure\nparser: '${token.id}' unexpected token in line ${token.line}\n`;
+  hc.files.stderr = `compile failure\nparser: '${token.id}' unexpected token in line ${token.line}\n`;
   try {
-    throw alert(stderr);
+    throw alert(hc.files.stderr);
   } catch {
-    throw new Error(stderr)
+    throw new Error(hc.files.stderr)
   }
-};
-
-/**
- * remove tabulation from string
- * @arg {number} val - token value
- */
-const remove_tabs = (val) => {
-  return val.replace(/\t/g, "");
 };
 
 /**
@@ -325,27 +506,27 @@ const check_token = (tokenList, index, expectedType) => {
 const check_ast_type = (type, expectedType) => {
   switch (expectedType) {
     case "id":
-      return type === tokenType.id ? true : false;
+      return type === token_type.id ? true : false;
     case "data_type":
-      return type === tokenType.i0 ||
-        type === tokenType.u0 ||
-        type === tokenType.i8 ||
-        type === tokenType.u8 ||
-        type === tokenType.i16 ||
-        type === tokenType.u16 ||
-        type === tokenType.i32 ||
-        type === tokenType.u32 ||
-        type === tokenType.i64 ||
-        type === tokenType.u64 ||
-        type === tokenType.f64 ||
-        type === tokenType.bool
+      return type === token_type.i0 ||
+        type === token_type.u0 ||
+        type === token_type.i8 ||
+        type === token_type.u8 ||
+        type === token_type.i16 ||
+        type === token_type.u16 ||
+        type === token_type.i32 ||
+        type === token_type.u32 ||
+        type === token_type.i64 ||
+        type === token_type.u64 ||
+        type === token_type.f64 ||
+        type === token_type.bool
         ? true
         : false;
     case "assignment_operator":
-      return type === tokenType.assingdiv ||
-        type === tokenType.assingmul ||
-        type === tokenType.assingsub ||
-        type === tokenType.assingsum
+      return type === token_type.assingdiv ||
+        type === token_type.assingmul ||
+        type === token_type.assingsub ||
+        type === token_type.assingsum
         ? true
         : false;
   }
@@ -359,18 +540,18 @@ const check_ast_type = (type, expectedType) => {
 const is_dtype = (tokenList, index) => {
   try {
     let type = tokenList[index].type;
-    return type === tokenType.i0 ||
-      type === tokenType.u0 ||
-      type === tokenType.i8 ||
-      type === tokenType.u8 ||
-      type === tokenType.i16 ||
-      type === tokenType.u16 ||
-      type === tokenType.i32 ||
-      type === tokenType.u32 ||
-      type === tokenType.i64 ||
-      type === tokenType.u64 ||
-      type === tokenType.f64 ||
-      type === tokenType.bool
+    return type === token_type.i0 ||
+      type === token_type.u0 ||
+      type === token_type.i8 ||
+      type === token_type.u8 ||
+      type === token_type.i16 ||
+      type === token_type.u16 ||
+      type === token_type.i32 ||
+      type === token_type.u32 ||
+      type === token_type.i64 ||
+      type === token_type.u64 ||
+      type === token_type.f64 ||
+      type === token_type.bool
       ? true
       : false;
   } catch {
@@ -386,14 +567,14 @@ const is_dtype = (tokenList, index) => {
 const is_logicalop = (tokenList, index) => {
   try {
     let type = tokenList[index].type;
-    return type === tokenType.big ||
-      type === tokenType.less ||
-      type === tokenType.or ||
-      type === tokenType.and ||
-      type === tokenType.not ||
-      type === tokenType.equal ||
-      type === tokenType.bigequal ||
-      type === tokenType.lessequal 
+    return type === token_type.big ||
+      type === token_type.less ||
+      type === token_type.or ||
+      type === token_type.and ||
+      type === token_type.not ||
+      type === token_type.equal ||
+      type === token_type.bigequal ||
+      type === token_type.lessequal
       ? true
       : false;
   } catch {
@@ -409,12 +590,12 @@ const is_logicalop = (tokenList, index) => {
 const is_mathop = (tokenList, index) => {
   try {
     let type = tokenList[index].type;
-    return type === tokenType.add ||
-      type === tokenType.sub ||
-      type === tokenType.div ||
-      type === tokenType.mul ||
-      type === tokenType.increment ||
-      type === tokenType.decrement
+    return type === token_type.add ||
+      type === token_type.sub ||
+      type === token_type.div ||
+      type === token_type.mul ||
+      type === token_type.increment ||
+      type === token_type.decrement
       ? true
       : false;
   } catch {
@@ -430,11 +611,11 @@ const is_mathop = (tokenList, index) => {
 const is_assingop = (tokenList, index) => {
   try {
     let type = tokenList[index].type;
-    return type === tokenType.assingdiv ||
-      type === tokenType.assingmul ||
-      type === tokenType.assingsub ||
-      type === tokenType.assingsum ||
-      type === tokenType.assig
+    return type === token_type.assingdiv ||
+      type === token_type.assingmul ||
+      type === token_type.assingsub ||
+      type === token_type.assingsum ||
+      type === token_type.assig
       ? true
       : false;
   } catch {
@@ -475,368 +656,24 @@ const list_eat_compassing = (tokenList) => {
 };
 
 /**
- * lex data type
- * @arg {string} str - token
- */
-const lex_type = (str) => {
-  switch (str) {
-    case "Bool":
-      return tokenType.bool;
-    case "I0":
-      return tokenType.i0;
-    case "U0":
-      return tokenType.u0;
-    case "I8":
-      return tokenType.i8;
-    case "U8":
-      return tokenType.u8;
-    case "I16":
-      return tokenType.i16;
-    case "U16":
-      return tokenType.u16;
-    case "I32":
-      return tokenType.i32;
-    case "U32":
-      return tokenType.u32;
-    case "I64":
-      return tokenType.i64;
-    case "U64":
-      return tokenType.u64;
-    case "F64":
-      return tokenType.f64;
-    default:
-      return null;
-  }
-};
-
-/**
- * lex keyword
- * @arg {string} str - token
- */
-const lex_keyword = (str) => {
-  switch (str) {
-    case "for":
-      return tokenType.for;
-    case "if":
-      return tokenType.if;
-    case "else":
-      return tokenType.else;
-    case "return":
-      return tokenType.return;
-    case "TRUE":
-      return tokenType.true;
-    case "FALSE":
-      return tokenType.false;
-    default:
-      return tokenType.id;
-  }
-};
-
-/**
- * lexer
- * @arg {string} input - input string
- */
-const lex = (input) => {
-  stdout = "";
-
-  if (!input) {
-    const stderr = "compile failure\nlexer: nothing to compile\n";
-    try {
-      throw alert(stderr);
-    } catch {
-      throw new Error(stderr);
-    }
-  }
-
-  input = remove_tabs(input);
-
-  var tokenList = [];
-  var line = 1;
-
-  for (let i = 0; i < input.length; ++i) {
-    if (input[i] === "\n") line++;
-
-    if (input[i] === " " || input[i] === "\n") continue;
-
-    if (input[i] === "/" && input[i + 1] === "/") {
-      i++; while (1) { if (input[i] === "\n") break; i++; } line++; continue;
-    }
-
-    if (input[i] === "'") {
-      let aux = ""; i++;
-      while (input[i] !== "'" && input[i]) { aux += input[i++]; }
-      tokenList.push({
-        id: aux,
-        line: line,
-        type: tokenType.str,
-      });
-      continue;
-    }
-
-    if (input[i] === '"') {
-      let aux = ""; i++;
-      while (input[i] !== '"' && input[i]) { aux += input[i++]; }
-      tokenList.push({
-        id: aux,
-        line: line,
-        type: tokenType.str,
-      });
-      continue;
-    }
-
-    if (is_digit(input[i])) {
-      let aux = "";
-      while (is_digit(input[i])) { aux += input[i++]; }
-      i--;
-      tokenList.push({
-        id: aux,
-        line: line,
-        type: tokenType.const,
-      });
-      continue;
-    }
-
-    if (is_alpha(input[i])) {
-      let aux = "";
-      while (is_alpha(input[i])) { aux += input[i++]; }
-      i--;
-      let type = lex_type(aux);
-      if (!type) {
-        type = lex_keyword(aux);
-      }
-      tokenList.push({
-        id: aux,
-        line: line,
-        type: type,
-      });
-      continue;
-    }
-
-    switch (input[i]) {
-      case "+": {
-        if (input[i + 1] === "+") {
-          i++;
-          tokenList.push({
-            id: "++",
-            line: line,
-            type: tokenType.increment,
-          });
-        } else if (input[i + 1] === "=") {
-          i++;
-          tokenList.push({
-            id: "+=",
-            line: line,
-            type: tokenType.assingsum,
-          });
-        } else {
-          tokenList.push({
-            id: "+",
-            line: line,
-            type: tokenType.add,
-          });
-        }
-        break;
-      }
-      case "-":
-        if (input[i + 1] === "-") {
-          i++;
-          tokenList.push({
-            id: "--",
-            line: line,
-            type: tokenType.decrement,
-          });
-        } else if (input[i + 1] === "=") {
-          i++;
-          tokenList.push({
-            id: "-=",
-            line: line,
-            type: tokenType.assingsub,
-          });
-        } else {
-          tokenList.push({
-            id: "-",
-            line: line,
-            type: tokenType.sub,
-          });
-        }
-        break;
-      case "*":
-        if (input[i + 1] === "=") {
-          i++;
-          tokenList.push({
-            id: "*=",
-            line: line,
-            type: tokenType.assingmul,
-          });
-        } else {
-          tokenList.push({
-            id: "*",
-            line: line,
-            type: tokenType.mul,
-          });
-        }
-        break;
-      case "/":
-        if (input[i + 1] === "=") {
-          i++;
-          tokenList.push({
-            id: "/=",
-            line: line,
-            type: tokenType.assingdiv,
-          });
-        } else {
-          tokenList.push({
-            id: "/",
-            line: line,
-            type: tokenType.div,
-          });
-        }
-        break;
-      case ";":
-        tokenList.push({
-          id: ";",
-          line: line,
-          type: tokenType.semi,
-        });
-        break;
-      case "{":
-        tokenList.push({
-          id: "{",
-          line: line,
-          type: tokenType.rbrace,
-        });
-        break;
-      case "}":
-        tokenList.push({
-          id: "}",
-          line: line,
-          type: tokenType.lbrace,
-        });
-        break;
-      case "(":
-        tokenList.push({
-          id: "(",
-          line: line,
-          type: tokenType.rparen,
-        });
-        break;
-      case ")":
-        tokenList.push({
-          id: ")",
-          line: line,
-          type: tokenType.lparen,
-        });
-        break;
-      case ",":
-        tokenList.push({
-          id: ",",
-          line: line,
-          type: tokenType.comma,
-        });
-        break;
-      case "=":
-        if (input[i + 1] === "=") {
-          i++;
-          tokenList.push({
-            id: "==",
-            line: line,
-            type: tokenType.equal,
-          });
-        } else {
-          tokenList.push({
-            id: "=",
-            line: line,
-            type: tokenType.assig,
-          });
-        }
-        break;
-      case "<":
-        if (input[i + 1] === "=") {
-          i++;
-          tokenList.push({
-            id: "<=",
-            line: line,
-            type: tokenType.lessequal,
-          });
-        } else {
-          tokenList.push({
-            id: "<",
-            line: line,
-            type: tokenType.less,
-          });
-        }
-        break;
-      case ">":
-        if (input[i + 1] === "=") {
-          i++;
-          tokenList.push({
-            id: ">=",
-            line: line,
-            type: tokenType.bigequal,
-          });
-        } else {
-          tokenList.push({
-            id: ">",
-            line: line,
-            type: tokenType.big,
-          });
-        }
-        break;
-      case "!":
-        tokenList.push({
-          id: "!",
-          line: line,
-          type: tokenType.not,
-        });
-        break;
-      case "&":
-        if (input[i + 1] === "&") {
-          i++;
-          tokenList.push({
-            id: "&&",
-            line: line,
-            type: tokenType.and,
-          });
-        }
-        break;
-      case "|":
-        if (input[i + 1] === "|") {
-          i++;
-          tokenList.push({
-            id: "||",
-            line: line,
-            type: tokenType.or,
-          });
-        }
-        break;
-
-      default:
-        lexer_error({ id: input[i], line: line });
-        break;
-    }
-  }
-  return tokenList;
-};
-
-/**
  * semantic analysis of logical expresions
  * @arg {array} tokenList
  */
 const parser_parse_logical_exp = (tokenList) => {
   if (
-    check_token(tokenList, tokenListIndexWalk, tokenType.semi) ||
-    check_token(tokenList, tokenListIndexWalk, tokenType.comma) ||
-    check_token(tokenList, tokenListIndexWalk, tokenType.lparen)
+    check_token(tokenList, tokenListIndexWalk, token_type.semi) ||
+    check_token(tokenList, tokenListIndexWalk, token_type.comma) ||
+    check_token(tokenList, tokenListIndexWalk, token_type.lparen)
   )
     return null;
 
   let ast;
 
   if (
-    check_token(tokenList, tokenListIndexWalk - 1, tokenType.id) ||
-    check_token(tokenList, tokenListIndexWalk - 1, tokenType.const) ||
-    check_token(tokenList, tokenListIndexWalk - 1, tokenType.true) ||
-    check_token(tokenList, tokenListIndexWalk - 1, tokenType.false)
+    check_token(tokenList, tokenListIndexWalk - 1, token_type.id) ||
+    check_token(tokenList, tokenListIndexWalk - 1, token_type.number) ||
+    check_token(tokenList, tokenListIndexWalk - 1, token_type.true) ||
+    check_token(tokenList, tokenListIndexWalk - 1, token_type.false)
   ) {
     if (is_logicalop(tokenList, tokenListIndexWalk)) {
       ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
@@ -844,13 +681,13 @@ const parser_parse_logical_exp = (tokenList) => {
       list_eat_logical(tokenList);
     } else {
       if (
-        check_token(tokenList, tokenListIndexWalk - 1, tokenType.id) ||
-        check_token(tokenList, tokenListIndexWalk - 1, tokenType.const)
+        check_token(tokenList, tokenListIndexWalk - 1, token_type.id) ||
+        check_token(tokenList, tokenListIndexWalk - 1, token_type.number)
       ) {
         if (is_mathop(tokenList, tokenListIndexWalk)) {
           if (
-            check_token(tokenList, tokenListIndexWalk + 1, tokenType.id) ||
-            check_token(tokenList, tokenListIndexWalk + 1, tokenType.const)
+            check_token(tokenList, tokenListIndexWalk + 1, token_type.id) ||
+            check_token(tokenList, tokenListIndexWalk + 1, token_type.number)
           ) {
             ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
             ast.token = tokenList[tokenListIndexWalk];
@@ -860,63 +697,63 @@ const parser_parse_logical_exp = (tokenList) => {
       }
     }
   } else if (is_logicalop(tokenList, tokenListIndexWalk - 1)) {
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.not)) {
-      ast = new AstNode(tokenType.not);
+    if (check_token(tokenList, tokenListIndexWalk, token_type.not)) {
+      ast = new AstNode(token_type.not);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.not);
-    } else if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
+      list_eat(tokenList, token_type.not);
+    } else if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
       check_symtab(tokenList, true);
 
-      ast = new AstNode(tokenType.id);
+      ast = new AstNode(token_type.id);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.id);
-    } else if (check_token(tokenList, tokenListIndexWalk, tokenType.true)) {
-      ast = new AstNode(tokenType.true);
+      list_eat(tokenList, token_type.id);
+    } else if (check_token(tokenList, tokenListIndexWalk, token_type.true)) {
+      ast = new AstNode(token_type.true);
       ast.token = {
         id: 1,
         line: tokenList[tokenListIndexWalk].line,
-        type: tokenType.const,
+        type: token_type.number,
       };
-      list_eat(tokenList, tokenType.true);
-    } else if (check_token(tokenList, tokenListIndexWalk, tokenType.false)) {
-      ast = new AstNode(tokenType.const);
+      list_eat(tokenList, token_type.true);
+    } else if (check_token(tokenList, tokenListIndexWalk, token_type.false)) {
+      ast = new AstNode(token_type.number);
       ast.token = {
         id: 0,
         line: tokenList[tokenListIndexWalk].line,
-        type: tokenType.const,
+        type: token_type.number,
       };
-      list_eat(tokenList, tokenType.false);
+      list_eat(tokenList, token_type.false);
     } else {
-      ast = new AstNode(tokenType.const);
+      ast = new AstNode(token_type.number);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.const);
+      list_eat(tokenList, token_type.number);
     }
-  } else if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
+  } else if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
     check_symtab(tokenList, true);
 
-    ast = new AstNode(tokenType.id);
+    ast = new AstNode(token_type.id);
     ast.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.id);
-  } else if (check_token(tokenList, tokenListIndexWalk, tokenType.true)) {
-    ast = new AstNode(tokenType.true);
+    list_eat(tokenList, token_type.id);
+  } else if (check_token(tokenList, tokenListIndexWalk, token_type.true)) {
+    ast = new AstNode(token_type.true);
     ast.token = {
       id: 1,
       line: tokenList[tokenListIndexWalk].line,
-      type: tokenType.const,
+      type: token_type.number,
     };
-    list_eat(tokenList, tokenType.true);
-  } else if (check_token(tokenList, tokenListIndexWalk, tokenType.false)) {
-    ast = new AstNode(tokenType.const);
+    list_eat(tokenList, token_type.true);
+  } else if (check_token(tokenList, tokenListIndexWalk, token_type.false)) {
+    ast = new AstNode(token_type.number);
     ast.token = {
       id: 0,
       line: tokenList[tokenListIndexWalk].line,
-      type: tokenType.const,
+      type: token_type.number,
     };
-    list_eat(tokenList, tokenType.false);
+    list_eat(tokenList, token_type.false);
   } else {
-    ast = new AstNode(tokenType.const);
+    ast = new AstNode(token_type.number);
     ast.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.const);
+    list_eat(tokenList, token_type.number);
   }
 
   ast.right = parser_parse_logical_exp(tokenList);
@@ -930,9 +767,9 @@ const parser_parse_logical_exp = (tokenList) => {
  */
 const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
   if (
-    check_token(tokenList, tokenListIndexWalk, tokenType.semi) ||
-    check_token(tokenList, tokenListIndexWalk, tokenType.comma) ||
-    (arg && check_token(tokenList, tokenListIndexWalk, tokenType.lparen))
+    check_token(tokenList, tokenListIndexWalk, token_type.semi) ||
+    check_token(tokenList, tokenListIndexWalk, token_type.comma) ||
+    (arg && check_token(tokenList, tokenListIndexWalk, token_type.lparen))
   )
     return null;
 
@@ -941,13 +778,13 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
   if (proceduresPrototypes.find(e => e.id === tokenList[tokenListIndexWalk].id)) {
     return parser_parse_call(tokenList)
   } else if (
-    check_token(tokenList, tokenListIndexWalk - 1, tokenType.id) ||
-    check_token(tokenList, tokenListIndexWalk - 1, tokenType.const)
+    check_token(tokenList, tokenListIndexWalk - 1, token_type.id) ||
+    check_token(tokenList, tokenListIndexWalk - 1, token_type.number)
   ) {
     if (is_mathop(tokenList, tokenListIndexWalk)) {
       if (
-        check_token(tokenList, tokenListIndexWalk + 1, tokenType.id) ||
-        check_token(tokenList, tokenListIndexWalk + 1, tokenType.const)
+        check_token(tokenList, tokenListIndexWalk + 1, token_type.id) ||
+        check_token(tokenList, tokenListIndexWalk + 1, token_type.number)
       ) {
         ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
         ast.token = tokenList[tokenListIndexWalk];
@@ -958,15 +795,15 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
       ast.token = tokenList[tokenListIndexWalk];
       list_eat_compassing(tokenList);
     } else {
-      ast = new AstNode(tokenType.assig);
+      ast = new AstNode(token_type.assig);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.assig);
+      list_eat(tokenList, token_type.assig);
     }
   } else if (
-    check_token(tokenList, tokenListIndexWalk - 1, tokenType.assig) ||
+    check_token(tokenList, tokenListIndexWalk - 1, token_type.assig) ||
     is_assingop(tokenList, tokenListIndexWalk - 1)
   ) {
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
+    if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
       let procedureArg;
       if (prototypeIndex) {
         procedureArg = proceduresPrototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[tokenListIndexWalk].id)
@@ -975,64 +812,64 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
       }
       !procedureArg && check_symtab(tokenList, true);
 
-      ast = new AstNode(tokenType.id);
+      ast = new AstNode(token_type.id);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.id);
+      list_eat(tokenList, token_type.id);
     } else {
       symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])] = {
         id: tokenList[tokenListIndexWalk - 2].id,
         line: tokenList[tokenListIndexWalk - 2].line,
         const: tokenList[tokenListIndexWalk].id,
       };
-  
-      if (check_token(tokenList, tokenListIndexWalk, tokenType.true)) {
+
+      if (check_token(tokenList, tokenListIndexWalk, token_type.true)) {
         symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])].value = 1;
-        tokenList[tokenListIndexWalk].type = tokenType.const
+        tokenList[tokenListIndexWalk].type = token_type.number
         tokenList[tokenListIndexWalk].id = 1;
 
-        ast = new AstNode(tokenType.const);
+        ast = new AstNode(token_type.number);
         ast.token = tokenList[tokenListIndexWalk];
-        list_eat(tokenList, tokenType.const);
-      } else if (check_token(tokenList, tokenListIndexWalk, tokenType.false)) {
+        list_eat(tokenList, token_type.number);
+      } else if (check_token(tokenList, tokenListIndexWalk, token_type.false)) {
         symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])].value = 0;
-        tokenList[tokenListIndexWalk].type = tokenType.const
+        tokenList[tokenListIndexWalk].type = token_type.number
         tokenList[tokenListIndexWalk].id = 0;
 
-        ast = new AstNode(tokenType.const);
+        ast = new AstNode(token_type.number);
         ast.token = tokenList[tokenListIndexWalk];
-        list_eat(tokenList, tokenType.const);
+        list_eat(tokenList, token_type.number);
       } else {
-        ast = new AstNode(tokenType.const);
+        ast = new AstNode(token_type.number);
         ast.token = tokenList[tokenListIndexWalk];
-        list_eat(tokenList, tokenType.const);
+        list_eat(tokenList, token_type.number);
       }
     }
-  } else if (is_mathop(tokenList, tokenListIndexWalk - 1) || check_token(tokenList, tokenListIndexWalk - 1, tokenType.return)) {
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
+  } else if (is_mathop(tokenList, tokenListIndexWalk - 1) || check_token(tokenList, tokenListIndexWalk - 1, token_type.return)) {
+    if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
       let procedureArg;
       prototypeIndex && (procedureArg = proceduresPrototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[tokenListIndexWalk].id))
       !procedureArg && check_symtab(tokenList, true);
 
-      ast = new AstNode(tokenType.id);
+      ast = new AstNode(token_type.id);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.id);
+      list_eat(tokenList, token_type.id);
     } else {
-      ast = new AstNode(tokenType.const);
+      ast = new AstNode(token_type.number);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.const);
+      list_eat(tokenList, token_type.number);
     }
-  } else if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
+  } else if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
     let procedureArg;
     prototypeIndex && (procedureArg = proceduresPrototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[tokenListIndexWalk].id))
     !procedureArg && check_symtab(tokenList, true);
 
-    ast = new AstNode(tokenType.id);
+    ast = new AstNode(token_type.id);
     ast.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.id);
-  } else if (!check_token(tokenList, tokenListIndexWalk, tokenType.semi)) {
-    ast = new AstNode(tokenType.comma);
+    list_eat(tokenList, token_type.id);
+  } else if (!check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
+    ast = new AstNode(token_type.comma);
     ast.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.comma);
+    list_eat(tokenList, token_type.comma);
   } else {
     parser_error(tokenList[tokenListIndexWalk]);
   }
@@ -1047,35 +884,35 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
  * @arg {array} tokenList
  */
 const parser_parse_str_args = (tokenList) => {
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.semi)) return null;
+  if (check_token(tokenList, tokenListIndexWalk, token_type.semi)) return null;
 
   let ast;
 
   if (
-    check_token(tokenList, tokenListIndexWalk, tokenType.id) ||
-    check_token(tokenList, tokenListIndexWalk, tokenType.const)
+    check_token(tokenList, tokenListIndexWalk, token_type.id) ||
+    check_token(tokenList, tokenListIndexWalk, token_type.number)
   ) {
     ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
     ast.token = tokenList[tokenListIndexWalk];
     list_eat(tokenList, tokenList[tokenListIndexWalk].type);
-  } else if (check_token(tokenList, tokenListIndexWalk, tokenType.str)) {
-    ast = new AstNode(tokenType.str);
+  } else if (check_token(tokenList, tokenListIndexWalk, token_type.str)) {
+    ast = new AstNode(token_type.str);
     ast.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.str);
+    list_eat(tokenList, token_type.str);
   } else {
     ast = parser_parse_exp(tokenList, false);
   }
 
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.assig)) {
-    ast.left = new AstNode(tokenType.assig);
+  if (check_token(tokenList, tokenListIndexWalk, token_type.assig)) {
+    ast.left = new AstNode(token_type.assig);
     ast.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.assig);
+    list_eat(tokenList, token_type.assig);
 
     ast.left.right = parser_parse_exp(tokenList, false);
-  } else if (!check_token(tokenList, tokenListIndexWalk, tokenType.semi)) {
-    ast.left = new AstNode(tokenType.comma);
+  } else if (!check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
+    ast.left = new AstNode(token_type.comma);
     ast.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.comma);
+    list_eat(tokenList, token_type.comma);
   }
 
   ast.right = parser_parse_str_args(tokenList);
@@ -1088,18 +925,18 @@ const parser_parse_str_args = (tokenList) => {
  * @arg {array} tokenList
  */
 const parser_parse_inline_str = (tokenList) => {
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.semi)) return null;
+  if (check_token(tokenList, tokenListIndexWalk, token_type.semi)) return null;
 
-  let ast = new AstNode(tokenType.str);
+  let ast = new AstNode(token_type.str);
   ast.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.str);
+  list_eat(tokenList, token_type.str);
 
-  if (!check_token(tokenList, tokenListIndexWalk, tokenType.semi)) {
-    ast.next = new AstNode(tokenType.comma);
+  if (!check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
+    ast.next = new AstNode(token_type.comma);
     ast.next.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.comma);
+    list_eat(tokenList, token_type.comma);
 
-    if (!check_token(tokenList, tokenListIndexWalk, tokenType.str)) {
+    if (!check_token(tokenList, tokenListIndexWalk, token_type.str)) {
       parser_error(tokenList[tokenListIndexWalk]);
     }
   }
@@ -1114,15 +951,15 @@ const parser_parse_inline_str = (tokenList) => {
  * @arg {array} tokenList
  */
 const parser_parse_return = (tokenList, prototypeIndex) => {
-  let ast = new AstNode(tokenType.return);
+  let ast = new AstNode(token_type.return);
   ast.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.return);
+  list_eat(tokenList, token_type.return);
 
   ast.right = parser_parse_exp(tokenList, false, prototypeIndex)
 
-  ast.left = new AstNode(tokenType.semi);
+  ast.left = new AstNode(token_type.semi);
   ast.left.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.semi);
+  list_eat(tokenList, token_type.semi);
 
   return ast;
 };
@@ -1132,31 +969,31 @@ const parser_parse_return = (tokenList, prototypeIndex) => {
  * @arg {array} tokenList
  */
 const parser_parse_str = (tokenList) => {
-  let ast = new AstNode(tokenType.str);
+  let ast = new AstNode(token_type.str);
   ast.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.str);
+  list_eat(tokenList, token_type.str);
 
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.semi)) {
-    ast.left = new AstNode(tokenType.semi);
+  if (check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
+    ast.left = new AstNode(token_type.semi);
     ast.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.semi);
+    list_eat(tokenList, token_type.semi);
   } else {
-    ast.left = new AstNode(tokenType.comma);
+    ast.left = new AstNode(token_type.comma);
     ast.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.comma);
+    list_eat(tokenList, token_type.comma);
 
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.str)) {
+    if (check_token(tokenList, tokenListIndexWalk, token_type.str)) {
       ast.right = parser_parse_inline_str(tokenList);
 
-      ast.left.left = new AstNode(tokenType.semi);
+      ast.left.left = new AstNode(token_type.semi);
       ast.left.left.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.semi);
+      list_eat(tokenList, token_type.semi);
     } else {
       ast.left.right = parser_parse_str_args(tokenList);
 
-      ast.left.left = new AstNode(tokenType.semi);
+      ast.left.left = new AstNode(token_type.semi);
       ast.left.left.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.semi);
+      list_eat(tokenList, token_type.semi);
     }
   }
 
@@ -1168,40 +1005,40 @@ const parser_parse_str = (tokenList) => {
  * @arg {array} tokenList
  */
 const parser_parse_block = (tokenList, prototypeIndex) => {
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.lbrace)) return null;
+  if (check_token(tokenList, tokenListIndexWalk, token_type.lbrace)) return null;
 
   let ast;
 
   switch (tokenList[tokenListIndexWalk].type) {
-    case tokenType.bool:
-    case tokenType.i0:
-    case tokenType.u0:
-    case tokenType.i8:
-    case tokenType.u8:
-    case tokenType.i16:
-    case tokenType.u16:
-    case tokenType.i32:
-    case tokenType.u32:
-    case tokenType.i64:
-    case tokenType.u64:
-    case tokenType.f64:
-    case tokenType.id:
+    case token_type.bool:
+    case token_type.i0:
+    case token_type.u0:
+    case token_type.i8:
+    case token_type.u8:
+    case token_type.i16:
+    case token_type.u16:
+    case token_type.i32:
+    case token_type.u32:
+    case token_type.i64:
+    case token_type.u64:
+    case token_type.f64:
+    case token_type.id:
       ast = parser_parse_id(tokenList, prototypeIndex);
       break;
-    case tokenType.increment:
-    case tokenType.decrement:
+    case token_type.increment:
+    case token_type.decrement:
       ast = parser_parse_prepostfix(tokenList, false);
       break;
-    case tokenType.str:
+    case token_type.str:
       ast = parser_parse_str(tokenList);
       break;
-    case tokenType.for:
+    case token_type.for:
       ast = parser_parse_for(tokenList);
       break;
-    case tokenType.if:
+    case token_type.if:
       ast = parser_parse_ifelse(tokenList);
       break;
-    case tokenType.return:
+    case token_type.return:
       ast = parser_parse_return(tokenList, prototypeIndex);
       break;
     default:
@@ -1218,36 +1055,36 @@ const parser_parse_block = (tokenList, prototypeIndex) => {
  * @arg {array} tokenList
  */
 const parser_parse_args = (tokenList = []) => {
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.lparen)) return null;
+  if (check_token(tokenList, tokenListIndexWalk, token_type.lparen)) return null;
 
   let ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
   ast.token = tokenList[tokenListIndexWalk];
   list_eat_type(tokenList);
 
-  ast.next = new AstNode(tokenType.id);
+  ast.next = new AstNode(token_type.id);
   ast.next.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.id);
+  list_eat(tokenList, token_type.id);
 
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.assig)) {
-    ast.next.next = new AstNode(tokenType.assig);
+  if (check_token(tokenList, tokenListIndexWalk, token_type.assig)) {
+    ast.next.next = new AstNode(token_type.assig);
     ast.next.next.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.assig);
+    list_eat(tokenList, token_type.assig);
 
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.const)) {
-      ast.next.next.next = new AstNode(tokenType.const);
+    if (check_token(tokenList, tokenListIndexWalk, token_type.number)) {
+      ast.next.next.next = new AstNode(token_type.number);
       ast.next.next.next.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.const);
+      list_eat(tokenList, token_type.number);
     } else {
-      ast.next.next.next = new AstNode(tokenType.str);
+      ast.next.next.next = new AstNode(token_type.str);
       ast.next.next.next.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.str);
+      list_eat(tokenList, token_type.str);
     }
   }
 
-  if (!check_token(tokenList, tokenListIndexWalk, tokenType.lparen)) {
-    ast.next.next = new AstNode(tokenType.comma);
+  if (!check_token(tokenList, tokenListIndexWalk, token_type.lparen)) {
+    ast.next.next = new AstNode(token_type.comma);
     ast.next.next.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.comma);
+    list_eat(tokenList, token_type.comma);
   }
 
   ast.right = parser_parse_args(tokenList);
@@ -1267,49 +1104,49 @@ const parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => {
   let ast;
 
   if (proceduresPrototypes[prototype].args[i]?.id) {
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
+    if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
       check_symtab(tokenList, true);
 
-      ast = new AstNode(tokenType.id);
+      ast = new AstNode(token_type.id);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.id);
+      list_eat(tokenList, token_type.id);
 
       if (is_mathop(tokenList, tokenListIndexWalk)) ast
 
-    } else if (check_token(tokenList, tokenListIndexWalk, tokenType.const)) {
-      ast = new AstNode(tokenType.const);
+    } else if (check_token(tokenList, tokenListIndexWalk, token_type.number)) {
+      ast = new AstNode(token_type.number);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.const);
+      list_eat(tokenList, token_type.number);
     }
   } else {
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
+    if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
       check_symtab(tokenList, true);
 
-      ast = new AstNode(tokenType.id);
+      ast = new AstNode(token_type.id);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.id);
+      list_eat(tokenList, token_type.id);
     } else {
-      ast = new AstNode(tokenType.const);
+      ast = new AstNode(token_type.number);
       ast.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.const);
+      list_eat(tokenList, token_type.number);
     }
   }
 
   if (i < proceduresPrototypes[prototype].args.length - 1) {
     if (ast) {
-      if (check_token(tokenList, tokenListIndexWalk, tokenType.comma)) {
-        ast.left = new AstNode(tokenType.comma);
+      if (check_token(tokenList, tokenListIndexWalk, token_type.comma)) {
+        ast.left = new AstNode(token_type.comma);
         ast.left.token = tokenList[tokenListIndexWalk];
-        list_eat(tokenList, tokenType.comma);
+        list_eat(tokenList, token_type.comma);
       } else {
         return ast;
       }
     } else {
-      if (notAssigArgs || check_token(tokenList, tokenListIndexWalk, tokenType.comma)) {
-        ast = new AstNode(tokenType.comma);
+      if (notAssigArgs || check_token(tokenList, tokenListIndexWalk, token_type.comma)) {
+        ast = new AstNode(token_type.comma);
         ast.token = tokenList[tokenListIndexWalk];
-        list_eat(tokenList, tokenType.comma);
-      } else if (!notAssigArgs || check_token(tokenList, tokenListIndexWalk, tokenType.rparen)) {
+        list_eat(tokenList, token_type.comma);
+      } else if (!notAssigArgs || check_token(tokenList, tokenListIndexWalk, token_type.rparen)) {
         return ast;
       }
     }
@@ -1333,64 +1170,64 @@ const parser_parse_call = (tokenList) => {
 
   const prototype = get_prototype(tokenList[tokenListIndexWalk]);
 
-  let ast = new AstNode(tokenType.call);
+  let ast = new AstNode(token_type.call);
   ast.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.id);
+  list_eat(tokenList, token_type.id);
 
   if (proceduresPrototypes[prototype].args.length) {
     const notAssigArgs = proceduresPrototypes[prototype].args.filter(e => { return e.id === undefined ? true : false }).length
 
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.semi) && !notAssigArgs) {
-      ast.left = new AstNode(tokenType.semi);
+    if (check_token(tokenList, tokenListIndexWalk, token_type.semi) && !notAssigArgs) {
+      ast.left = new AstNode(token_type.semi);
       ast.left.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.semi);
+      list_eat(tokenList, token_type.semi);
 
       return ast;
     }
 
-    ast.left = new AstNode(tokenType.rparen);
+    ast.left = new AstNode(token_type.rparen);
     ast.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.rparen);
+    list_eat(tokenList, token_type.rparen);
 
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.str) && !notAssigArgs && tokenList[tokenListIndexWalk].id === "*") {
-      ast.left.left = new AstNode(tokenType.str);
+    if (check_token(tokenList, tokenListIndexWalk, token_type.str) && !notAssigArgs && tokenList[tokenListIndexWalk].id === "*") {
+      ast.left.left = new AstNode(token_type.str);
       ast.left.left.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.str);
+      list_eat(tokenList, token_type.str);
     } else {
       if (proceduresPrototypes[prototype].args.length) {
         ast.right = parser_parse_call_args(tokenList, prototype, notAssigArgs, 0);
       }
     }
 
-    ast.left.left = new AstNode(tokenType.lparen);
+    ast.left.left = new AstNode(token_type.lparen);
     ast.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.lparen);
+    list_eat(tokenList, token_type.lparen);
 
-    // ast.left.left.left = new AstNode(tokenType.semi);
+    // ast.left.left.left = new AstNode(token_type.semi);
     // ast.left.left.left.token = tokenList[tokenListIndexWalk];
-    // list_eat(tokenList, tokenType.semi);
-  } else if (check_token(tokenList, tokenListIndexWalk, tokenType.rparen)) {
-    ast.left = new AstNode(tokenType.rparen);
+    // list_eat(tokenList, token_type.semi);
+  } else if (check_token(tokenList, tokenListIndexWalk, token_type.rparen)) {
+    ast.left = new AstNode(token_type.rparen);
     ast.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.rparen);
-
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.str) && tokenList[tokenListIndexWalk].id === "*") {
-      ast.left.next = new AstNode(tokenType.str);
+    list_eat(tokenList, token_type.rparen);
+    console.log("--> ", tokenList[tokenListIndexWalk])
+    if (check_token(tokenList, tokenListIndexWalk, token_type.str) && tokenList[tokenListIndexWalk].id === "*") {
+      ast.left.next = new AstNode(token_type.str);
       ast.left.next.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.str);
+      list_eat(tokenList, token_type.str);
     }
 
-    ast.left.left = new AstNode(tokenType.lparen);
+    ast.left.left = new AstNode(token_type.lparen);
     ast.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.lparen);
+    list_eat(tokenList, token_type.lparen);
 
-    // ast.left.left.left = new AstNode(tokenType.semi);
+    // ast.left.left.left = new AstNode(token_type.semi);
     // ast.left.left.left.token = tokenList[tokenListIndexWalk];
-    // list_eat(tokenList, tokenType.semi);
+    // list_eat(tokenList, token_type.semi);
   } else {
-    // ast.left = new AstNode(tokenType.semi);
+    // ast.left = new AstNode(token_type.semi);
     // ast.left.token = tokenList[tokenListIndexWalk];
-    // list_eat(tokenList, tokenType.semi);
+    // list_eat(tokenList, token_type.semi);
   }
 
   return ast;
@@ -1402,8 +1239,8 @@ const parser_parse_call = (tokenList) => {
  */
 const parser_parse_inline_vars = (tokenList) => {
   if (
-    check_token(tokenList, tokenListIndexWalk, tokenType.semi) &&
-    !check_token(tokenList, tokenListIndexWalk - 1, tokenType.comma)
+    check_token(tokenList, tokenListIndexWalk, token_type.semi) &&
+    !check_token(tokenList, tokenListIndexWalk - 1, token_type.comma)
   )
     return null;
 
@@ -1411,26 +1248,26 @@ const parser_parse_inline_vars = (tokenList) => {
 
   let symtabNode = tokenList[tokenListIndexWalk];
 
-  let ast = new AstNode(tokenType.id);
+  let ast = new AstNode(token_type.id);
   ast.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.id);
+  list_eat(tokenList, token_type.id);
 
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.assig)) {
+  if (check_token(tokenList, tokenListIndexWalk, token_type.assig)) {
     symbolTable.push({ ...symtabNode, value: 0 });
 
     ast.left = parser_parse_exp(tokenList, false);
 
-    if (!check_token(tokenList, tokenListIndexWalk, tokenType.semi)) {
-      ast.left.left = new AstNode(tokenType.comma);
+    if (!check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
+      ast.left.left = new AstNode(token_type.comma);
       ast.left.left.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.comma);
+      list_eat(tokenList, token_type.comma);
     }
-  } else if (!check_token(tokenList, tokenListIndexWalk, tokenType.semi)) {
+  } else if (!check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
     symbolTable.push({ ...symtabNode, value: 0 });
 
-    ast.left = new AstNode(tokenType.comma);
+    ast.left = new AstNode(token_type.comma);
     ast.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.comma);
+    list_eat(tokenList, token_type.comma);
   } else {
     symbolTable.push({ ...symtabNode, value: 0 });
   }
@@ -1445,23 +1282,23 @@ const parser_parse_inline_vars = (tokenList) => {
  * @arg {array} tokenList
  */
 const parser_parse_id = (tokenList, prototypeIndex) => {
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.id)) {
+  if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
     if (is_assingop(tokenList, tokenListIndexWalk + 1)) {
       let ast = parser_parse_exp(tokenList, false, prototypeIndex);
 
-      ast.left = new AstNode(tokenType.semi);
+      ast.left = new AstNode(token_type.semi);
       ast.left.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.semi);
+      list_eat(tokenList, token_type.semi);
 
       return ast;
     } else if (
-      check_token(tokenList, tokenListIndexWalk + 1, tokenType.increment) ||
-      check_token(tokenList, tokenListIndexWalk + 1, tokenType.decrement)
+      check_token(tokenList, tokenListIndexWalk + 1, token_type.increment) ||
+      check_token(tokenList, tokenListIndexWalk + 1, token_type.decrement)
     ) {
       return parser_parse_prepostfix(tokenList, false);
     } else {
       let ast = parser_parse_call(tokenList);
-      list_eat(tokenList, tokenType.semi);
+      list_eat(tokenList, token_type.semi);
       return ast
     }
   }
@@ -1480,47 +1317,47 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
 
   let symtabNode = tokenList[tokenListIndexWalk];
 
-  ast.left = new AstNode(tokenType.id);
+  ast.left = new AstNode(token_type.id);
   ast.left.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.id);
+  list_eat(tokenList, token_type.id);
 
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.semi)) {
+  if (check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
     symbolTable.push({ ...symtabNode, value: 0 });
 
-    ast.left.left = new AstNode(tokenType.semi);
+    ast.left.left = new AstNode(token_type.semi);
     ast.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.semi);
-  } else if (check_token(tokenList, tokenListIndexWalk, tokenType.comma)) {
+    list_eat(tokenList, token_type.semi);
+  } else if (check_token(tokenList, tokenListIndexWalk, token_type.comma)) {
     symbolTable.push({ ...symtabNode, value: 0 });
 
-    ast.left.left = new AstNode(tokenType.comma);
+    ast.left.left = new AstNode(token_type.comma);
     ast.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.comma);
+    list_eat(tokenList, token_type.comma);
 
     ast.right = parser_parse_inline_vars(tokenList);
 
-    ast.left.left.left = new AstNode(tokenType.semi);
+    ast.left.left.left = new AstNode(token_type.semi);
     ast.left.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.semi);
-  } else if (check_token(tokenList, tokenListIndexWalk, tokenType.assig)) {
+    list_eat(tokenList, token_type.semi);
+  } else if (check_token(tokenList, tokenListIndexWalk, token_type.assig)) {
     symbolTable.push({ ...symtabNode, value: 0 });
 
     ast.right = parser_parse_exp(tokenList, false, prototypeIndex);
 
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.comma)) {
-      ast.left.left = new AstNode(tokenType.comma);
+    if (check_token(tokenList, tokenListIndexWalk, token_type.comma)) {
+      ast.left.left = new AstNode(token_type.comma);
       ast.left.left.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.comma);
+      list_eat(tokenList, token_type.comma);
 
       ast.left.right = parser_parse_inline_vars(tokenList);
 
-      ast.left.left.left = new AstNode(tokenType.semi);
+      ast.left.left.left = new AstNode(token_type.semi);
       ast.left.left.left.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.semi);
+      list_eat(tokenList, token_type.semi);
     } else {
-      ast.left.left = new AstNode(tokenType.semi);
+      ast.left.left = new AstNode(token_type.semi);
       ast.left.left.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.semi);
+      list_eat(tokenList, token_type.semi);
     }
   } else if (!prototypeIndex) {
     /**
@@ -1534,9 +1371,9 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
       return: undefined,
     }
 
-    ast.left.left = new AstNode(tokenType.rparen);
+    ast.left.left = new AstNode(token_type.rparen);
     ast.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.rparen);
+    list_eat(tokenList, token_type.rparen);
 
     let priorWalk = tokenListIndexWalk;
 
@@ -1549,12 +1386,12 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
         type: tokenList[priorWalk].type,
         value: undefined,
       }
-      if (tokenList[priorWalk + 2].type === tokenType.assig) {
+      if (tokenList[priorWalk + 2].type === token_type.assig) {
         argProt.value = tokenList[priorWalk + 3].id;
         priorWalk += 2;
       }
       priorWalk += 2;
-      if (tokenList[priorWalk].type === tokenType.comma) {
+      if (tokenList[priorWalk].type === token_type.comma) {
         priorWalk++;
       }
       args.push(argProt)
@@ -1565,19 +1402,19 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
 
     const prototypeIndex = proceduresPrototypes.findIndex(e => e.id === prototypeId) + 1;
 
-    ast.left.left.left = new AstNode(tokenType.lparen);
+    ast.left.left.left = new AstNode(token_type.lparen);
     ast.left.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.lparen);
+    list_eat(tokenList, token_type.lparen);
 
-    ast.left.left.left.left = new AstNode(tokenType.rbrace);
+    ast.left.left.left.left = new AstNode(token_type.rbrace);
     ast.left.left.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.rbrace);
+    list_eat(tokenList, token_type.rbrace);
 
     ast.right = parser_parse_block(tokenList, prototypeIndex);
 
-    ast.left.left.left.left.left = new AstNode(tokenType.lbrace);
+    ast.left.left.left.left.left = new AstNode(token_type.lbrace);
     ast.left.left.left.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.lbrace);
+    list_eat(tokenList, token_type.lbrace);
   }
 
   return ast;
@@ -1592,43 +1429,43 @@ const parser_parse_prepostfix = (tokenList, block) => {
   let ast;
 
   if (is_mathop(tokenList, tokenListIndexWalk)) {
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.increment)) {
-      ast = new AstNode(tokenType.increment);
+    if (check_token(tokenList, tokenListIndexWalk, token_type.increment)) {
+      ast = new AstNode(token_type.increment);
       ast.token = tokenList[tokenListIndexWalk];
       list_eat_math(tokenList);
     } else {
-      ast = new AstNode(tokenType.decrement);
+      ast = new AstNode(token_type.decrement);
       ast.token = tokenList[tokenListIndexWalk];
       list_eat_math(tokenList);
     }
 
     check_symtab(tokenList, true);
 
-    ast.right = new AstNode(tokenType.id);
+    ast.right = new AstNode(token_type.id);
     ast.right.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.id);
+    list_eat(tokenList, token_type.id);
   } else {
     check_symtab(tokenList, true);
 
-    ast = new AstNode(tokenType.id);
+    ast = new AstNode(token_type.id);
     ast.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.id);
+    list_eat(tokenList, token_type.id);
 
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.increment)) {
-      ast.right = new AstNode(tokenType.increment);
+    if (check_token(tokenList, tokenListIndexWalk, token_type.increment)) {
+      ast.right = new AstNode(token_type.increment);
       ast.right.token = tokenList[tokenListIndexWalk];
       list_eat_math(tokenList);
     } else {
-      ast.right = new AstNode(tokenType.decrement);
+      ast.right = new AstNode(token_type.decrement);
       ast.right.token = tokenList[tokenListIndexWalk];
       list_eat_math(tokenList);
     }
   }
 
   if (!block) {
-    ast.left = new AstNode(tokenType.semi);
+    ast.left = new AstNode(token_type.semi);
     ast.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.semi);
+    list_eat(tokenList, token_type.semi);
   }
 
   return ast;
@@ -1639,78 +1476,78 @@ const parser_parse_prepostfix = (tokenList, block) => {
  * @arg {array} tokenList
  */
 const parser_parse_ifelse = (tokenList) => {
-  let ast = new AstNode(tokenType.if);
+  let ast = new AstNode(token_type.if);
   ast.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.if);
+  list_eat(tokenList, token_type.if);
 
-  ast.left = new AstNode(tokenType.rparen);
+  ast.left = new AstNode(token_type.rparen);
   ast.left.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.rparen);
+  list_eat(tokenList, token_type.rparen);
 
-  if (check_token(tokenList, tokenListIndexWalk, tokenType.const)) {
-    ast.left.left = new AstNode(tokenType.const);
+  if (check_token(tokenList, tokenListIndexWalk, token_type.number)) {
+    ast.left.left = new AstNode(token_type.number);
     ast.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.const);
-  } else if (check_token(tokenList, tokenListIndexWalk, tokenType.true)) {
-    ast.left.left = new AstNode(tokenType.true);
+    list_eat(tokenList, token_type.number);
+  } else if (check_token(tokenList, tokenListIndexWalk, token_type.true)) {
+    ast.left.left = new AstNode(token_type.true);
     ast.left.left.token = {
       id: 1,
       line: tokenList[tokenListIndexWalk].line,
-      type: tokenType.const,
+      type: token_type.number,
     };
-    list_eat(tokenList, tokenType.true);
-  } else if (check_token(tokenList, tokenListIndexWalk, tokenType.false)) {
-    ast.left.left = new AstNode(tokenType.const);
+    list_eat(tokenList, token_type.true);
+  } else if (check_token(tokenList, tokenListIndexWalk, token_type.false)) {
+    ast.left.left = new AstNode(token_type.number);
     ast.left.left.token = {
       id: 0,
       line: tokenList[tokenListIndexWalk].line,
-      type: tokenType.const,
+      type: token_type.number,
     };
-    list_eat(tokenList, tokenType.false);
+    list_eat(tokenList, token_type.false);
   } else {
     check_symtab(tokenList, true);
 
-    ast.left.left = new AstNode(tokenType.id);
+    ast.left.left = new AstNode(token_type.id);
     ast.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.id);
+    list_eat(tokenList, token_type.id);
   }
 
   ast.right = parser_parse_logical_exp(tokenList);
 
-  ast.left.left.left = new AstNode(tokenType.lparen);
+  ast.left.left.left = new AstNode(token_type.lparen);
   ast.left.left.left.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.lparen);
+  list_eat(tokenList, token_type.lparen);
 
-  ast.left.left.next = new AstNode(tokenType.rbrace);
+  ast.left.left.next = new AstNode(token_type.rbrace);
   ast.left.left.next.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.rbrace);
+  list_eat(tokenList, token_type.rbrace);
 
   ast.left.left.left.right = parser_parse_block(tokenList);
 
-  ast.left.left.next.next = new AstNode(tokenType.lbrace);
+  ast.left.left.next.next = new AstNode(token_type.lbrace);
   ast.left.left.next.next.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.lbrace);
+  list_eat(tokenList, token_type.lbrace);
 
   if (
     tokenListIndexWalk < tokenList.length &&
-    check_token(tokenList, tokenListIndexWalk, tokenType.else)
+    check_token(tokenList, tokenListIndexWalk, token_type.else)
   ) {
-    ast.left.left.left.left = new AstNode(tokenType.else);
+    ast.left.left.left.left = new AstNode(token_type.else);
     ast.left.left.left.left.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.else);
+    list_eat(tokenList, token_type.else);
 
-    if (check_token(tokenList, tokenListIndexWalk, tokenType.if)) {
+    if (check_token(tokenList, tokenListIndexWalk, token_type.if)) {
       ast.left.left.left.next = parser_parse_ifelse(tokenList);
     } else {
-      ast.left.left.left.next = new AstNode(tokenType.rbrace);
+      ast.left.left.left.next = new AstNode(token_type.rbrace);
       ast.left.left.left.next.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.rbrace);
+      list_eat(tokenList, token_type.rbrace);
 
       ast.left.left.left.left.right = parser_parse_block(tokenList);
 
-      ast.left.left.left.next.next = new AstNode(tokenType.lbrace);
+      ast.left.left.left.next.next = new AstNode(token_type.lbrace);
       ast.left.left.left.next.next.token = tokenList[tokenListIndexWalk];
-      list_eat(tokenList, tokenType.lbrace);
+      list_eat(tokenList, token_type.lbrace);
     }
   }
 
@@ -1722,49 +1559,49 @@ const parser_parse_ifelse = (tokenList) => {
  * @arg {array} tokenList
  */
 const parser_parse_for = (tokenList) => {
-  let ast = new AstNode(tokenType.for);
+  let ast = new AstNode(token_type.for);
   ast.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.for);
+  list_eat(tokenList, token_type.for);
 
-  ast.next = new AstNode(tokenType.rparen);
+  ast.next = new AstNode(token_type.rparen);
   ast.next.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.rparen);
+  list_eat(tokenList, token_type.rparen);
 
   check_symtab(tokenList, true);
 
-  ast.left = new AstNode(tokenType.id);
+  ast.left = new AstNode(token_type.id);
   ast.left.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.id);
+  list_eat(tokenList, token_type.id);
 
   ast.right = parser_parse_exp(tokenList, false);
 
-  ast.left.left = new AstNode(tokenType.semi);
+  ast.left.left = new AstNode(token_type.semi);
   ast.left.left.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.semi);
+  list_eat(tokenList, token_type.semi);
 
   check_symtab(tokenList, true);
 
-  ast.left.left.left = new AstNode(tokenType.id);
+  ast.left.left.left = new AstNode(token_type.id);
   ast.left.left.left.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.id);
+  list_eat(tokenList, token_type.id);
 
   ast.left.left.left.left = new AstNode(tokenList[tokenListIndexWalk]?.type);
   ast.left.left.left.left.token = tokenList[tokenListIndexWalk];
   list_eat_logical(tokenList);
 
-  ast.left.left.left.left.left = new AstNode(tokenType.const);
+  ast.left.left.left.left.left = new AstNode(token_type.number);
   ast.left.left.left.left.left.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.const);
+  list_eat(tokenList, token_type.number);
 
-  ast.left.left.left.left.left.left = new AstNode(tokenType.semi);
+  ast.left.left.left.left.left.left = new AstNode(token_type.semi);
   ast.left.left.left.left.left.left.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.semi);
+  list_eat(tokenList, token_type.semi);
 
   if (
-    check_token(tokenList, tokenListIndexWalk, tokenType.increment) ||
-    check_token(tokenList, tokenListIndexWalk, tokenType.decrement) ||
-    check_token(tokenList, tokenListIndexWalk + 1, tokenType.decrement) ||
-    check_token(tokenList, tokenListIndexWalk + 1, tokenType.increment)
+    check_token(tokenList, tokenListIndexWalk, token_type.increment) ||
+    check_token(tokenList, tokenListIndexWalk, token_type.decrement) ||
+    check_token(tokenList, tokenListIndexWalk + 1, token_type.decrement) ||
+    check_token(tokenList, tokenListIndexWalk + 1, token_type.increment)
   ) {
     ast.left.left.left.left.left.left.left = parser_parse_prepostfix(
       tokenList,
@@ -1773,9 +1610,9 @@ const parser_parse_for = (tokenList) => {
   } else {
     check_symtab(tokenList, true);
 
-    ast.left.left.left.left.left.left.next = new AstNode(tokenType.id);
+    ast.left.left.left.left.left.left.next = new AstNode(token_type.id);
     ast.left.left.left.left.left.left.next.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenType.id);
+    list_eat(tokenList, token_type.id);
 
     ast.left.left.left.left.left.left.left = parser_parse_exp(
       tokenList,
@@ -1783,19 +1620,19 @@ const parser_parse_for = (tokenList) => {
     );
   }
 
-  ast.left.left.left.left.left.left.left.next = new AstNode(tokenType.lparen);
+  ast.left.left.left.left.left.left.left.next = new AstNode(token_type.lparen);
   ast.left.left.left.left.left.left.left.next.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.lparen);
+  list_eat(tokenList, token_type.lparen);
 
-  ast.left.left.left.left.left.left.next = new AstNode(tokenType.rbrace);
+  ast.left.left.left.left.left.left.next = new AstNode(token_type.rbrace);
   ast.left.left.left.left.left.left.next.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.rbrace);
+  list_eat(tokenList, token_type.rbrace);
 
   ast.left.left.left.left.left.left.right = parser_parse_block(tokenList);
 
-  ast.left.left.left.left.left.left.next.next = new AstNode(tokenType.lbrace);
+  ast.left.left.left.left.left.left.next.next = new AstNode(token_type.lbrace);
   ast.left.left.left.left.left.left.next.next.token = tokenList[tokenListIndexWalk];
-  list_eat(tokenList, tokenType.lbrace);
+  list_eat(tokenList, token_type.lbrace);
 
   return ast;
 };
@@ -1811,32 +1648,32 @@ const parser_parse = (tokenList) => {
   const type = tokenList[tokenListIndexWalk].type;
 
   switch (type) {
-    case tokenType.bool:
-    case tokenType.i0:
-    case tokenType.u0:
-    case tokenType.i8:
-    case tokenType.u8:
-    case tokenType.i16:
-    case tokenType.u16:
-    case tokenType.i32:
-    case tokenType.u32:
-    case tokenType.i64:
-    case tokenType.u64:
-    case tokenType.f64:
-    case tokenType.id:
+    case token_type.bool:
+    case token_type.i0:
+    case token_type.u0:
+    case token_type.i8:
+    case token_type.u8:
+    case token_type.i16:
+    case token_type.u16:
+    case token_type.i32:
+    case token_type.u32:
+    case token_type.i64:
+    case token_type.u64:
+    case token_type.f64:
+    case token_type.id:
       expList.ast = parser_parse_id(tokenList);
       break;
-    case tokenType.increment:
-    case tokenType.decrement:
+    case token_type.increment:
+    case token_type.decrement:
       expList.ast = parser_parse_prepostfix(tokenList, false);
       break;
-    case tokenType.str:
+    case token_type.str:
       expList.ast = parser_parse_str(tokenList);
       break;
-    case tokenType.for:
+    case token_type.for:
       expList.ast = parser_parse_for(tokenList);
       break;
-    case tokenType.if:
+    case token_type.if:
       expList.ast = parser_parse_ifelse(tokenList);
       break;
     default:
@@ -1869,29 +1706,29 @@ const output_out_math_exp = (first, ast) => {
   let value = first;
   while (ast) {
     switch (ast.type) {
-      case tokenType.div:
-        if (ast.right.token.type === tokenType.const) {
+      case token_type.div:
+        if (ast.right.token.type === token_type.number) {
           value /= parseInt(ast.right.token.id);
         } else {
           value /= parseInt(symbolTable[get_symtab(ast.right.token)].value);
         }
         break;
-      case tokenType.mul:
-        if (ast.right.token.type === tokenType.const) {
+      case token_type.mul:
+        if (ast.right.token.type === token_type.number) {
           value *= parseInt(ast.right.token.id);
         } else {
           value *= parseInt(symbolTable[get_symtab(ast.right.token)].value);
         }
         break;
-      case tokenType.add:
-        if (ast.right.token.type === tokenType.const) {
+      case token_type.add:
+        if (ast.right.token.type === token_type.number) {
           value += parseInt(ast.right.token.id);
         } else {
           value += parseInt(symbolTable[get_symtab(ast.right.token)].value);
         }
         break;
-      case tokenType.sub:
-        if (ast.right.token.type === tokenType.const) {
+      case token_type.sub:
+        if (ast.right.token.type === token_type.number) {
           value -= parseInt(ast.right.token.id);
         } else {
           value -= parseInt(symbolTable[get_symtab(ast.right.token)].value);
@@ -1904,10 +1741,10 @@ const output_out_math_exp = (first, ast) => {
       break;
     }
     if (
-      ast.type !== tokenType.add &&
-      ast.type !== tokenType.sub &&
-      ast.type !== tokenType.div &&
-      ast.type !== tokenType.mul
+      ast.type !== token_type.add &&
+      ast.type !== token_type.sub &&
+      ast.type !== token_type.div &&
+      ast.type !== token_type.mul
     ) {
       break;
     }
@@ -1928,13 +1765,13 @@ const output_out_logical_exp = (ast, inside) => {
     boolean: false,
   };
 
-  if (!inside && ast.left.left.token.type === tokenType.not) {
+  if (!inside && ast.left.left.token.type === token_type.not) {
     first = ast.right.token;
     walk = ast.right.right;
   } else if (!inside) {
     first = ast.left.left.token;
     walk = ast.right;
-  } else if (inside && ast.right.token.type === tokenType.not) {
+  } else if (inside && ast.right.token.type === token_type.not) {
     first = ast.right.right.token;
     walk = ast.right.right.right;
   } else if (inside) {
@@ -1942,30 +1779,30 @@ const output_out_logical_exp = (ast, inside) => {
     walk = ast.right.right;
   }
 
-  if (first.type === tokenType.id) {
+  if (first.type === token_type.id) {
     value.number = parseInt(symbolTable[get_symtab(first)].value);
   } else {
     value.number = parseInt(first.id);
   }
 
   if (
-    walk?.token.type === tokenType.add ||
-    walk?.token.type === tokenType.sub ||
-    walk?.token.type === tokenType.div ||
-    walk?.token.type === tokenType.mul
+    walk?.token.type === token_type.add ||
+    walk?.token.type === token_type.sub ||
+    walk?.token.type === token_type.div ||
+    walk?.token.type === token_type.mul
   ) {
     value.number = output_out_math_exp(value.number, walk);
     while (walk) {
       walk = walk.right;
       if (walk) {
         if (
-          walk.token.type === tokenType.or ||
-          walk.token.type === tokenType.and ||
-          walk.token.type === tokenType.big ||
-          walk.token.type === tokenType.less ||
-          walk.token.type === tokenType.bigequal ||
-          walk.token.type === tokenType.lessequal ||
-          walk.token.type === tokenType.equal
+          walk.token.type === token_type.or ||
+          walk.token.type === token_type.and ||
+          walk.token.type === token_type.big ||
+          walk.token.type === token_type.less ||
+          walk.token.type === token_type.bigequal ||
+          walk.token.type === token_type.lessequal ||
+          walk.token.type === token_type.equal
         ) {
           break;
         }
@@ -1980,71 +1817,71 @@ const output_out_logical_exp = (ast, inside) => {
   let tokenValue;
   while (walk) {
     if (
-      walk.right?.right?.token.type === tokenType.add ||
-      walk.right?.right?.token.type === tokenType.sub ||
-      walk.right?.right?.token.type === tokenType.div ||
-      walk.right?.right?.token.type === tokenType.mul ||
-      walk.right?.right?.token.type === tokenType.not
+      walk.right?.right?.token.type === token_type.add ||
+      walk.right?.right?.token.type === token_type.sub ||
+      walk.right?.right?.token.type === token_type.div ||
+      walk.right?.right?.token.type === token_type.mul ||
+      walk.right?.right?.token.type === token_type.not
     ) {
       let mathFirst;
-      if (walk.right.token.type === tokenType.id) {
+      if (walk.right.token.type === token_type.id) {
         mathFirst = parseInt(symbolTable[get_symtab(walk.right.token)].value);
       } else {
         mathFirst = parseInt(walk.right.token.id);
       }
       tokenValue = output_out_math_exp(mathFirst, walk.right.right);
-    } else if (walk.right.token.type === tokenType.id) {
+    } else if (walk.right.token.type === token_type.id) {
       tokenValue = parseInt(symbolTable[get_symtab(walk.right.token)].value);
-    } else if (walk.right.token.type === tokenType.const) {
+    } else if (walk.right.token.type === token_type.number) {
       tokenValue = parseInt(walk.right.token.id);
-    } else if (walk.right.token.type === tokenType.not) {
-      if (walk.right.right.token.type === tokenType.id) {
+    } else if (walk.right.token.type === token_type.not) {
+      if (walk.right.right.token.type === token_type.id) {
         tokenValue = parseInt(
           symbolTable[get_symtab(walk.right.right.token)].value
         );
-      } else if (walk.right.right.token.type === tokenType.const) {
+      } else if (walk.right.right.token.type === token_type.number) {
         tokenValue = parseInt(walk.right.right.token.id);
       }
     }
 
     switch (walk.type) {
-      case tokenType.less:
+      case token_type.less:
         value.boolean = value.number < tokenValue ? true : false;
         value.number = tokenValue;
         break;
-      case tokenType.lessequal:
+      case token_type.lessequal:
         value.boolean = value.number <= tokenValue ? true : false;
         value.number = tokenValue;
         break;
-      case tokenType.big:
+      case token_type.big:
         value.boolean = value.number > tokenValue ? true : false;
         value.number = tokenValue;
         break;
-      case tokenType.bigequal:
+      case token_type.bigequal:
         value.boolean = value.number >= tokenValue ? true : false;
         value.number = tokenValue;
         break;
-      case tokenType.or:
+      case token_type.or:
         const inside = output_out_logical_exp(walk, true);
         value.boolean = value.boolean || inside ? true : false;
         while (walk) {
           walk = walk.right;
-          if (walk && walk.token.type === tokenType.or) break;
+          if (walk && walk.token.type === token_type.or) break;
         }
         break;
-      case tokenType.and:
+      case token_type.and:
         value.boolean = value.boolean && (tokenValue ? true : false);
         break;
-      case tokenType.not:
+      case token_type.not:
         value.boolean = !value.boolean;
         break;
-      case tokenType.equal:
+      case token_type.equal:
         value.boolean = value.number === tokenValue ? true : false;
         break;
     }
     if (!walk) break;
     walk = walk.right.right;
-    if (walk && walk?.token?.type === tokenType.not) {
+    if (walk && walk?.token?.type === token_type.not) {
       walk = walk.right;
     }
   }
@@ -2075,7 +1912,7 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
     if (prototypeIndex + 1 && proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === procedureToken.id)) {
       prototypeArgIndex = proceduresPrototypes[prototypeIndex]?.args.findIndex(e => e.id === procedureToken.id)
     } else {
-      if (ast.token.type === tokenType.id) {
+      if (ast.token.type === token_type.id) {
         symTabI = get_symtab(ast.token);
       }
     }
@@ -2104,9 +1941,9 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
 
   while (walk) {
     switch (walk.type) {
-      case tokenType.div:
-      case tokenType.assingdiv:
-        if (walk.right.token.type === tokenType.const) {
+      case token_type.div:
+      case token_type.assingdiv:
+        if (walk.right.token.type === token_type.number) {
           value /= parseInt(walk.right.token.id);
         } else {
           let procedureArg;
@@ -2123,9 +1960,9 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
-      case tokenType.mul:
-      case tokenType.assingmul:
-        if (walk.right.token.type === tokenType.const) {
+      case token_type.mul:
+      case token_type.assingmul:
+        if (walk.right.token.type === token_type.number) {
           value *= parseInt(walk.right.token.id);
         } else {
           let procedureArg;
@@ -2142,8 +1979,8 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
-      case tokenType.assig:
-        if (walk.right.token.type === tokenType.const) {
+      case token_type.assig:
+        if (walk.right.token.type === token_type.number) {
           value = parseInt(walk.right.token.id);
         } else {
           let procedureArg;
@@ -2160,9 +1997,9 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
-      case tokenType.assingsum:
-      case tokenType.add:
-        if (walk.right.token.type === tokenType.const) {
+      case token_type.assingsum:
+      case token_type.add:
+        if (walk.right.token.type === token_type.number) {
           value += parseInt(walk.right.token.id);
         } else {
           let procedureArg;
@@ -2179,9 +2016,9 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
-      case tokenType.assingsub:
-      case tokenType.sub:
-        if (walk.right.token.type === tokenType.const) {
+      case token_type.assingsub:
+      case token_type.sub:
+        if (walk.right.token.type === token_type.number) {
           value -= parseInt(walk.right.token.id);
         } else {
           let procedureArg;
@@ -2198,7 +2035,7 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break
-      case tokenType.semi:
+      case token_type.semi:
         return walk;
     }
     walk = walk.right;
@@ -2252,37 +2089,37 @@ const output_out_block = (walk, expList, prototypeIndex) => {
   if (!walk) return;
 
   switch (walk.type) {
-    case tokenType.bool:
-    case tokenType.i0:
-    case tokenType.u0:
-    case tokenType.i8:
-    case tokenType.u8:
-    case tokenType.i16:
-    case tokenType.u16:
-    case tokenType.i32:
-    case tokenType.u32:
-    case tokenType.i64:
-    case tokenType.u64:
-    case tokenType.f64:
-    case tokenType.id:
+    case token_type.bool:
+    case token_type.i0:
+    case token_type.u0:
+    case token_type.i8:
+    case token_type.u8:
+    case token_type.i16:
+    case token_type.u16:
+    case token_type.i32:
+    case token_type.u32:
+    case token_type.i64:
+    case token_type.u64:
+    case token_type.f64:
+    case token_type.id:
       if (walk.left) { // fix two entries in exp
         output_out_exp(walk, expList, false, prototypeIndex);
       }
       break;
-    case tokenType.if:
+    case token_type.if:
       output_out_ifelse(walk, expList, prototypeIndex);
       break;
-    case tokenType.for:
+    case token_type.for:
       output_out_for(walk, expList, prototypeIndex);
       break;
-    case tokenType.str:
+    case token_type.str:
       printf(walk, prototypeIndex);
       break;
-    case tokenType.call:
+    case token_type.call:
       output_out_procedures(walk, expList)
       //output_out_call(output_out_get_ast(expList, walk.token), expList);
       break;
-    case tokenType.return:
+    case token_type.return:
       output_out_return(walk, expList, prototypeIndex);
       return;
     default:
@@ -2311,7 +2148,7 @@ const output_out_ifelse = (ast, expList, prototypeIndex) => {
     output_out_block(elseBlock, expList, prototypeIndex);
   }
 
-  if (!logical && ast?.left?.left?.left?.next?.token.type === tokenType.if) {
+  if (!logical && ast?.left?.left?.left?.next?.token.type === token_type.if) {
     output_out_ifelse(ast.left.left.left.next, expList);
   }
 };
@@ -2328,7 +2165,7 @@ const output_out_for = (ast, expList, prototypeIndex) => {
   const condVal = parseInt(ast.left.left.left.left.left.token.id);
   let iterate = ast.left.left.left.left.left.left.left;
 
-  if (iterate.type === tokenType.id) {
+  if (iterate.type === token_type.id) {
     iterate = ast.left.left.left.left.left.left.left.right;
   }
 
@@ -2340,14 +2177,14 @@ const output_out_for = (ast, expList, prototypeIndex) => {
   }
 
   switch (cond.type) {
-    case tokenType.less:
+    case token_type.less:
       for (let i = val; i < condVal; i += iterateValue) {
         output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
         symbolTable[symTabI].value =
           parseInt(symbolTable[symTabI].value) + iterateValue;
       }
       break;
-    case tokenType.big:
+    case token_type.big:
       for (let i = val; i > condVal; i += iterateValue) {
         output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
         symbolTable[symTabI].value =
@@ -2369,9 +2206,9 @@ const output_out_procedures = (ast, expList) => {
   let i = 0;
 
   while (proceduresPrototypes[prototypeIndex].args[i] && aux) {
-    if (aux.token.type === tokenType.id) {
+    if (aux.token.type === token_type.id) {
       proceduresPrototypes[prototypeIndex].args[i].value = symbolTable[get_symtab(aux.token)].value
-    } else if (aux.token.type === tokenType.const) {
+    } else if (aux.token.type === token_type.number) {
       proceduresPrototypes[prototypeIndex].args[i].value = aux.token.id
     }
     i++;
@@ -2379,7 +2216,6 @@ const output_out_procedures = (ast, expList) => {
   }
 
   output_out_block(procedureAst.right, expList, prototypeIndex)
-  //output_out_call(procedureAst, expList, procedure.args);
 };
 
 /**
@@ -2401,35 +2237,35 @@ const output = (expList) => {
 
   do {
     switch (expListAux.ast.type) {
-      case tokenType.bool:
-      case tokenType.i0:
-      case tokenType.u0:
-      case tokenType.i8:
-      case tokenType.u8:
-      case tokenType.i16:
-      case tokenType.u16:
-      case tokenType.i32:
-      case tokenType.u32:
-      case tokenType.i64:
-      case tokenType.u64:
-      case tokenType.f64:
-      case tokenType.id:
+      case token_type.bool:
+      case token_type.i0:
+      case token_type.u0:
+      case token_type.i8:
+      case token_type.u8:
+      case token_type.i16:
+      case token_type.u16:
+      case token_type.i32:
+      case token_type.u32:
+      case token_type.i64:
+      case token_type.u64:
+      case token_type.f64:
+      case token_type.id:
         output_out_exp(expListAux.ast, expList);
         break;
-      case tokenType.if:
+      case token_type.if:
         output_out_ifelse(expListAux.ast, expList);
         break;
-      case tokenType.for:
+      case token_type.for:
         output_out_for(expListAux.ast, expList);
         break;
-      case tokenType.str:
+      case token_type.str:
         let walk = expListAux.ast;
         do {
           printf(walk);
           walk = walk.right;
         } while (walk);
         break;
-      case tokenType.call:
+      case token_type.call:
         output_out_procedures(expListAux.ast, expList)
         break;
       default:
@@ -2439,7 +2275,7 @@ const output = (expList) => {
     expListAux = expListAux.next;
   } while (expListAux);
 
-  return stdout;
+  return hc.files.stdout;
 };
 
 /**
@@ -2457,7 +2293,7 @@ const printf = (ast, prototypeIndex) => {
     if (prototypeIndex + 1 && (procedureArg = proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === ast.left.right.token.id))) {
       str = str.replace("%d", procedureArg.value);
     } else {
-      if (ast.left.right.token.type === tokenType.const) {
+      if (ast.left.right.token.type === token_type.number) {
         str = str.replace("%d", ast.left.right.token.id);
       } else {
         str = str.replace("%d", symbolTable[get_symtab(ast.left.right.token)].value);
@@ -2465,7 +2301,7 @@ const printf = (ast, prototypeIndex) => {
     }
   }
 
-  stdout += str.replace(/\\n|\\t/g, (e) => {
+  hc.files.stdout += str.replace(/\\n|\\t/g, (e) => {
     switch (e) {
       case "\\r":
       case "\\n":
