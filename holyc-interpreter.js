@@ -36,10 +36,8 @@ export const holyc_web_run = () => {
  * This procedures is only for holy node (the JS HolyC interpreter for back-ends);
  * Check github.com/leozamboni/holy-node
  */
-let keepSymTabAndPrototypes = false;
-
 export const holy_node_cli = (stdin) => {
-  return output(() => { const ast = parser(lexer(stdin)); keepSymTabAndPrototypes = true; return ast; });
+  return output(() => { const ast = parser(lexer(stdin)); hc.symtab.keep = true; return ast; });
 }
 
 export const holy_node_scan = (stdin) => {
@@ -80,60 +78,33 @@ class Ast {
   ast;
 }
 
-/**
- * symbol table
- * @global
- * @param {{
- *  id: string, 
- *  line: number, 
- *  type: token_type 
- * }} token
- */
-var symbolTable;
-
-/**
- * procedures prototypes
- * @global
- * @param {{
- *  id: string, 
- *  line: number, 
- *  type: token_type,
- *  value: number | string | boolean, 
- * }} prototype
- */
-var proceduresPrototypes;
-
-/**
- * index for token list iteration
- * @global
- * @type {number}
- */
-var tokenListIndexWalk;
-
-
-let _files = {
-  stdin: '',
-  stdout: '',
-  stderr: '',
-}
-
-let _lexer = {
-  char: '',
-  line: 1,
-  index: 0,
-}
-
-let hc = {
-  files: _files,
-  lexer: _lexer,
-}
-
 class Token {
   constructor(id, type, line) {
     this.id = id;
     this.type = type;
     this.line = line;
   }
+}
+
+let hc = {
+  files: {
+    stdin: '',
+    stdout: '',
+    stderr: '',
+  },
+  lexer: {
+    char: '',
+    line: 1,
+    index: 0,
+  },
+  parser: {
+    index: 0,
+  },
+  symtab: {
+    keep: false,
+    global: [],
+    prototypes: [],
+  },
 }
 
 const token_type = {
@@ -189,7 +160,6 @@ const token_type = {
 const token_cases = [
   {
     char: '/', renderer: (hc) => {
-
       if (hc.files.stdin[hc.lexer.index] === '/') {
         while (hc.files.stdin[hc.lexer.index++]
           && hc.files.stdin[hc.lexer.index] !== '\n') { };
@@ -377,9 +347,12 @@ const init_hc = (stdin) => {
   hc.lexer.char = '';
   hc.lexer.index = 0;
   hc.lexer.line = 1;
+  hc.parser.index = 0;
+  hc.symtab.global = [];
+  hc.symtab.prototypes = [];
 
   if (!stdin) {
-    hc.files.stderr += "lexer: nothing to compile\n";
+    hc.files.stderr += "compile failure\nlexer: nothing to compile\n";
     try {
       throw alert(hc.files.stderr);
     } catch {
@@ -388,9 +361,10 @@ const init_hc = (stdin) => {
   }
 }
 
+// TODO: create a one step lexer
 const lexer = (stdin) => {
   init_hc(stdin)
-  let token_list = [];
+  let token_list = []; 
 
   while (1) {
     const token = lexer_lex(hc)
@@ -405,8 +379,8 @@ const lexer = (stdin) => {
  * get index of a symbol in symbol table
  */
 const get_symtab = (token) => {
-  for (let i = 0; i < symbolTable.length; ++i) {
-    if (symbolTable[i].id === token.id) return i;
+  for (let i = 0; i < hc.symtab.global.length; ++i) {
+    if (hc.symtab.global[i].id === token.id) return i;
   }
 };
 
@@ -415,8 +389,8 @@ const get_symtab = (token) => {
  * get index of prototype
  */
 const get_prototype = (token) => {
-  for (let i = 0; i < proceduresPrototypes.length; ++i) {
-    if (proceduresPrototypes[i].id === token.id) return i;
+  for (let i = 0; i < hc.symtab.prototypes.length; ++i) {
+    if (hc.symtab.prototypes[i].id === token.id) return i;
   }
 };
 
@@ -452,8 +426,8 @@ const parser_error = (token) => {
  * @arg {boolean} isin
  */
 const check_symtab = (tokenList, isin) => {
-  if (symtab_contain(tokenList[tokenListIndexWalk]) !== isin) {
-    parser_error(tokenList[tokenListIndexWalk]);
+  if (symtab_contain(tokenList[hc.parser.index]) !== isin) {
+    parser_error(tokenList[hc.parser.index]);
   }
 };
 
@@ -464,12 +438,12 @@ const check_symtab = (tokenList, isin) => {
  */
 const list_eat = (tokenList, expectedType) => {
   try {
-    if (tokenList[tokenListIndexWalk].type !== expectedType) {
+    if (tokenList[hc.parser.index].type !== expectedType) {
       throw new Error();
     }
-    tokenListIndexWalk++;
+    hc.parser.index++;
   } catch {
-    parser_error(tokenList[tokenListIndexWalk] ? tokenList[tokenListIndexWalk] : tokenList[tokenListIndexWalk - 1]);
+    parser_error(tokenList[hc.parser.index] ? tokenList[hc.parser.index] : tokenList[hc.parser.index - 1]);
   }
 };
 
@@ -478,7 +452,7 @@ const list_eat = (tokenList, expectedType) => {
  * @arg {object} token
  */
 const symtab_contain = (token) => {
-  if (symbolTable.filter((e) => e.id === token.id).length) {
+  if (hc.symtab.global.filter((e) => e.id === token.id).length) {
     return true;
   }
   return false;
@@ -624,35 +598,35 @@ const is_assingop = (tokenList, index) => {
 };
 
 /**
- * increment tokenListIndexWalk to next node in token list if token type is data type
+ * increment hc.parser.index to next node in token list if token type is data type
  * @arg {array} tokenList
  */
 const list_eat_type = (tokenList) => {
-  is_dtype(tokenList, tokenListIndexWalk) ? tokenListIndexWalk++ : parser_error(tokenList[tokenListIndexWalk]);
+  is_dtype(tokenList, hc.parser.index) ? hc.parser.index++ : parser_error(tokenList[hc.parser.index]);
 };
 
 /**
- * increment tokenListIndexWalk to next node in token list if token type is logical operator
+ * increment hc.parser.index to next node in token list if token type is logical operator
  * @arg {array} tokenList
  */
 const list_eat_logical = (tokenList) => {
-  is_logicalop(tokenList, tokenListIndexWalk) ? tokenListIndexWalk++ : parser_error(tokenList[tokenListIndexWalk]);
+  is_logicalop(tokenList, hc.parser.index) ? hc.parser.index++ : parser_error(tokenList[hc.parser.index]);
 };
 
 /**
- * increment tokenListIndexWalk to next node in token list if token type is mathematical operator
+ * increment hc.parser.index to next node in token list if token type is mathematical operator
  * @arg {array} tokenList
  */
 const list_eat_math = (tokenList) => {
-  is_mathop(tokenList, tokenListIndexWalk) ? tokenListIndexWalk++ : parser_error(tokenList[tokenListIndexWalk]);
+  is_mathop(tokenList, hc.parser.index) ? hc.parser.index++ : parser_error(tokenList[hc.parser.index]);
 };
 
 /**
- * increment tokenListIndexWalk to next node in token list if token type is compound assignment operator
+ * increment hc.parser.index to next node in token list if token type is compound assignment operator
  * @arg {array} tokenList
  */
 const list_eat_compassing = (tokenList) => {
-  is_assingop(tokenList, tokenListIndexWalk) ? tokenListIndexWalk++ : parser_error(tokenList[tokenListIndexWalk]);
+  is_assingop(tokenList, hc.parser.index) ? hc.parser.index++ : parser_error(tokenList[hc.parser.index]);
 };
 
 /**
@@ -661,98 +635,98 @@ const list_eat_compassing = (tokenList) => {
  */
 const parser_parse_logical_exp = (tokenList) => {
   if (
-    check_token(tokenList, tokenListIndexWalk, token_type.semi) ||
-    check_token(tokenList, tokenListIndexWalk, token_type.comma) ||
-    check_token(tokenList, tokenListIndexWalk, token_type.lparen)
+    check_token(tokenList, hc.parser.index, token_type.semi) ||
+    check_token(tokenList, hc.parser.index, token_type.comma) ||
+    check_token(tokenList, hc.parser.index, token_type.lparen)
   )
     return null;
 
   let ast;
 
   if (
-    check_token(tokenList, tokenListIndexWalk - 1, token_type.id) ||
-    check_token(tokenList, tokenListIndexWalk - 1, token_type.number) ||
-    check_token(tokenList, tokenListIndexWalk - 1, token_type.true) ||
-    check_token(tokenList, tokenListIndexWalk - 1, token_type.false)
+    check_token(tokenList, hc.parser.index - 1, token_type.id) ||
+    check_token(tokenList, hc.parser.index - 1, token_type.number) ||
+    check_token(tokenList, hc.parser.index - 1, token_type.true) ||
+    check_token(tokenList, hc.parser.index - 1, token_type.false)
   ) {
-    if (is_logicalop(tokenList, tokenListIndexWalk)) {
-      ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
-      ast.token = tokenList[tokenListIndexWalk];
+    if (is_logicalop(tokenList, hc.parser.index)) {
+      ast = new AstNode(tokenList[hc.parser.index]?.type);
+      ast.token = tokenList[hc.parser.index];
       list_eat_logical(tokenList);
     } else {
       if (
-        check_token(tokenList, tokenListIndexWalk - 1, token_type.id) ||
-        check_token(tokenList, tokenListIndexWalk - 1, token_type.number)
+        check_token(tokenList, hc.parser.index - 1, token_type.id) ||
+        check_token(tokenList, hc.parser.index - 1, token_type.number)
       ) {
-        if (is_mathop(tokenList, tokenListIndexWalk)) {
+        if (is_mathop(tokenList, hc.parser.index)) {
           if (
-            check_token(tokenList, tokenListIndexWalk + 1, token_type.id) ||
-            check_token(tokenList, tokenListIndexWalk + 1, token_type.number)
+            check_token(tokenList, hc.parser.index + 1, token_type.id) ||
+            check_token(tokenList, hc.parser.index + 1, token_type.number)
           ) {
-            ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
-            ast.token = tokenList[tokenListIndexWalk];
+            ast = new AstNode(tokenList[hc.parser.index]?.type);
+            ast.token = tokenList[hc.parser.index];
             list_eat_math(tokenList);
           }
         }
       }
     }
-  } else if (is_logicalop(tokenList, tokenListIndexWalk - 1)) {
-    if (check_token(tokenList, tokenListIndexWalk, token_type.not)) {
+  } else if (is_logicalop(tokenList, hc.parser.index - 1)) {
+    if (check_token(tokenList, hc.parser.index, token_type.not)) {
       ast = new AstNode(token_type.not);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.not);
-    } else if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
+    } else if (check_token(tokenList, hc.parser.index, token_type.id)) {
       check_symtab(tokenList, true);
 
       ast = new AstNode(token_type.id);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.id);
-    } else if (check_token(tokenList, tokenListIndexWalk, token_type.true)) {
+    } else if (check_token(tokenList, hc.parser.index, token_type.true)) {
       ast = new AstNode(token_type.true);
       ast.token = {
         id: 1,
-        line: tokenList[tokenListIndexWalk].line,
+        line: tokenList[hc.parser.index].line,
         type: token_type.number,
       };
       list_eat(tokenList, token_type.true);
-    } else if (check_token(tokenList, tokenListIndexWalk, token_type.false)) {
+    } else if (check_token(tokenList, hc.parser.index, token_type.false)) {
       ast = new AstNode(token_type.number);
       ast.token = {
         id: 0,
-        line: tokenList[tokenListIndexWalk].line,
+        line: tokenList[hc.parser.index].line,
         type: token_type.number,
       };
       list_eat(tokenList, token_type.false);
     } else {
       ast = new AstNode(token_type.number);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.number);
     }
-  } else if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
+  } else if (check_token(tokenList, hc.parser.index, token_type.id)) {
     check_symtab(tokenList, true);
 
     ast = new AstNode(token_type.id);
-    ast.token = tokenList[tokenListIndexWalk];
+    ast.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.id);
-  } else if (check_token(tokenList, tokenListIndexWalk, token_type.true)) {
+  } else if (check_token(tokenList, hc.parser.index, token_type.true)) {
     ast = new AstNode(token_type.true);
     ast.token = {
       id: 1,
-      line: tokenList[tokenListIndexWalk].line,
+      line: tokenList[hc.parser.index].line,
       type: token_type.number,
     };
     list_eat(tokenList, token_type.true);
-  } else if (check_token(tokenList, tokenListIndexWalk, token_type.false)) {
+  } else if (check_token(tokenList, hc.parser.index, token_type.false)) {
     ast = new AstNode(token_type.number);
     ast.token = {
       id: 0,
-      line: tokenList[tokenListIndexWalk].line,
+      line: tokenList[hc.parser.index].line,
       type: token_type.number,
     };
     list_eat(tokenList, token_type.false);
   } else {
     ast = new AstNode(token_type.number);
-    ast.token = tokenList[tokenListIndexWalk];
+    ast.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.number);
   }
 
@@ -767,111 +741,111 @@ const parser_parse_logical_exp = (tokenList) => {
  */
 const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
   if (
-    check_token(tokenList, tokenListIndexWalk, token_type.semi) ||
-    check_token(tokenList, tokenListIndexWalk, token_type.comma) ||
-    (arg && check_token(tokenList, tokenListIndexWalk, token_type.lparen))
+    check_token(tokenList, hc.parser.index, token_type.semi) ||
+    check_token(tokenList, hc.parser.index, token_type.comma) ||
+    (arg && check_token(tokenList, hc.parser.index, token_type.lparen))
   )
     return null;
 
   let ast;
 
-  if (proceduresPrototypes.find(e => e.id === tokenList[tokenListIndexWalk].id)) {
+  if (hc.symtab.prototypes.find(e => e.id === tokenList[hc.parser.index].id)) {
     return parser_parse_call(tokenList)
   } else if (
-    check_token(tokenList, tokenListIndexWalk - 1, token_type.id) ||
-    check_token(tokenList, tokenListIndexWalk - 1, token_type.number)
+    check_token(tokenList, hc.parser.index - 1, token_type.id) ||
+    check_token(tokenList, hc.parser.index - 1, token_type.number)
   ) {
-    if (is_mathop(tokenList, tokenListIndexWalk)) {
+    if (is_mathop(tokenList, hc.parser.index)) {
       if (
-        check_token(tokenList, tokenListIndexWalk + 1, token_type.id) ||
-        check_token(tokenList, tokenListIndexWalk + 1, token_type.number)
+        check_token(tokenList, hc.parser.index + 1, token_type.id) ||
+        check_token(tokenList, hc.parser.index + 1, token_type.number)
       ) {
-        ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
-        ast.token = tokenList[tokenListIndexWalk];
+        ast = new AstNode(tokenList[hc.parser.index]?.type);
+        ast.token = tokenList[hc.parser.index];
         list_eat_math(tokenList);
       }
-    } else if (is_assingop(tokenList, tokenListIndexWalk)) {
-      ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
-      ast.token = tokenList[tokenListIndexWalk];
+    } else if (is_assingop(tokenList, hc.parser.index)) {
+      ast = new AstNode(tokenList[hc.parser.index]?.type);
+      ast.token = tokenList[hc.parser.index];
       list_eat_compassing(tokenList);
     } else {
       ast = new AstNode(token_type.assig);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.assig);
     }
   } else if (
-    check_token(tokenList, tokenListIndexWalk - 1, token_type.assig) ||
-    is_assingop(tokenList, tokenListIndexWalk - 1)
+    check_token(tokenList, hc.parser.index - 1, token_type.assig) ||
+    is_assingop(tokenList, hc.parser.index - 1)
   ) {
-    if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
+    if (check_token(tokenList, hc.parser.index, token_type.id)) {
       let procedureArg;
       if (prototypeIndex) {
-        procedureArg = proceduresPrototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[tokenListIndexWalk].id)
+        procedureArg = hc.symtab.prototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[hc.parser.index].id)
       } else {
-        procedureArg = proceduresPrototypes.find(e => e.id === tokenList[tokenListIndexWalk].id)
+        procedureArg = hc.symtab.prototypes.find(e => e.id === tokenList[hc.parser.index].id)
       }
       !procedureArg && check_symtab(tokenList, true);
 
       ast = new AstNode(token_type.id);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.id);
     } else {
-      symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])] = {
-        id: tokenList[tokenListIndexWalk - 2].id,
-        line: tokenList[tokenListIndexWalk - 2].line,
-        const: tokenList[tokenListIndexWalk].id,
+      hc.symtab.global[get_symtab(tokenList[hc.parser.index - 2])] = {
+        id: tokenList[hc.parser.index - 2].id,
+        line: tokenList[hc.parser.index - 2].line,
+        const: tokenList[hc.parser.index].id,
       };
 
-      if (check_token(tokenList, tokenListIndexWalk, token_type.true)) {
-        symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])].value = 1;
-        tokenList[tokenListIndexWalk].type = token_type.number
-        tokenList[tokenListIndexWalk].id = 1;
+      if (check_token(tokenList, hc.parser.index, token_type.true)) {
+        hc.symtab.global[get_symtab(tokenList[hc.parser.index - 2])].value = 1;
+        tokenList[hc.parser.index].type = token_type.number
+        tokenList[hc.parser.index].id = 1;
 
         ast = new AstNode(token_type.number);
-        ast.token = tokenList[tokenListIndexWalk];
+        ast.token = tokenList[hc.parser.index];
         list_eat(tokenList, token_type.number);
-      } else if (check_token(tokenList, tokenListIndexWalk, token_type.false)) {
-        symbolTable[get_symtab(tokenList[tokenListIndexWalk - 2])].value = 0;
-        tokenList[tokenListIndexWalk].type = token_type.number
-        tokenList[tokenListIndexWalk].id = 0;
+      } else if (check_token(tokenList, hc.parser.index, token_type.false)) {
+        hc.symtab.global[get_symtab(tokenList[hc.parser.index - 2])].value = 0;
+        tokenList[hc.parser.index].type = token_type.number
+        tokenList[hc.parser.index].id = 0;
 
         ast = new AstNode(token_type.number);
-        ast.token = tokenList[tokenListIndexWalk];
+        ast.token = tokenList[hc.parser.index];
         list_eat(tokenList, token_type.number);
       } else {
         ast = new AstNode(token_type.number);
-        ast.token = tokenList[tokenListIndexWalk];
+        ast.token = tokenList[hc.parser.index];
         list_eat(tokenList, token_type.number);
       }
     }
-  } else if (is_mathop(tokenList, tokenListIndexWalk - 1) || check_token(tokenList, tokenListIndexWalk - 1, token_type.return)) {
-    if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
+  } else if (is_mathop(tokenList, hc.parser.index - 1) || check_token(tokenList, hc.parser.index - 1, token_type.return)) {
+    if (check_token(tokenList, hc.parser.index, token_type.id)) {
       let procedureArg;
-      prototypeIndex && (procedureArg = proceduresPrototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[tokenListIndexWalk].id))
+      prototypeIndex && (procedureArg = hc.symtab.prototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[hc.parser.index].id))
       !procedureArg && check_symtab(tokenList, true);
 
       ast = new AstNode(token_type.id);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.id);
     } else {
       ast = new AstNode(token_type.number);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.number);
     }
-  } else if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
+  } else if (check_token(tokenList, hc.parser.index, token_type.id)) {
     let procedureArg;
-    prototypeIndex && (procedureArg = proceduresPrototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[tokenListIndexWalk].id))
+    prototypeIndex && (procedureArg = hc.symtab.prototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[hc.parser.index].id))
     !procedureArg && check_symtab(tokenList, true);
 
     ast = new AstNode(token_type.id);
-    ast.token = tokenList[tokenListIndexWalk];
+    ast.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.id);
-  } else if (!check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
+  } else if (!check_token(tokenList, hc.parser.index, token_type.semi)) {
     ast = new AstNode(token_type.comma);
-    ast.token = tokenList[tokenListIndexWalk];
+    ast.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.comma);
   } else {
-    parser_error(tokenList[tokenListIndexWalk]);
+    parser_error(tokenList[hc.parser.index]);
   }
 
   ast.right = parser_parse_exp(tokenList, arg, prototypeIndex);
@@ -884,34 +858,34 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
  * @arg {array} tokenList
  */
 const parser_parse_str_args = (tokenList) => {
-  if (check_token(tokenList, tokenListIndexWalk, token_type.semi)) return null;
+  if (check_token(tokenList, hc.parser.index, token_type.semi)) return null;
 
   let ast;
 
   if (
-    check_token(tokenList, tokenListIndexWalk, token_type.id) ||
-    check_token(tokenList, tokenListIndexWalk, token_type.number)
+    check_token(tokenList, hc.parser.index, token_type.id) ||
+    check_token(tokenList, hc.parser.index, token_type.number)
   ) {
-    ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
-    ast.token = tokenList[tokenListIndexWalk];
-    list_eat(tokenList, tokenList[tokenListIndexWalk].type);
-  } else if (check_token(tokenList, tokenListIndexWalk, token_type.str)) {
+    ast = new AstNode(tokenList[hc.parser.index]?.type);
+    ast.token = tokenList[hc.parser.index];
+    list_eat(tokenList, tokenList[hc.parser.index].type);
+  } else if (check_token(tokenList, hc.parser.index, token_type.str)) {
     ast = new AstNode(token_type.str);
-    ast.token = tokenList[tokenListIndexWalk];
+    ast.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.str);
   } else {
     ast = parser_parse_exp(tokenList, false);
   }
 
-  if (check_token(tokenList, tokenListIndexWalk, token_type.assig)) {
+  if (check_token(tokenList, hc.parser.index, token_type.assig)) {
     ast.left = new AstNode(token_type.assig);
-    ast.left.token = tokenList[tokenListIndexWalk];
+    ast.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.assig);
 
     ast.left.right = parser_parse_exp(tokenList, false);
-  } else if (!check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
+  } else if (!check_token(tokenList, hc.parser.index, token_type.semi)) {
     ast.left = new AstNode(token_type.comma);
-    ast.left.token = tokenList[tokenListIndexWalk];
+    ast.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.comma);
   }
 
@@ -925,19 +899,19 @@ const parser_parse_str_args = (tokenList) => {
  * @arg {array} tokenList
  */
 const parser_parse_inline_str = (tokenList) => {
-  if (check_token(tokenList, tokenListIndexWalk, token_type.semi)) return null;
+  if (check_token(tokenList, hc.parser.index, token_type.semi)) return null;
 
   let ast = new AstNode(token_type.str);
-  ast.token = tokenList[tokenListIndexWalk];
+  ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.str);
 
-  if (!check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
+  if (!check_token(tokenList, hc.parser.index, token_type.semi)) {
     ast.next = new AstNode(token_type.comma);
-    ast.next.token = tokenList[tokenListIndexWalk];
+    ast.next.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.comma);
 
-    if (!check_token(tokenList, tokenListIndexWalk, token_type.str)) {
-      parser_error(tokenList[tokenListIndexWalk]);
+    if (!check_token(tokenList, hc.parser.index, token_type.str)) {
+      parser_error(tokenList[hc.parser.index]);
     }
   }
 
@@ -952,13 +926,13 @@ const parser_parse_inline_str = (tokenList) => {
  */
 const parser_parse_return = (tokenList, prototypeIndex) => {
   let ast = new AstNode(token_type.return);
-  ast.token = tokenList[tokenListIndexWalk];
+  ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.return);
 
   ast.right = parser_parse_exp(tokenList, false, prototypeIndex)
 
   ast.left = new AstNode(token_type.semi);
-  ast.left.token = tokenList[tokenListIndexWalk];
+  ast.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.semi);
 
   return ast;
@@ -970,29 +944,29 @@ const parser_parse_return = (tokenList, prototypeIndex) => {
  */
 const parser_parse_str = (tokenList) => {
   let ast = new AstNode(token_type.str);
-  ast.token = tokenList[tokenListIndexWalk];
+  ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.str);
 
-  if (check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
+  if (check_token(tokenList, hc.parser.index, token_type.semi)) {
     ast.left = new AstNode(token_type.semi);
-    ast.left.token = tokenList[tokenListIndexWalk];
+    ast.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.semi);
   } else {
     ast.left = new AstNode(token_type.comma);
-    ast.left.token = tokenList[tokenListIndexWalk];
+    ast.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.comma);
 
-    if (check_token(tokenList, tokenListIndexWalk, token_type.str)) {
+    if (check_token(tokenList, hc.parser.index, token_type.str)) {
       ast.right = parser_parse_inline_str(tokenList);
 
       ast.left.left = new AstNode(token_type.semi);
-      ast.left.left.token = tokenList[tokenListIndexWalk];
+      ast.left.left.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.semi);
     } else {
       ast.left.right = parser_parse_str_args(tokenList);
 
       ast.left.left = new AstNode(token_type.semi);
-      ast.left.left.token = tokenList[tokenListIndexWalk];
+      ast.left.left.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.semi);
     }
   }
@@ -1005,11 +979,11 @@ const parser_parse_str = (tokenList) => {
  * @arg {array} tokenList
  */
 const parser_parse_block = (tokenList, prototypeIndex) => {
-  if (check_token(tokenList, tokenListIndexWalk, token_type.lbrace)) return null;
+  if (check_token(tokenList, hc.parser.index, token_type.lbrace)) return null;
 
   let ast;
 
-  switch (tokenList[tokenListIndexWalk].type) {
+  switch (tokenList[hc.parser.index].type) {
     case token_type.bool:
     case token_type.i0:
     case token_type.u0:
@@ -1042,7 +1016,7 @@ const parser_parse_block = (tokenList, prototypeIndex) => {
       ast = parser_parse_return(tokenList, prototypeIndex);
       break;
     default:
-      parser_error(tokenList[tokenListIndexWalk]);
+      parser_error(tokenList[hc.parser.index]);
   }
 
   ast.next = parser_parse_block(tokenList, prototypeIndex);
@@ -1055,35 +1029,35 @@ const parser_parse_block = (tokenList, prototypeIndex) => {
  * @arg {array} tokenList
  */
 const parser_parse_args = (tokenList = []) => {
-  if (check_token(tokenList, tokenListIndexWalk, token_type.lparen)) return null;
+  if (check_token(tokenList, hc.parser.index, token_type.lparen)) return null;
 
-  let ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
-  ast.token = tokenList[tokenListIndexWalk];
+  let ast = new AstNode(tokenList[hc.parser.index]?.type);
+  ast.token = tokenList[hc.parser.index];
   list_eat_type(tokenList);
 
   ast.next = new AstNode(token_type.id);
-  ast.next.token = tokenList[tokenListIndexWalk];
+  ast.next.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.id);
 
-  if (check_token(tokenList, tokenListIndexWalk, token_type.assig)) {
+  if (check_token(tokenList, hc.parser.index, token_type.assig)) {
     ast.next.next = new AstNode(token_type.assig);
-    ast.next.next.token = tokenList[tokenListIndexWalk];
+    ast.next.next.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.assig);
 
-    if (check_token(tokenList, tokenListIndexWalk, token_type.number)) {
+    if (check_token(tokenList, hc.parser.index, token_type.number)) {
       ast.next.next.next = new AstNode(token_type.number);
-      ast.next.next.next.token = tokenList[tokenListIndexWalk];
+      ast.next.next.next.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.number);
     } else {
       ast.next.next.next = new AstNode(token_type.str);
-      ast.next.next.next.token = tokenList[tokenListIndexWalk];
+      ast.next.next.next.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.str);
     }
   }
 
-  if (!check_token(tokenList, tokenListIndexWalk, token_type.lparen)) {
+  if (!check_token(tokenList, hc.parser.index, token_type.lparen)) {
     ast.next.next = new AstNode(token_type.comma);
-    ast.next.next.token = tokenList[tokenListIndexWalk];
+    ast.next.next.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.comma);
   }
 
@@ -1099,54 +1073,54 @@ const parser_parse_args = (tokenList = []) => {
  * @arg {number} i - number of arguments
  */
 const parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => {
-  if (proceduresPrototypes[prototype].args.length === i) return null;
+  if (hc.symtab.prototypes[prototype].args.length === i) return null;
 
   let ast;
 
-  if (proceduresPrototypes[prototype].args[i]?.id) {
-    if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
+  if (hc.symtab.prototypes[prototype].args[i]?.id) {
+    if (check_token(tokenList, hc.parser.index, token_type.id)) {
       check_symtab(tokenList, true);
 
       ast = new AstNode(token_type.id);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.id);
 
-      if (is_mathop(tokenList, tokenListIndexWalk)) ast
+      if (is_mathop(tokenList, hc.parser.index)) ast
 
-    } else if (check_token(tokenList, tokenListIndexWalk, token_type.number)) {
+    } else if (check_token(tokenList, hc.parser.index, token_type.number)) {
       ast = new AstNode(token_type.number);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.number);
     }
   } else {
-    if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
+    if (check_token(tokenList, hc.parser.index, token_type.id)) {
       check_symtab(tokenList, true);
 
       ast = new AstNode(token_type.id);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.id);
     } else {
       ast = new AstNode(token_type.number);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.number);
     }
   }
 
-  if (i < proceduresPrototypes[prototype].args.length - 1) {
+  if (i < hc.symtab.prototypes[prototype].args.length - 1) {
     if (ast) {
-      if (check_token(tokenList, tokenListIndexWalk, token_type.comma)) {
+      if (check_token(tokenList, hc.parser.index, token_type.comma)) {
         ast.left = new AstNode(token_type.comma);
-        ast.left.token = tokenList[tokenListIndexWalk];
+        ast.left.token = tokenList[hc.parser.index];
         list_eat(tokenList, token_type.comma);
       } else {
         return ast;
       }
     } else {
-      if (notAssigArgs || check_token(tokenList, tokenListIndexWalk, token_type.comma)) {
+      if (notAssigArgs || check_token(tokenList, hc.parser.index, token_type.comma)) {
         ast = new AstNode(token_type.comma);
-        ast.token = tokenList[tokenListIndexWalk];
+        ast.token = tokenList[hc.parser.index];
         list_eat(tokenList, token_type.comma);
-      } else if (!notAssigArgs || check_token(tokenList, tokenListIndexWalk, token_type.rparen)) {
+      } else if (!notAssigArgs || check_token(tokenList, hc.parser.index, token_type.rparen)) {
         return ast;
       }
     }
@@ -1164,60 +1138,60 @@ const parser_parse_call_args = (tokenList, prototype, notAssigArgs, i) => {
  * @arg {array} tokenList
  */
 const parser_parse_call = (tokenList) => {
-  if (proceduresPrototypes.findIndex(e => e.id === tokenList[tokenListIndexWalk].id) < 0) {
+  if (hc.symtab.prototypes.findIndex(e => e.id === tokenList[hc.parser.index].id) < 0) {
     check_symtab(tokenList, true);
   }
 
-  const prototype = get_prototype(tokenList[tokenListIndexWalk]);
+  const prototype = get_prototype(tokenList[hc.parser.index]);
 
   let ast = new AstNode(token_type.call);
-  ast.token = tokenList[tokenListIndexWalk];
+  ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.id);
 
-  if (proceduresPrototypes[prototype].args.length) {
-    const notAssigArgs = proceduresPrototypes[prototype].args.filter(e => { return e.id === undefined ? true : false }).length
+  if (hc.symtab.prototypes[prototype].args.length) {
+    const notAssigArgs = hc.symtab.prototypes[prototype].args.filter(e => { return e.id === undefined ? true : false }).length
 
-    if (check_token(tokenList, tokenListIndexWalk, token_type.semi) && !notAssigArgs) {
+    if (check_token(tokenList, hc.parser.index, token_type.semi) && !notAssigArgs) {
       ast.left = new AstNode(token_type.semi);
-      ast.left.token = tokenList[tokenListIndexWalk];
+      ast.left.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.semi);
 
       return ast;
     }
 
     ast.left = new AstNode(token_type.rparen);
-    ast.left.token = tokenList[tokenListIndexWalk];
+    ast.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.rparen);
 
-    if (check_token(tokenList, tokenListIndexWalk, token_type.str) && !notAssigArgs && tokenList[tokenListIndexWalk].id === "*") {
+    if (check_token(tokenList, hc.parser.index, token_type.str) && !notAssigArgs && tokenList[hc.parser.index].id === "*") {
       ast.left.left = new AstNode(token_type.str);
-      ast.left.left.token = tokenList[tokenListIndexWalk];
+      ast.left.left.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.str);
     } else {
-      if (proceduresPrototypes[prototype].args.length) {
+      if (hc.symtab.prototypes[prototype].args.length) {
         ast.right = parser_parse_call_args(tokenList, prototype, notAssigArgs, 0);
       }
     }
 
     ast.left.left = new AstNode(token_type.lparen);
-    ast.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.lparen);
 
-  } else if (check_token(tokenList, tokenListIndexWalk, token_type.rparen)) {
+  } else if (check_token(tokenList, hc.parser.index, token_type.rparen)) {
     ast.left = new AstNode(token_type.rparen);
-    ast.left.token = tokenList[tokenListIndexWalk];
+    ast.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.rparen);
 
-    if (check_token(tokenList, tokenListIndexWalk, token_type.str) && tokenList[tokenListIndexWalk].id === "*") {
+    if (check_token(tokenList, hc.parser.index, token_type.str) && tokenList[hc.parser.index].id === "*") {
       ast.left.next = new AstNode(token_type.str);
-      ast.left.next.token = tokenList[tokenListIndexWalk];
+      ast.left.next.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.str);
     }
 
     ast.left.left = new AstNode(token_type.lparen);
-    ast.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.lparen);
-  } 
+  }
 
   return ast;
 };
@@ -1228,37 +1202,37 @@ const parser_parse_call = (tokenList) => {
  */
 const parser_parse_inline_vars = (tokenList) => {
   if (
-    check_token(tokenList, tokenListIndexWalk, token_type.semi) &&
-    !check_token(tokenList, tokenListIndexWalk - 1, token_type.comma)
+    check_token(tokenList, hc.parser.index, token_type.semi) &&
+    !check_token(tokenList, hc.parser.index - 1, token_type.comma)
   )
     return null;
 
   check_symtab(tokenList, false);
 
-  let symtabNode = tokenList[tokenListIndexWalk];
+  let symtabNode = tokenList[hc.parser.index];
 
   let ast = new AstNode(token_type.id);
-  ast.token = tokenList[tokenListIndexWalk];
+  ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.id);
 
-  if (check_token(tokenList, tokenListIndexWalk, token_type.assig)) {
-    symbolTable.push({ ...symtabNode, value: 0 });
+  if (check_token(tokenList, hc.parser.index, token_type.assig)) {
+    hc.symtab.global.push({ ...symtabNode, value: 0 });
 
     ast.left = parser_parse_exp(tokenList, false);
 
-    if (!check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
+    if (!check_token(tokenList, hc.parser.index, token_type.semi)) {
       ast.left.left = new AstNode(token_type.comma);
-      ast.left.left.token = tokenList[tokenListIndexWalk];
+      ast.left.left.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.comma);
     }
-  } else if (!check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
-    symbolTable.push({ ...symtabNode, value: 0 });
+  } else if (!check_token(tokenList, hc.parser.index, token_type.semi)) {
+    hc.symtab.global.push({ ...symtabNode, value: 0 });
 
     ast.left = new AstNode(token_type.comma);
-    ast.left.token = tokenList[tokenListIndexWalk];
+    ast.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.comma);
   } else {
-    symbolTable.push({ ...symtabNode, value: 0 });
+    hc.symtab.global.push({ ...symtabNode, value: 0 });
   }
 
   ast.right = parser_parse_inline_vars(tokenList);
@@ -1271,18 +1245,18 @@ const parser_parse_inline_vars = (tokenList) => {
  * @arg {array} tokenList
  */
 const parser_parse_id = (tokenList, prototypeIndex) => {
-  if (check_token(tokenList, tokenListIndexWalk, token_type.id)) {
-    if (is_assingop(tokenList, tokenListIndexWalk + 1)) {
+  if (check_token(tokenList, hc.parser.index, token_type.id)) {
+    if (is_assingop(tokenList, hc.parser.index + 1)) {
       let ast = parser_parse_exp(tokenList, false, prototypeIndex);
 
       ast.left = new AstNode(token_type.semi);
-      ast.left.token = tokenList[tokenListIndexWalk];
+      ast.left.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.semi);
 
       return ast;
     } else if (
-      check_token(tokenList, tokenListIndexWalk + 1, token_type.increment) ||
-      check_token(tokenList, tokenListIndexWalk + 1, token_type.decrement)
+      check_token(tokenList, hc.parser.index + 1, token_type.increment) ||
+      check_token(tokenList, hc.parser.index + 1, token_type.decrement)
     ) {
       return parser_parse_prepostfix(tokenList, false);
     } else {
@@ -1292,11 +1266,11 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
     }
   }
 
-  let ast = new AstNode(tokenList[tokenListIndexWalk]?.type);
-  ast.token = tokenList[tokenListIndexWalk];
+  let ast = new AstNode(tokenList[hc.parser.index]?.type);
+  ast.token = tokenList[hc.parser.index];
   list_eat_type(tokenList);
 
-  if (proceduresPrototypes.findIndex(e => e.id === tokenList[tokenListIndexWalk].id) < 0) {
+  if (hc.symtab.prototypes.findIndex(e => e.id === tokenList[hc.parser.index].id) < 0) {
     if (!prototypeIndex) {
       check_symtab(tokenList, false);
     }
@@ -1304,72 +1278,72 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
     check_symtab(tokenList, true);
   }
 
-  let symtabNode = tokenList[tokenListIndexWalk];
+  let symtabNode = tokenList[hc.parser.index];
 
   ast.left = new AstNode(token_type.id);
-  ast.left.token = tokenList[tokenListIndexWalk];
+  ast.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.id);
 
-  if (check_token(tokenList, tokenListIndexWalk, token_type.semi)) {
-    symbolTable.push({ ...symtabNode, value: 0 });
+  if (check_token(tokenList, hc.parser.index, token_type.semi)) {
+    hc.symtab.global.push({ ...symtabNode, value: 0 });
 
     ast.left.left = new AstNode(token_type.semi);
-    ast.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.semi);
-  } else if (check_token(tokenList, tokenListIndexWalk, token_type.comma)) {
-    symbolTable.push({ ...symtabNode, value: 0 });
+  } else if (check_token(tokenList, hc.parser.index, token_type.comma)) {
+    hc.symtab.global.push({ ...symtabNode, value: 0 });
 
     ast.left.left = new AstNode(token_type.comma);
-    ast.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.comma);
 
     ast.right = parser_parse_inline_vars(tokenList);
 
     ast.left.left.left = new AstNode(token_type.semi);
-    ast.left.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.semi);
-  } else if (check_token(tokenList, tokenListIndexWalk, token_type.assig)) {
-    symbolTable.push({ ...symtabNode, value: 0 });
+  } else if (check_token(tokenList, hc.parser.index, token_type.assig)) {
+    hc.symtab.global.push({ ...symtabNode, value: 0 });
 
     ast.right = parser_parse_exp(tokenList, false, prototypeIndex);
 
-    if (check_token(tokenList, tokenListIndexWalk, token_type.comma)) {
+    if (check_token(tokenList, hc.parser.index, token_type.comma)) {
       ast.left.left = new AstNode(token_type.comma);
-      ast.left.left.token = tokenList[tokenListIndexWalk];
+      ast.left.left.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.comma);
 
       ast.left.right = parser_parse_inline_vars(tokenList);
 
       ast.left.left.left = new AstNode(token_type.semi);
-      ast.left.left.left.token = tokenList[tokenListIndexWalk];
+      ast.left.left.left.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.semi);
     } else {
       ast.left.left = new AstNode(token_type.semi);
-      ast.left.left.token = tokenList[tokenListIndexWalk];
+      ast.left.left.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.semi);
     }
   } else if (!prototypeIndex) {
     /**
      * parse procedures 
      */
-    const prototypeId = tokenList[tokenListIndexWalk - 1].id
+    const prototypeId = tokenList[hc.parser.index - 1].id
     let prototype = {
       id: prototypeId,
-      type: tokenList[tokenListIndexWalk - 2].type,
+      type: tokenList[hc.parser.index - 2].type,
       args: undefined,
       return: undefined,
     }
 
     ast.left.left = new AstNode(token_type.rparen);
-    ast.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.rparen);
 
-    let priorWalk = tokenListIndexWalk;
+    let priorWalk = hc.parser.index;
 
     ast.left.left.right = parser_parse_args(tokenList);
 
     let args = [];
-    while (priorWalk < tokenListIndexWalk) {
+    while (priorWalk < hc.parser.index) {
       let argProt = {
         id: tokenList[priorWalk + 1].id,
         type: tokenList[priorWalk].type,
@@ -1387,22 +1361,22 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
     }
     prototype.args = args;
 
-    proceduresPrototypes.push(prototype)
+    hc.symtab.prototypes.push(prototype)
 
-    const prototypeIndex = proceduresPrototypes.findIndex(e => e.id === prototypeId) + 1;
+    const prototypeIndex = hc.symtab.prototypes.findIndex(e => e.id === prototypeId) + 1;
 
     ast.left.left.left = new AstNode(token_type.lparen);
-    ast.left.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.lparen);
 
     ast.left.left.left.left = new AstNode(token_type.rbrace);
-    ast.left.left.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.rbrace);
 
     ast.right = parser_parse_block(tokenList, prototypeIndex);
 
     ast.left.left.left.left.left = new AstNode(token_type.lbrace);
-    ast.left.left.left.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.left.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.lbrace);
   }
 
@@ -1417,43 +1391,43 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
 const parser_parse_prepostfix = (tokenList, block) => {
   let ast;
 
-  if (is_mathop(tokenList, tokenListIndexWalk)) {
-    if (check_token(tokenList, tokenListIndexWalk, token_type.increment)) {
+  if (is_mathop(tokenList, hc.parser.index)) {
+    if (check_token(tokenList, hc.parser.index, token_type.increment)) {
       ast = new AstNode(token_type.increment);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat_math(tokenList);
     } else {
       ast = new AstNode(token_type.decrement);
-      ast.token = tokenList[tokenListIndexWalk];
+      ast.token = tokenList[hc.parser.index];
       list_eat_math(tokenList);
     }
 
     check_symtab(tokenList, true);
 
     ast.right = new AstNode(token_type.id);
-    ast.right.token = tokenList[tokenListIndexWalk];
+    ast.right.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.id);
   } else {
     check_symtab(tokenList, true);
 
     ast = new AstNode(token_type.id);
-    ast.token = tokenList[tokenListIndexWalk];
+    ast.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.id);
 
-    if (check_token(tokenList, tokenListIndexWalk, token_type.increment)) {
+    if (check_token(tokenList, hc.parser.index, token_type.increment)) {
       ast.right = new AstNode(token_type.increment);
-      ast.right.token = tokenList[tokenListIndexWalk];
+      ast.right.token = tokenList[hc.parser.index];
       list_eat_math(tokenList);
     } else {
       ast.right = new AstNode(token_type.decrement);
-      ast.right.token = tokenList[tokenListIndexWalk];
+      ast.right.token = tokenList[hc.parser.index];
       list_eat_math(tokenList);
     }
   }
 
   if (!block) {
     ast.left = new AstNode(token_type.semi);
-    ast.left.token = tokenList[tokenListIndexWalk];
+    ast.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.semi);
   }
 
@@ -1466,30 +1440,30 @@ const parser_parse_prepostfix = (tokenList, block) => {
  */
 const parser_parse_ifelse = (tokenList) => {
   let ast = new AstNode(token_type.if);
-  ast.token = tokenList[tokenListIndexWalk];
+  ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.if);
 
   ast.left = new AstNode(token_type.rparen);
-  ast.left.token = tokenList[tokenListIndexWalk];
+  ast.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.rparen);
 
-  if (check_token(tokenList, tokenListIndexWalk, token_type.number)) {
+  if (check_token(tokenList, hc.parser.index, token_type.number)) {
     ast.left.left = new AstNode(token_type.number);
-    ast.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.number);
-  } else if (check_token(tokenList, tokenListIndexWalk, token_type.true)) {
+  } else if (check_token(tokenList, hc.parser.index, token_type.true)) {
     ast.left.left = new AstNode(token_type.true);
     ast.left.left.token = {
       id: 1,
-      line: tokenList[tokenListIndexWalk].line,
+      line: tokenList[hc.parser.index].line,
       type: token_type.number,
     };
     list_eat(tokenList, token_type.true);
-  } else if (check_token(tokenList, tokenListIndexWalk, token_type.false)) {
+  } else if (check_token(tokenList, hc.parser.index, token_type.false)) {
     ast.left.left = new AstNode(token_type.number);
     ast.left.left.token = {
       id: 0,
-      line: tokenList[tokenListIndexWalk].line,
+      line: tokenList[hc.parser.index].line,
       type: token_type.number,
     };
     list_eat(tokenList, token_type.false);
@@ -1497,45 +1471,45 @@ const parser_parse_ifelse = (tokenList) => {
     check_symtab(tokenList, true);
 
     ast.left.left = new AstNode(token_type.id);
-    ast.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.id);
   }
 
   ast.right = parser_parse_logical_exp(tokenList);
 
   ast.left.left.left = new AstNode(token_type.lparen);
-  ast.left.left.left.token = tokenList[tokenListIndexWalk];
+  ast.left.left.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.lparen);
 
   ast.left.left.next = new AstNode(token_type.rbrace);
-  ast.left.left.next.token = tokenList[tokenListIndexWalk];
+  ast.left.left.next.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.rbrace);
 
   ast.left.left.left.right = parser_parse_block(tokenList);
 
   ast.left.left.next.next = new AstNode(token_type.lbrace);
-  ast.left.left.next.next.token = tokenList[tokenListIndexWalk];
+  ast.left.left.next.next.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.lbrace);
 
   if (
-    tokenListIndexWalk < tokenList.length &&
-    check_token(tokenList, tokenListIndexWalk, token_type.else)
+    hc.parser.index < tokenList.length &&
+    check_token(tokenList, hc.parser.index, token_type.else)
   ) {
     ast.left.left.left.left = new AstNode(token_type.else);
-    ast.left.left.left.left.token = tokenList[tokenListIndexWalk];
+    ast.left.left.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.else);
 
-    if (check_token(tokenList, tokenListIndexWalk, token_type.if)) {
+    if (check_token(tokenList, hc.parser.index, token_type.if)) {
       ast.left.left.left.next = parser_parse_ifelse(tokenList);
     } else {
       ast.left.left.left.next = new AstNode(token_type.rbrace);
-      ast.left.left.left.next.token = tokenList[tokenListIndexWalk];
+      ast.left.left.left.next.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.rbrace);
 
       ast.left.left.left.left.right = parser_parse_block(tokenList);
 
       ast.left.left.left.next.next = new AstNode(token_type.lbrace);
-      ast.left.left.left.next.next.token = tokenList[tokenListIndexWalk];
+      ast.left.left.left.next.next.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.lbrace);
     }
   }
@@ -1549,48 +1523,48 @@ const parser_parse_ifelse = (tokenList) => {
  */
 const parser_parse_for = (tokenList) => {
   let ast = new AstNode(token_type.for);
-  ast.token = tokenList[tokenListIndexWalk];
+  ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.for);
 
   ast.next = new AstNode(token_type.rparen);
-  ast.next.token = tokenList[tokenListIndexWalk];
+  ast.next.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.rparen);
 
   check_symtab(tokenList, true);
 
   ast.left = new AstNode(token_type.id);
-  ast.left.token = tokenList[tokenListIndexWalk];
+  ast.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.id);
 
   ast.right = parser_parse_exp(tokenList, false);
 
   ast.left.left = new AstNode(token_type.semi);
-  ast.left.left.token = tokenList[tokenListIndexWalk];
+  ast.left.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.semi);
 
   check_symtab(tokenList, true);
 
   ast.left.left.left = new AstNode(token_type.id);
-  ast.left.left.left.token = tokenList[tokenListIndexWalk];
+  ast.left.left.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.id);
 
-  ast.left.left.left.left = new AstNode(tokenList[tokenListIndexWalk]?.type);
-  ast.left.left.left.left.token = tokenList[tokenListIndexWalk];
+  ast.left.left.left.left = new AstNode(tokenList[hc.parser.index]?.type);
+  ast.left.left.left.left.token = tokenList[hc.parser.index];
   list_eat_logical(tokenList);
 
   ast.left.left.left.left.left = new AstNode(token_type.number);
-  ast.left.left.left.left.left.token = tokenList[tokenListIndexWalk];
+  ast.left.left.left.left.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.number);
 
   ast.left.left.left.left.left.left = new AstNode(token_type.semi);
-  ast.left.left.left.left.left.left.token = tokenList[tokenListIndexWalk];
+  ast.left.left.left.left.left.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.semi);
 
   if (
-    check_token(tokenList, tokenListIndexWalk, token_type.increment) ||
-    check_token(tokenList, tokenListIndexWalk, token_type.decrement) ||
-    check_token(tokenList, tokenListIndexWalk + 1, token_type.decrement) ||
-    check_token(tokenList, tokenListIndexWalk + 1, token_type.increment)
+    check_token(tokenList, hc.parser.index, token_type.increment) ||
+    check_token(tokenList, hc.parser.index, token_type.decrement) ||
+    check_token(tokenList, hc.parser.index + 1, token_type.decrement) ||
+    check_token(tokenList, hc.parser.index + 1, token_type.increment)
   ) {
     ast.left.left.left.left.left.left.left = parser_parse_prepostfix(
       tokenList,
@@ -1600,7 +1574,7 @@ const parser_parse_for = (tokenList) => {
     check_symtab(tokenList, true);
 
     ast.left.left.left.left.left.left.next = new AstNode(token_type.id);
-    ast.left.left.left.left.left.left.next.token = tokenList[tokenListIndexWalk];
+    ast.left.left.left.left.left.left.next.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.id);
 
     ast.left.left.left.left.left.left.left = parser_parse_exp(
@@ -1610,17 +1584,17 @@ const parser_parse_for = (tokenList) => {
   }
 
   ast.left.left.left.left.left.left.left.next = new AstNode(token_type.lparen);
-  ast.left.left.left.left.left.left.left.next.token = tokenList[tokenListIndexWalk];
+  ast.left.left.left.left.left.left.left.next.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.lparen);
 
   ast.left.left.left.left.left.left.next = new AstNode(token_type.rbrace);
-  ast.left.left.left.left.left.left.next.token = tokenList[tokenListIndexWalk];
+  ast.left.left.left.left.left.left.next.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.rbrace);
 
   ast.left.left.left.left.left.left.right = parser_parse_block(tokenList);
 
   ast.left.left.left.left.left.left.next.next = new AstNode(token_type.lbrace);
-  ast.left.left.left.left.left.left.next.next.token = tokenList[tokenListIndexWalk];
+  ast.left.left.left.left.left.left.next.next.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.lbrace);
 
   return ast;
@@ -1630,11 +1604,11 @@ const parser_parse_for = (tokenList) => {
  * @arg {array} tokenList
  */
 const parser_parse = (tokenList) => {
-  if (!tokenList[tokenListIndexWalk]) return null;
+  if (!tokenList[hc.parser.index]) return null;
 
   let expList = new Ast();
 
-  const type = tokenList[tokenListIndexWalk].type;
+  const type = tokenList[hc.parser.index].type;
 
   switch (type) {
     case token_type.bool:
@@ -1666,7 +1640,7 @@ const parser_parse = (tokenList) => {
       expList.ast = parser_parse_ifelse(tokenList);
       break;
     default:
-      parser_error(tokenList[tokenListIndexWalk]);
+      parser_error(tokenList[hc.parser.index]);
   }
 
   expList.next = parser_parse(tokenList);
@@ -1679,11 +1653,6 @@ const parser_parse = (tokenList) => {
  * @arg {array} tokenList
  */
 const parser = (tokenList) => {
-  tokenListIndexWalk = 0;
-  if (!keepSymTabAndPrototypes) {
-    symbolTable = [];
-    proceduresPrototypes = []
-  }
   return parser_parse(tokenList);
 };
 
@@ -1699,28 +1668,28 @@ const output_out_math_exp = (first, ast) => {
         if (ast.right.token.type === token_type.number) {
           value /= parseInt(ast.right.token.id);
         } else {
-          value /= parseInt(symbolTable[get_symtab(ast.right.token)].value);
+          value /= parseInt(hc.symtab.global[get_symtab(ast.right.token)].value);
         }
         break;
       case token_type.mul:
         if (ast.right.token.type === token_type.number) {
           value *= parseInt(ast.right.token.id);
         } else {
-          value *= parseInt(symbolTable[get_symtab(ast.right.token)].value);
+          value *= parseInt(hc.symtab.global[get_symtab(ast.right.token)].value);
         }
         break;
       case token_type.add:
         if (ast.right.token.type === token_type.number) {
           value += parseInt(ast.right.token.id);
         } else {
-          value += parseInt(symbolTable[get_symtab(ast.right.token)].value);
+          value += parseInt(hc.symtab.global[get_symtab(ast.right.token)].value);
         }
         break;
       case token_type.sub:
         if (ast.right.token.type === token_type.number) {
           value -= parseInt(ast.right.token.id);
         } else {
-          value -= parseInt(symbolTable[get_symtab(ast.right.token)].value);
+          value -= parseInt(hc.symtab.global[get_symtab(ast.right.token)].value);
         }
         break;
     }
@@ -1769,7 +1738,7 @@ const output_out_logical_exp = (ast, inside) => {
   }
 
   if (first.type === token_type.id) {
-    value.number = parseInt(symbolTable[get_symtab(first)].value);
+    value.number = parseInt(hc.symtab.global[get_symtab(first)].value);
   } else {
     value.number = parseInt(first.id);
   }
@@ -1814,19 +1783,19 @@ const output_out_logical_exp = (ast, inside) => {
     ) {
       let mathFirst;
       if (walk.right.token.type === token_type.id) {
-        mathFirst = parseInt(symbolTable[get_symtab(walk.right.token)].value);
+        mathFirst = parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
       } else {
         mathFirst = parseInt(walk.right.token.id);
       }
       tokenValue = output_out_math_exp(mathFirst, walk.right.right);
     } else if (walk.right.token.type === token_type.id) {
-      tokenValue = parseInt(symbolTable[get_symtab(walk.right.token)].value);
+      tokenValue = parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
     } else if (walk.right.token.type === token_type.number) {
       tokenValue = parseInt(walk.right.token.id);
     } else if (walk.right.token.type === token_type.not) {
       if (walk.right.right.token.type === token_type.id) {
         tokenValue = parseInt(
-          symbolTable[get_symtab(walk.right.right.token)].value
+          hc.symtab.global[get_symtab(walk.right.right.token)].value
         );
       } else if (walk.right.right.token.type === token_type.number) {
         tokenValue = parseInt(walk.right.right.token.id);
@@ -1891,15 +1860,15 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
 
   if (check_ast_type(ast.token.type, "data_type")) {
     procedureToken = ast.left.token
-    if (prototypeIndex + 1 && proceduresPrototypes[prototypeIndex]?.args?.find(e => e.id === procedureToken.id)) {
-      prototypeArgIndex = proceduresPrototypes[prototypeIndex]?.args.findIndex(e => e.id === procedureToken.id)
+    if (prototypeIndex + 1 && hc.symtab.prototypes[prototypeIndex]?.args?.find(e => e.id === procedureToken.id)) {
+      prototypeArgIndex = hc.symtab.prototypes[prototypeIndex]?.args.findIndex(e => e.id === procedureToken.id)
     } else {
       symTabI = get_symtab(ast.left.token);
     }
   } else {
     procedureToken = ast.token
-    if (prototypeIndex + 1 && proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === procedureToken.id)) {
-      prototypeArgIndex = proceduresPrototypes[prototypeIndex]?.args.findIndex(e => e.id === procedureToken.id)
+    if (prototypeIndex + 1 && hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === procedureToken.id)) {
+      prototypeArgIndex = hc.symtab.prototypes[prototypeIndex]?.args.findIndex(e => e.id === procedureToken.id)
     } else {
       if (ast.token.type === token_type.id) {
         symTabI = get_symtab(ast.token);
@@ -1909,11 +1878,11 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
 
   let value;
   let procedureArg;
-  if (prototypeIndex + 1 && (procedureArg = proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === procedureToken.id))) {
+  if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === procedureToken.id))) {
     value = parseInt(procedureArg.value);
   } else {
     if (symTabI > -1) {
-      value = parseInt(symbolTable[symTabI].value);
+      value = parseInt(hc.symtab.global[symTabI].value);
     } else {
       value = parseInt(procedureToken.id)
     }
@@ -1936,17 +1905,17 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           value /= parseInt(walk.right.token.id);
         } else {
           let procedureArg;
-          if (prototypeIndex + 1 && (procedureArg = proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
+          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
             value /= parseInt(procedureArg.value);
-          } else if ((procedureArg = proceduresPrototypes.find(e => e.id === walk.right.token.id))) {
+          } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
             value /= procedureArg.return;
           } else {
-            value /= parseInt(symbolTable[get_symtab(walk.right.token)].value);
+            value /= parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          symTabI >= 0 ? hc.symtab.global[symTabI].value = value : hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
       case token_type.mul:
@@ -1955,17 +1924,17 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           value *= parseInt(walk.right.token.id);
         } else {
           let procedureArg;
-          if (prototypeIndex + 1 && (procedureArg = proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
+          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
             value += parseInt(procedureArg.value);
-          } else if ((procedureArg = proceduresPrototypes.find(e => e.id === walk.right.token.id))) {
+          } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
             value += procedureArg.return;
           } else {
-            value += parseInt(symbolTable[get_symtab(walk.right.token)].value);
+            value += parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          symTabI >= 0 ? hc.symtab.global[symTabI].value = value : hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
       case token_type.assig:
@@ -1973,17 +1942,17 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           value = parseInt(walk.right.token.id);
         } else {
           let procedureArg;
-          if (prototypeIndex + 1 && (procedureArg = proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
+          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
             value = parseInt(procedureArg.value);
-          } else if ((procedureArg = proceduresPrototypes.find(e => e.id === walk.right.token.id))) {
+          } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
             value = procedureArg.return;
           } else {
-            value = parseInt(symbolTable[get_symtab(walk.right.token)].value);
+            value = parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          symTabI >= 0 ? hc.symtab.global[symTabI].value = value : hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
       case token_type.assingsum:
@@ -1992,17 +1961,17 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           value += parseInt(walk.right.token.id);
         } else {
           let procedureArg;
-          if (prototypeIndex + 1 && (procedureArg = proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
+          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
             value += parseInt(procedureArg.value);
-          } else if ((procedureArg = proceduresPrototypes.find(e => e.id === walk.right.token.id))) {
+          } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
             value += procedureArg.return;
           } else {
-            value += parseInt(symbolTable[get_symtab(walk.right.token)].value);
+            value += parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          symTabI >= 0 ? hc.symtab.global[symTabI].value = value : hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break;
       case token_type.assingsub:
@@ -2011,17 +1980,17 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           value -= parseInt(walk.right.token.id);
         } else {
           let procedureArg;
-          if (prototypeIndex + 1 && (procedureArg = proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
+          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
             value -= parseInt(procedureArg.value);
-          } else if ((procedureArg = proceduresPrototypes.find(e => e.id === walk.right.token.id))) {
+          } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
             value -= procedureArg.return;
           } else {
-            value -= parseInt(symbolTable[get_symtab(walk.right.token)].value);
+            value -= parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? symbolTable[symTabI].value = value : proceduresPrototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          symTabI >= 0 ? hc.symtab.global[symTabI].value = value : hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value;
         }
         break
       case token_type.semi:
@@ -2037,7 +2006,7 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
   }
 
   if (procedureReturn) {
-    proceduresPrototypes[prototypeIndex].return = value;
+    hc.symtab.prototypes[prototypeIndex].return = value;
   }
 
   return walk;
@@ -2169,15 +2138,15 @@ const output_out_for = (ast, expList, prototypeIndex) => {
     case token_type.less:
       for (let i = val; i < condVal; i += iterateValue) {
         output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
-        symbolTable[symTabI].value =
-          parseInt(symbolTable[symTabI].value) + iterateValue;
+        hc.symtab.global[symTabI].value =
+          parseInt(hc.symtab.global[symTabI].value) + iterateValue;
       }
       break;
     case token_type.big:
       for (let i = val; i > condVal; i += iterateValue) {
         output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
-        symbolTable[symTabI].value =
-          parseInt(symbolTable[symTabI].value) + iterateValue;
+        hc.symtab.global[symTabI].value =
+          parseInt(hc.symtab.global[symTabI].value) + iterateValue;
       }
       break;
   }
@@ -2194,11 +2163,11 @@ const output_out_procedures = (ast, expList) => {
   let aux = ast.right;
   let i = 0;
 
-  while (proceduresPrototypes[prototypeIndex].args[i] && aux) {
+  while (hc.symtab.prototypes[prototypeIndex].args[i] && aux) {
     if (aux.token.type === token_type.id) {
-      proceduresPrototypes[prototypeIndex].args[i].value = symbolTable[get_symtab(aux.token)].value
+      hc.symtab.prototypes[prototypeIndex].args[i].value = hc.symtab.global[get_symtab(aux.token)].value
     } else if (aux.token.type === token_type.number) {
-      proceduresPrototypes[prototypeIndex].args[i].value = aux.token.id
+      hc.symtab.prototypes[prototypeIndex].args[i].value = aux.token.id
     }
     i++;
     aux = aux.right;
@@ -2279,13 +2248,13 @@ const printf = (ast, prototypeIndex) => {
   let str = ast.token.id;
   if (ast.token.id.includes("%")) {
     let procedureArg;
-    if (prototypeIndex + 1 && (procedureArg = proceduresPrototypes[prototypeIndex]?.args.find(e => e.id === ast.left.right.token.id))) {
+    if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === ast.left.right.token.id))) {
       str = str.replace("%d", procedureArg.value);
     } else {
       if (ast.left.right.token.type === token_type.number) {
         str = str.replace("%d", ast.left.right.token.id);
       } else {
-        str = str.replace("%d", symbolTable[get_symtab(ast.left.right.token)].value);
+        str = str.replace("%d", hc.symtab.global[get_symtab(ast.left.right.token)].value);
       }
     }
   }
