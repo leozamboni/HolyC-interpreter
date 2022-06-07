@@ -9,7 +9,7 @@
  * @requires
  * @description 
  * Make sure you have a input tag with "stdin" id in your HTML DOM;
- * You need to import this procedure in your HTML BOM:
+ * You need to import this procedure in your BOM:
  * 
  *  <script type="module">
  *    import { holyc_web_run } from "./holyc-interpreter.js"
