@@ -36,11 +36,11 @@ export const holyc_web_run = () => {
  * This procedures is only for holy node (the JS HolyC interpreter for back-ends);
  * Check github.com/leozamboni/holy-node
  */
-export const holy_node_cli = (stdin) => {
+export const holy_node_interactive = (stdin) => {
   return output(hc.symtab.keep = true && parser(lexer(stdin)));
 }
 
-export const holy_node_scan = (stdin) => {
+export const holy_node_script = (stdin) => {
   return output(parser(lexer(stdin)));
 }
 
