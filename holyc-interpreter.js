@@ -22,7 +22,9 @@
  * 
  * After run the stdout will appear in the alert box in your site, 
  * so make sure you have it enabled in your browser;
- * For local run you need a HTTP server.
+ * For local run you need a HTTP server:
+ *  
+ *  python -m http.server 8000
  */
 export const holyc_web_run = () => {
   alert(output(parser(lexer(document.getElementById("stdin").value))));
