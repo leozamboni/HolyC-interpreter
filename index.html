@@ -9,12 +9,15 @@
     <script type="module">
         import { holyc_web_run } from "./holyc-interpreter.js"
         window.holyc_web_run = holyc_web_run;
-      </script>
+    </script>
     <style>
         * {
             margin: 0;
             padding: 0;
-            font-family: monospace;
+            font-family: Inconsolata, monospace;
+        }
+
+        main {
             font-size: 10pt;
         }
 
@@ -79,6 +82,10 @@
         .examples {
             margin-top: 45vh;
         }
+
+        footer {
+            font-size: 0.75em;
+        }
     </style>
 </head>
 
@@ -130,23 +137,26 @@
         <br>
         <br>
 
-        <hr />
-
-        <p>
-            Not a complete HolyC language compiler yet. The source
-            code is in GitHub you can contribute
-            <a href="https://github.com/leozamboni/js-holyc-interpreter">here</a>. All currently implemented features
-            are
-            exemplified in select.
-        </p>
-        <p>If you want to learn HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/HolyC.html#l1">this</a>
-            documentation.</p>
-
-        <p>This program is under MIT <a
-                href="https://github.com/leozamboni/js-holyc-interpreter/blob/master/LICENSE">license</a>.</p>
-        <br>
-        <p>HolyC and TempleOS are creations of Terry Davis.</p>
     </main>
+    <footer>
+        <hr />
+        <br>
+        <p>
+            This is not a complete HolyC language compiler yet but the source
+            code is in GitHub you can contribute
+            <a href="https://github.com/leozamboni/js-holyc-interpreter">here</a>, all currently implemented
+            features
+            are exemplified in the examples select. New releases and updates are shared on <a
+                href="https://www.reddit.com/r/TempleOS_Official/">r/TempleOS_Official</a>.
+        </p>
+        <br>
+        <p>If you want to learn HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/HolyC.html#l1">this
+                documentation</a>.</p>
+        <br>
+        <p>This site is under MIT <a
+                href="https://github.com/leozamboni/js-holyc-interpreter/blob/master/LICENSE">license</a>. HolyC and
+            TempleOS are creations of Terry Davis.</p>
+    </footer>
 
     <script>
         document.getElementById("stdin").value = '"hello world";';
