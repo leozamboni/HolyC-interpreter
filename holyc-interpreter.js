@@ -26,9 +26,11 @@
  *  
  *  python -m http.server 8000
  */
-export const holyc_web_run = () => {
-  alert(output(parser(lexer(document.getElementById("stdin").value))));
-};
+const stderr = (value) => document.getElementById("stderr").innerHTML = value;
+const stdin = document.getElementById("stdin");
+const stdout = (value) => alert(value);
+
+export const holyc_web_run = () => stdout(output(parser(lexer(init_hc()))));
 
 /**
  * Back-end runtime 
@@ -38,13 +40,9 @@ export const holyc_web_run = () => {
  * This procedures is only for holy node (the JS HolyC interpreter for back-ends);
  * Check github.com/leozamboni/holy-node
  */
-export const holy_node_interactive = (stdin) => {
-  return output(hc.symtab.keep = true && parser(lexer(stdin)));
-}
+export const holy_node_interactive = (stdin) => output(hc.symtab.interactive = true && parser(lexer(init_hc(stdin))));
 
-export const holy_node_script = (stdin) => {
-  return output(parser(lexer(stdin)));
-}
+export const holy_node_script = (stdin) => output(parser(lexer(init_hc(stdin))));
 
 /**
  * AST Node
@@ -103,9 +101,10 @@ let hc = {
     index: 0,
   },
   symtab: {
-    keep: false,
+    interactive: false,
     global: [],
     prototypes: [],
+    class: [],
   },
 }
 
@@ -157,6 +156,7 @@ const token_type = {
   bigequal: 45,
   lessequal: 46,
   bool: 47,
+  class: 48,
 };
 
 const token_cases = [
@@ -257,6 +257,7 @@ const token_cases = [
 
 const token_keywords = [
   { id: "for", type: token_type.for },
+  { id: "class", type: token_type.class },
   { id: "if", type: token_type.if },
   { id: "else", type: token_type.else },
   { id: "return", type: token_type.return },
@@ -342,30 +343,34 @@ const lexer_lex = (hc) => {
   }
 }
 
-const init_hc = (stdin) => {
-  hc.files.stdin = stdin;
+const init_hc = (inpStdin) => {
+  stderr && stderr('')
+  stdin && (hc.files.stdin = stdin.value) || (hc.files.stdin = inpStdin)
+
   hc.files.stdout = '';
   hc.files.stderr = '';
   hc.lexer.char = '';
   hc.lexer.index = 0;
   hc.lexer.line = 1;
   hc.parser.index = 0;
-  !hc.symtab.keep && (hc.symtab.global = []);
-  !hc.symtab.keep && (hc.symtab.prototypes = []);
+  !hc.symtab.interactive && (hc.symtab.global = []);
+  !hc.symtab.interactive && (hc.symtab.prototypes = []);
+  !hc.symtab.interactive && (hc.symtab.class = []);
 
   if (!stdin) {
     hc.files.stderr += "compile failure\nlexer: nothing to compile\n";
     try {
-      throw alert(hc.files.stderr);
+      throw stderr(hc.files.stderr);;
     } catch {
       throw new Error(hc.files.stderr);
     }
   }
+
+  return hc;
 }
 
 // TODO: create a one step lexer
-const lexer = (stdin) => {
-  init_hc(stdin)
+const lexer = (hc) => {
   let token_list = [];
 
   while (1) {
@@ -397,13 +402,36 @@ const get_prototype = (token) => {
 };
 
 /**
+ * get index of class
+ */
+const get_class = (token) => {
+  for (let i = 0; i < hc.symtab.class.length; ++i) {
+    if (hc.symtab.class[i].id === token.id) return i;
+  }
+  return -1;
+};
+
+/**
  * throw lexer error
  * @arg {object} token
  */
 const lexer_error = (token) => {
-  hc.files.stderr = `compile failure\nlexer: '${token.id}' unexpected token in line ${token.line}\n`;
+  hc.files.stderr = `Compile failure\nLexer: '${token.id}' unexpected token in line ${token.line}\n`;
   try {
-    throw alert(hc.files.stderr);
+    throw stderr(hc.files.stderr)
+  } catch {
+    throw new Error(hc.files.stderr)
+  }
+};
+
+/**
+ * throw parser error
+ * @arg {object} token
+ */
+const internal_error = (err) => {
+  hc.files.stderr = `Compile failure\nInternal error: '${err}'`;
+  try {
+    throw stderr(hc.files.stderr)
   } catch {
     throw new Error(hc.files.stderr)
   }
@@ -414,9 +442,9 @@ const lexer_error = (token) => {
  * @arg {object} token
  */
 const parser_error = (token) => {
-  hc.files.stderr = `compile failure\nparser: '${token.id}' unexpected token in line ${token.line}\n`;
+  hc.files.stderr = `Compile failure\nParser: '${token.id}' unexpected token in line ${token.line}\n`;
   try {
-    throw alert(hc.files.stderr);
+    throw stderr(hc.files.stderr)
   } catch {
     throw new Error(hc.files.stderr)
   }
@@ -630,6 +658,35 @@ const list_eat_math = (tokenList) => {
 const list_eat_compassing = (tokenList) => {
   is_assingop(tokenList, hc.parser.index) ? hc.parser.index++ : parser_error(tokenList[hc.parser.index]);
 };
+
+const parser_parse_class = (tokenList) => {
+  let ast = new AstNode(token_type.class);
+  ast.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.class);
+
+  check_symtab(tokenList, false);
+
+  if (get_class(tokenList[hc.parser.index]) > -1) {
+    lexer_error(tokenList[hc.parser.index])
+  } else {
+    hc.symtab.class.push(tokenList[hc.parser.index]);
+  }
+  const classId = get_class(tokenList[hc.parser.index]) + 1;
+  hc.symtab.class[classId - 1].content = [];
+
+  ast.left = new AstNode(token_type.id);
+  ast.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.id);
+
+  list_eat(tokenList, token_type.rbrace);
+
+  ast.right = parser_parse_class_vars(tokenList, classId);
+
+  list_eat(tokenList, token_type.lbrace);
+  list_eat(tokenList, token_type.semi);
+
+  return ast;
+}
 
 /**
  * semantic analysis of logical expresions
@@ -977,56 +1034,6 @@ const parser_parse_str = (tokenList) => {
 };
 
 /**
- * semantic analysis of blocks
- * @arg {array} tokenList
- */
-const parser_parse_block = (tokenList, prototypeIndex) => {
-  if (check_token(tokenList, hc.parser.index, token_type.lbrace)) return null;
-
-  let ast;
-
-  switch (tokenList[hc.parser.index].type) {
-    case token_type.bool:
-    case token_type.i0:
-    case token_type.u0:
-    case token_type.i8:
-    case token_type.u8:
-    case token_type.i16:
-    case token_type.u16:
-    case token_type.i32:
-    case token_type.u32:
-    case token_type.i64:
-    case token_type.u64:
-    case token_type.f64:
-    case token_type.id:
-      ast = parser_parse_id(tokenList, prototypeIndex);
-      break;
-    case token_type.increment:
-    case token_type.decrement:
-      ast = parser_parse_prepostfix(tokenList, false);
-      break;
-    case token_type.str:
-      ast = parser_parse_str(tokenList);
-      break;
-    case token_type.for:
-      ast = parser_parse_for(tokenList);
-      break;
-    case token_type.if:
-      ast = parser_parse_ifelse(tokenList);
-      break;
-    case token_type.return:
-      ast = parser_parse_return(tokenList, prototypeIndex);
-      break;
-    default:
-      parser_error(tokenList[hc.parser.index]);
-  }
-
-  ast.next = parser_parse_block(tokenList, prototypeIndex);
-
-  return ast;
-};
-
-/**
  * semantic analysis of procedures arguments
  * @arg {array} tokenList
  */
@@ -1202,7 +1209,7 @@ const parser_parse_call = (tokenList) => {
  * semantic analysis of inline variables declaration
  * @arg {array} tokenList
  */
-const parser_parse_inline_vars = (tokenList) => {
+const parser_parse_inline_vars = (tokenList, classId) => {
   if (
     check_token(tokenList, hc.parser.index, token_type.semi) &&
     !check_token(tokenList, hc.parser.index - 1, token_type.comma)
@@ -1218,7 +1225,11 @@ const parser_parse_inline_vars = (tokenList) => {
   list_eat(tokenList, token_type.id);
 
   if (check_token(tokenList, hc.parser.index, token_type.assig)) {
-    hc.symtab.global.push({ ...symtabNode, value: 0 });
+    if (classId) {
+      hc.symtab.class[classId - 1].content.push({ ...symtabNode, value: 0 });
+    } else {
+      hc.symtab.global.push({ ...symtabNode, value: 0 });
+    }
 
     ast.left = parser_parse_exp(tokenList, false);
 
@@ -1228,19 +1239,46 @@ const parser_parse_inline_vars = (tokenList) => {
       list_eat(tokenList, token_type.comma);
     }
   } else if (!check_token(tokenList, hc.parser.index, token_type.semi)) {
-    hc.symtab.global.push({ ...symtabNode, value: 0 });
+    if (classId) {
+      hc.symtab.class[classId - 1].content.push({ ...symtabNode, value: 0 });
+    } else {
+      hc.symtab.global.push({ ...symtabNode, value: 0 });
+    }
 
     ast.left = new AstNode(token_type.comma);
     ast.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.comma);
   } else {
-    hc.symtab.global.push({ ...symtabNode, value: 0 });
+    if (classId) {
+      hc.symtab.class[classId - 1].content.push({ ...symtabNode, value: 0 });
+    } else {
+      hc.symtab.global.push({ ...symtabNode, value: 0 });
+    }
   }
 
-  ast.right = parser_parse_inline_vars(tokenList);
+  ast.right = parser_parse_inline_vars(tokenList, classId);
 
   return ast;
 };
+
+const parser_parse_class_vars = (tokenList, classId) => {
+  if (check_token(tokenList, hc.parser.index, token_type.lbrace))
+    return null;
+
+  let ast = new AstNode(tokenList[hc.parser.index]?.type);
+  ast.token = tokenList[hc.parser.index];
+  list_eat_type(tokenList);
+
+  ast.left = parser_parse_inline_vars(tokenList, classId);
+
+  ast.left.left = new AstNode(token_type.semi);
+  ast.left.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.semi);
+
+  ast.right = parser_parse_class_vars(tokenList, classId);
+
+  return ast;
+}
 
 /**
  * semantic analysis of identifiers
@@ -1603,6 +1641,59 @@ const parser_parse_for = (tokenList) => {
 };
 
 /**
+ * semantic analysis of blocks
+ * @arg {array} tokenList
+ */
+const parser_parse_block = (tokenList, prototypeIndex) => {
+  if (check_token(tokenList, hc.parser.index, token_type.lbrace)) return null;
+
+  let ast;
+
+  switch (tokenList[hc.parser.index].type) {
+    case token_type.bool:
+    case token_type.i0:
+    case token_type.u0:
+    case token_type.i8:
+    case token_type.u8:
+    case token_type.i16:
+    case token_type.u16:
+    case token_type.i32:
+    case token_type.u32:
+    case token_type.i64:
+    case token_type.u64:
+    case token_type.f64:
+    case token_type.id:
+      ast = parser_parse_id(tokenList, prototypeIndex);
+      break;
+    case token_type.increment:
+    case token_type.decrement:
+      ast = parser_parse_prepostfix(tokenList, false);
+      break;
+    case token_type.str:
+      ast = parser_parse_str(tokenList);
+      break;
+    case token_type.for:
+      ast = parser_parse_for(tokenList);
+      break;
+    case token_type.if:
+      ast = parser_parse_ifelse(tokenList);
+      break;
+    case token_type.return:
+      ast = parser_parse_return(tokenList, prototypeIndex);
+      break;
+    case token_type.class:
+      ast = parser_parse_class(tokenList);
+      break;
+    default:
+      parser_error(tokenList[hc.parser.index]);
+  }
+
+  ast.next = parser_parse_block(tokenList, prototypeIndex);
+
+  return ast;
+};
+
+/**
  * @arg {array} tokenList
  */
 const parser_parse = (tokenList) => {
@@ -1641,6 +1732,9 @@ const parser_parse = (tokenList) => {
     case token_type.if:
       expList.ast = parser_parse_ifelse(tokenList);
       break;
+    case token_type.class:
+      expList.ast = parser_parse_class(tokenList);
+      break;
     default:
       parser_error(tokenList[hc.parser.index]);
   }
@@ -1654,9 +1748,7 @@ const parser_parse = (tokenList) => {
  * Semantic analysis
  * @arg {array} tokenList
  */
-const parser = (tokenList) => {
-  return parser_parse(tokenList);
-};
+const parser = (tokenList) => parser_parse(tokenList);
 
 /**
  * code generation of mathematical expresions
@@ -2193,49 +2285,54 @@ const output_out_return = (ast, expList, prototypeIndex) => {
  * @arg {array} expList
  */
 const output = (expList) => {
-  let expListAux = expList;
+  try {
 
-  do {
-    switch (expListAux.ast.type) {
-      case token_type.bool:
-      case token_type.i0:
-      case token_type.u0:
-      case token_type.i8:
-      case token_type.u8:
-      case token_type.i16:
-      case token_type.u16:
-      case token_type.i32:
-      case token_type.u32:
-      case token_type.i64:
-      case token_type.u64:
-      case token_type.f64:
-      case token_type.id:
-        output_out_exp(expListAux.ast, expList);
-        break;
-      case token_type.if:
-        output_out_ifelse(expListAux.ast, expList);
-        break;
-      case token_type.for:
-        output_out_for(expListAux.ast, expList);
-        break;
-      case token_type.str:
-        let walk = expListAux.ast;
-        do {
-          printf(walk);
-          walk = walk.right;
-        } while (walk);
-        break;
-      case token_type.call:
-        output_out_procedures(expListAux.ast, expList)
-        break;
-      default:
-        break;
-    }
+    let expListAux = expList;
 
-    expListAux = expListAux.next;
-  } while (expListAux);
+    do {
+      switch (expListAux.ast.type) {
+        case token_type.bool:
+        case token_type.i0:
+        case token_type.u0:
+        case token_type.i8:
+        case token_type.u8:
+        case token_type.i16:
+        case token_type.u16:
+        case token_type.i32:
+        case token_type.u32:
+        case token_type.i64:
+        case token_type.u64:
+        case token_type.f64:
+        case token_type.id:
+          output_out_exp(expListAux.ast, expList);
+          break;
+        case token_type.if:
+          output_out_ifelse(expListAux.ast, expList);
+          break;
+        case token_type.for:
+          output_out_for(expListAux.ast, expList);
+          break;
+        case token_type.str:
+          let walk = expListAux.ast;
+          do {
+            printf(walk);
+            walk = walk.right;
+          } while (walk);
+          break;
+        case token_type.call:
+          output_out_procedures(expListAux.ast, expList)
+          break;
+        default:
+          break;
+      }
 
-  return hc.files.stdout;
+      expListAux = expListAux.next;
+    } while (expListAux);
+
+    return hc.files.stdout;
+  } catch(err) {
+    internal_error(err);
+  }
 };
 
 /**

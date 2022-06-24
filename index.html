@@ -79,9 +79,18 @@
             background: white;
         }
 
-        .examples {
+        #stderr {
+            text-align: center;
+            position: relative;
+            display: block;
+            top: 42vh;
+            color: red;
+        }
+
+        #examples {
             margin-top: 45vh;
         }
+
 
         footer {
             font-size: 0.75em;
@@ -121,7 +130,11 @@
             <div class='highlight' id="hl"></div>
         </div>
 
-        <select onchange="examples()" class="examples" id="examples">
+        <div>
+            <span id="stderr"></span>
+        </div>
+        
+        <select onchange="examples()" id="examples">
             <option value="">Examples</option>
             <option value="helloWorld">Hello World</option>
             <option value="conditionals">Conditionals</option>
@@ -150,7 +163,7 @@
                 href="https://www.reddit.com/r/TempleOS_Official/">r/TempleOS_Official</a>.
         </p>
         <br>
-        <p>If you want to learn HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/HolyC.html#l1">this
+        <p>If you want to learn HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/">this
                 documentation</a>.</p>
         <br>
         <p>This site is under MIT <a
