@@ -162,7 +162,7 @@ const token_type = {
 
 const token_cases = [
   {
-    char: '/', renderer: (hc) => {
+    char: '/', render: (hc) => {
       if (hc.files.stdin[hc.lexer.index] === '/') {
         while (hc.files.stdin[hc.lexer.index++]
           && hc.files.stdin[hc.lexer.index] !== '\n') { };
@@ -176,13 +176,13 @@ const token_cases = [
     }
   },
   {
-    char: "'", renderer: (hc) => lex_simple_quote_string(hc)
+    char: "'", render: (hc) => lex_simple_quote_string(hc)
   },
   {
-    char: '"', renderer: (hc) => lex_string(hc)
+    char: '"', render: (hc) => lex_string(hc)
   },
   {
-    char: "+", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "+"
+    char: "+", render: (hc) => hc.files.stdin[hc.lexer.index] === "+"
       && hc.lexer.index++
       && (new Token('++', token_type.increment, hc.lexer.line))
       || hc.files.stdin[hc.lexer.index] === "="
@@ -191,7 +191,7 @@ const token_cases = [
       || (new Token('+', token_type.add, hc.lexer.line))
   },
   {
-    char: "-", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "-"
+    char: "-", render: (hc) => hc.files.stdin[hc.lexer.index] === "-"
       && hc.lexer.index++
       && (new Token('--', token_type.increment, hc.lexer.decrement))
       || hc.files.stdin[hc.lexer.index] === "="
@@ -200,57 +200,57 @@ const token_cases = [
       || (new Token('-', token_type.sub, hc.lexer.line))
   },
   {
-    char: "*", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "="
+    char: "*", render: (hc) => hc.files.stdin[hc.lexer.index] === "="
       && hc.lexer.index++
       && (new Token('*=', token_type.assingmul, hc.lexer.line))
       || (new Token('*', token_type.mul, hc.lexer.line))
   },
   {
-    char: ";", renderer: (hc) => new Token(';', token_type.semi, hc.lexer.line)
+    char: ";", render: (hc) => new Token(';', token_type.semi, hc.lexer.line)
   },
   {
-    char: "{", renderer: (hc) => new Token('{', token_type.rbrace, hc.lexer.line)
+    char: "{", render: (hc) => new Token('{', token_type.rbrace, hc.lexer.line)
   },
   {
-    char: "}", renderer: (hc) => new Token('}', token_type.lbrace, hc.lexer.line)
+    char: "}", render: (hc) => new Token('}', token_type.lbrace, hc.lexer.line)
   },
   {
-    char: "(", renderer: (hc) => new Token('(', token_type.rparen, hc.lexer.line)
+    char: "(", render: (hc) => new Token('(', token_type.rparen, hc.lexer.line)
   },
   {
-    char: ")", renderer: (hc) => new Token(')', token_type.lparen, hc.lexer.line)
+    char: ")", render: (hc) => new Token(')', token_type.lparen, hc.lexer.line)
   },
   {
-    char: ",", renderer: (hc) => new Token(',', token_type.comma, hc.lexer.line)
+    char: ",", render: (hc) => new Token(',', token_type.comma, hc.lexer.line)
   },
   {
-    char: "!", renderer: (hc) => new Token('!', token_type.not, hc.lexer.line)
+    char: "!", render: (hc) => new Token('!', token_type.not, hc.lexer.line)
   },
   {
-    char: "=", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "="
+    char: "=", render: (hc) => hc.files.stdin[hc.lexer.index] === "="
       && hc.lexer.index++
       && (new Token('==', token_type.equal, hc.lexer.line))
       || (new Token('=', token_type.assig, hc.lexer.line))
   },
   {
-    char: "<", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "="
+    char: "<", render: (hc) => hc.files.stdin[hc.lexer.index] === "="
       && hc.lexer.index++
       && (new Token('<=', token_type.lessequal, hc.lexer.line))
       || (new Token('<', token_type.less, hc.lexer.line))
   },
   {
-    char: ">", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "="
+    char: ">", render: (hc) => hc.files.stdin[hc.lexer.index] === "="
       && hc.lexer.index++
       && (new Token('>=', token_type.bigequal, hc.lexer.line))
       || (new Token('>', token_type.big, hc.lexer.line))
   },
   {
-    char: "&", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "&"
+    char: "&", render: (hc) => hc.files.stdin[hc.lexer.index] === "&"
       && hc.lexer.index++
       && (new Token('&&', token_type.and, hc.lexer.line))
   },
   {
-    char: "|", renderer: (hc) => hc.files.stdin[hc.lexer.index] === "|"
+    char: "|", render: (hc) => hc.files.stdin[hc.lexer.index] === "|"
       && hc.lexer.index++
       && (new Token('||', token_type.or, hc.lexer.line))
   },
@@ -337,7 +337,7 @@ const lexer_lex = (hc) => {
     if (is_ignored(hc.lexer.char)) continue;
     if (is_number(hc.lexer.char)) return lex_number(hc);
     if (is_alpha(hc.lexer.char)) return lex_alpha(hc);
-    const token = token_cases.find(e => e.char === hc.lexer.char)?.renderer(hc)
+    const token = token_cases.find(e => e.char === hc.lexer.char)?.render(hc)
     if (token === "{comment}") continue;
     else if (token) return token;
     else lexer_error({ id: hc.lexer.char, line: hc.lexer.line })
@@ -361,7 +361,7 @@ const init_hc = (inpStdin) => {
   if (!stdin) {
     hc.files.stderr += "compile failure\nlexer: nothing to compile\n";
     try {
-      throw stderr(hc.files.stderr);;
+      throw stderr(hc.files.stderr);
     } catch {
       throw new Error(hc.files.stderr);
     }
@@ -684,7 +684,19 @@ const parser_parse_class = (tokenList) => {
   ast.right = parser_parse_class_vars(tokenList, classId);
 
   list_eat(tokenList, token_type.lbrace);
-  list_eat(tokenList, token_type.semi);
+
+  if (check_token(tokenList, hc.parser.index, token_type.semi)) {
+    list_eat(tokenList, token_type.semi);
+  } else {
+    hc.symtab.global.push({ ...tokenList[hc.parser.index], value: 0 });
+
+    ast.left.left = new AstNode(token_type.id);
+    ast.left.left.token = tokenList[hc.parser.index];
+    list_eat(tokenList, token_type.id);
+
+    list_eat(tokenList, token_type.semi);
+  }
+
 
   return ast;
 }
