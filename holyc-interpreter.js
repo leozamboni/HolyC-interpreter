@@ -25,6 +25,7 @@
  * For local run you need a HTTP server:
  *  
  *  python -m http.server 8000
+ * 
  */
 const stderr = (value) => document.getElementById("stderr").innerHTML = value;
 const stdin = document.getElementById("stdin");
@@ -715,18 +716,13 @@ const parser_parse_logical_exp = (tokenList) => {
     } else {
       if (
         check_token(tokenList, hc.parser.index - 1, token_type.id) ||
-        check_token(tokenList, hc.parser.index - 1, token_type.number)
+        check_token(tokenList, hc.parser.index - 1, token_type.number) ||
+        check_token(tokenList, hc.parser.index - 1, token_type.true) ||
+        check_token(tokenList, hc.parser.index - 1, token_type.false)
       ) {
-        if (is_mathop(tokenList, hc.parser.index)) {
-          if (
-            check_token(tokenList, hc.parser.index + 1, token_type.id) ||
-            check_token(tokenList, hc.parser.index + 1, token_type.number)
-          ) {
-            ast = new AstNode(tokenList[hc.parser.index]?.type);
-            ast.token = tokenList[hc.parser.index];
-            list_eat_math(tokenList);
-          }
-        }
+        ast = new AstNode(tokenList[hc.parser.index]?.type);
+        ast.token = tokenList[hc.parser.index];
+        list_eat_math(tokenList);
       }
     }
   } else if (is_logicalop(tokenList, hc.parser.index - 1)) {
