@@ -315,6 +315,7 @@ const lex_simple_quote_string = (hc) => {
   hc.lexer.char = hc.files.stdin[hc.lexer.index++]
   let id = '';
   do {
+    !hc.lexer.char && lexer_error({ id: "EOF", line: hc.lexer.line })
     id += hc.lexer.char
   }
   while ((hc.lexer.char = hc.files.stdin[hc.lexer.index++]) !== "'");
@@ -325,6 +326,7 @@ const lex_string = (hc) => {
   hc.lexer.char = hc.files.stdin[hc.lexer.index++]
   let id = '';
   do {
+    !hc.lexer.char && lexer_error({ id: "EOF", line: hc.lexer.line })
     id += hc.lexer.char
   }
   while ((hc.lexer.char = hc.files.stdin[hc.lexer.index++]) !== '"');
@@ -391,7 +393,6 @@ const get_symtab = (token) => {
     if (hc.symtab.global[i].id === token.id) return i;
   }
 };
-
 
 /**
  * get index of prototype
@@ -696,7 +697,6 @@ const parser_parse_class = (tokenList) => {
 
     list_eat(tokenList, token_type.semi);
   }
-
 
   return ast;
 }
@@ -2338,7 +2338,7 @@ const output = (expList) => {
     } while (expListAux);
 
     return hc.files.stdout;
-  } catch(err) {
+  } catch (err) {
     internal_error(err);
   }
 };
