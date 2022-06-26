@@ -106,6 +106,7 @@ let hc = {
     global: [],
     prototypes: [],
     class: [],
+    types: [],
   },
 }
 
@@ -360,6 +361,7 @@ const init_hc = (inpStdin) => {
   hc.lexer.index = 0;
   hc.lexer.line = 1;
   hc.parser.index = 0;
+  !hc.symtab.interactive && (hc.symtab.types = []);
   !hc.symtab.interactive && (hc.symtab.global = []);
   !hc.symtab.interactive && (hc.symtab.prototypes = []);
   !hc.symtab.interactive && (hc.symtab.class = []);
@@ -561,9 +563,11 @@ const is_dtype = (tokenList, index) => {
       type === token_type.i64 ||
       type === token_type.u64 ||
       type === token_type.f64 ||
-      type === token_type.bool
+      type === token_type.bool ||
+      hc.symtab.types.findIndex(e => e.id === tokenList[index].id) > -1
       ? true
       : false;
+
   } catch {
     parser_error(tokenList[index - 1]);
   }
@@ -701,7 +705,9 @@ const parser_parse_class = (tokenList) => {
         classValue.push({ ...tokenList[varsIndex], value: 0 });
       }
     }
-    hc.symtab.global.push({
+    hc.symtab.types.findIndex(e => e.id === tokenList[hc.parser.index].id) > -1
+      && lexer_error(tokenList[hc.parser.index])
+    hc.symtab.types.push({
       ...tokenList[hc.parser.index],
       value: classValue,
       classType: true
@@ -1323,7 +1329,7 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
       check_token(tokenList, hc.parser.index + 1, token_type.decrement)
     ) {
       return parser_parse_prepostfix(tokenList, false);
-    // } else if (check_token(tokenList, hc.parser.index + 1, token_type.dot)) {
+      // } else if (check_token(tokenList, hc.parser.index + 1, token_type.dot)) {
 
     } else {
       let ast = parser_parse_call(tokenList);
@@ -2355,7 +2361,7 @@ const output = (expList) => {
 
       expListAux = expListAux.next;
     } while (expListAux);
-    
+
     return hc.files.stdout;
   } catch (err) {
     internal_error(err);
