@@ -2,7 +2,7 @@
 
 This is not a complete HolyC language compiler yet but you can contribute here. All currently implemented features are exemplified in the examples select. New releases and updates are shared on r/TempleOS_Official.
 
-[demo](https://leozamboni.github.io/holyc-interpreter) 
+[Live demo](https://leozamboni.github.io/holyc-interpreter) 
 
 # Holy Node
 

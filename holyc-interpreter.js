@@ -364,8 +364,8 @@ const init_hc = (inpStdin) => {
   !hc.symtab.interactive && (hc.symtab.prototypes = []);
   !hc.symtab.interactive && (hc.symtab.class = []);
 
-  if (!stdin) {
-    hc.files.stderr += "compile failure\nlexer: nothing to compile\n";
+  if (!hc.files.stdin) {
+    hc.files.stderr += "Compile failure\nLexer: nothing to compile\n";
     try {
       throw stderr(hc.files.stderr);
     } catch {
@@ -1774,7 +1774,7 @@ const parser_parse = (tokenList) => {
  * Semantic analysis
  * @arg {array} tokenList
  */
-const parser = (tokenList) => parser_parse(tokenList);
+const parser = (tokenList) => tokenList && parser_parse(tokenList);
 
 /**
  * code generation of mathematical expresions
@@ -2311,6 +2311,7 @@ const output_out_return = (ast, expList, prototypeIndex) => {
  * @arg {array} expList
  */
 const output = (expList) => {
+  if (!expList) return hc.files.stdout;
   try {
 
     let expListAux = expList;
@@ -2354,7 +2355,7 @@ const output = (expList) => {
 
       expListAux = expListAux.next;
     } while (expListAux);
-
+    
     return hc.files.stdout;
   } catch (err) {
     internal_error(err);
