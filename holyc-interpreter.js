@@ -158,6 +158,7 @@ const token_type = {
   lessequal: 46,
   bool: 47,
   class: 48,
+  dot: 49,
 };
 
 const token_cases = [
@@ -207,6 +208,9 @@ const token_cases = [
   },
   {
     char: ";", render: (hc) => new Token(';', token_type.semi, hc.lexer.line)
+  },
+  {
+    char: ".", render: (hc) => new Token('.', token_type.dot, hc.lexer.line)
   },
   {
     char: "{", render: (hc) => new Token('{', token_type.rbrace, hc.lexer.line)
@@ -673,23 +677,35 @@ const parser_parse_class = (tokenList) => {
   } else {
     hc.symtab.class.push(tokenList[hc.parser.index]);
   }
-  const classId = get_class(tokenList[hc.parser.index]) + 1;
-  hc.symtab.class[classId - 1].content = [];
+  const classId = get_class(tokenList[hc.parser.index]);
+  hc.symtab.class[classId].content = [];
 
   ast.left = new AstNode(token_type.id);
   ast.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.id);
 
   list_eat(tokenList, token_type.rbrace);
+  let varsIndex = hc.parser.index;
 
-  ast.right = parser_parse_class_vars(tokenList, classId);
+  ast.right = parser_parse_class_vars(tokenList, classId + 1);
 
   list_eat(tokenList, token_type.lbrace);
 
   if (check_token(tokenList, hc.parser.index, token_type.semi)) {
     list_eat(tokenList, token_type.semi);
   } else {
-    hc.symtab.global.push({ ...tokenList[hc.parser.index], value: 0 });
+    let classValue = [];
+    while (tokenList[varsIndex++]
+      && tokenList[varsIndex].type !== token_type.lbrace) {
+      if (check_token(tokenList, varsIndex, token_type.id)) {
+        classValue.push({ ...tokenList[varsIndex], value: 0 });
+      }
+    }
+    hc.symtab.global.push({
+      ...tokenList[hc.parser.index],
+      value: classValue,
+      classType: true
+    });
 
     ast.left.left = new AstNode(token_type.id);
     ast.left.left.token = tokenList[hc.parser.index];
@@ -1307,6 +1323,8 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
       check_token(tokenList, hc.parser.index + 1, token_type.decrement)
     ) {
       return parser_parse_prepostfix(tokenList, false);
+    // } else if (check_token(tokenList, hc.parser.index + 1, token_type.dot)) {
+
     } else {
       let ast = parser_parse_call(tokenList);
       list_eat(tokenList, token_type.semi);
