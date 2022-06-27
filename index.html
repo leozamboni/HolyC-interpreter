@@ -96,7 +96,6 @@
             margin-top: 45vh;
         }
 
-
         footer {
             font-size: 0.90em;
         }
@@ -212,7 +211,7 @@
                     content = "// Allows \"5 < 1 < 2 + 1 < 20\" instead of \"5 < 1 && 1 < 2 + 1 && 1 + 1 < 20\";\nif (5 < 1 < 2 + 1 < 20)\n{\n\t\"true\\n\";\n}\n\n// Conditionals with logicals;\nif (TRUE)\n{\n\tif (1 > 2)\n\t{\n\t\t\"1 > 2\\n\";\n\t}\n\telse if (1 > 2 || 2 > 3)\n\t{\n\t\t\"2 > 3\\n\";\n\t}\n\telse\n\t{\n\t\t\"all false conditions\\n\";\n\t}\n}\n\nif (TRUE > FALSE)\n{\n\t\"TRUE > FALSE\\n\";\n}\n\n// Conditionals with variables;\nU8 A = 1;\nU8 B = 2;\nif (A < B)\n{\n\t\"A < B\\n\";\n}\n\nif (A)\n{\n\t\"A != 0\\n\";\n\tA = 0;\n}\n\nif (A)\n{\n\t\"A == 0\\n\";\n}\n\n// Conditionals with math expressions.\nif (1 + 2 * 3 > 9)\n{\n\t\"1 + 2 * 3 > 9\\n\";\n}\nelse if (1 + 2 * 3 > A + 8)\n{\n\t\"1 + 2 * 3 > A + 8\\n\";\n}\n\n";
                     break;
                 case "procedures":
-                    content = "// HolyC Procedures\nU0\nno_args()\n{\n\t\"no args\\n\";\n}\n\n// Function with no args, or just default args can be called without parentheses;\nno_args(\"*\");\nno_args();\nno_args;\n\nU8\ndefault_args(U8 abc=1, U8 def, U8 ghi=3)\n{\n\t\"arg 1: %d\\n\", abc;\n\tdef = def - 2;\n\t\"arg 2: %d\\n\", def;\n\t\"arg 3: %d\\n\", ghi;\n\treturn abc + def + ghi;\n}\n\n// Default args don't have to be on the end. This code is valid:\nU0 default_args_value = default_args(,4);\n\"%d\", default_args_value;";
+                    content = "// HolyC Procedures\nU0\nno_args()\n{\n\t\"no args\\n\";\n}\n\n// Function with no args, or just default args can be called without parentheses;\nno_args(\"*\");\nno_args();\nno_args;\n\nU8\ndefault_args(U8 abc=1, U8 def, U8 ghi=3)\n{\n\t\"arg 1: %d\\n\", abc;\n\tdef = def - 2;\n\t\"arg 2: %d\\n\", def;\n\t\"arg 3: %d\\n\", ghi;\n\treturn abc + def + ghi;\n}\n\n// Default args don't have to be on the end. This code is valid:\nU16 default_args_value = default_args(,4);\n\"%d\", default_args_value;";
                     break;
                 default:
                     content = "";

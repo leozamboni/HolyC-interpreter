@@ -1310,12 +1310,67 @@ const parser_parse_class_vars = (tokenList, classId) => {
   return ast;
 }
 
+const parser_parse_class_var_exp = (tokenList) => {
+  let ast = new AstNode(token_type.id);
+  ast.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.id);
+
+  if (check_token(tokenList, hc.parser.index, token_type.assig)) return null;
+
+  ast.right = new AstNode(token_type.dot);
+  ast.right.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.dot);
+
+  ast.right.right = parser_parse_class_var_exp(tokenList);
+  return ast;
+}
+
+const parser_parse_class_assig = (tokenList, index) => {
+  let vars = hc.parser.index;
+  let ids = [];
+  while (tokenList[vars].type
+    !== token_type.assig
+    && tokenList[++vars]) {
+    tokenList[vars].type === token_type.id
+      && ids.push(tokenList[vars].id)
+  }
+
+  let isGlobal = false;
+  if (index
+    && hc.symtab.prototypes[prototypeIndex]?.args?.findIndex(e => e.id === tokenList[hc.parser.index].id) < 0) {
+    parser_error(tokenList[hc.parser.index])
+  } else {
+    check_symtab(tokenList, true);
+    index = hc.symtab.global.findIndex(e => e.id === tokenList[hc.parser.index].id);
+    isGlobal = true;
+  }
+
+  let ast = parser_parse_class_var_exp(tokenList);
+
+  ast.left = new AstNode(token_type.assig);
+  ast.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.assig);
+
+  if (isGlobal) {
+    ast.left.left = parser_parse_exp(tokenList, false)
+  } else {
+    ast.left.left = parser_parse_exp(tokenList, false, index)
+  }
+
+  ast.left.left.left = new AstNode(token_type.semi);
+  ast.left.left.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.semi);
+
+  return ast;
+}
+
 /**
  * semantic analysis of identifiers
  * @arg {array} tokenList
  */
 const parser_parse_id = (tokenList, prototypeIndex) => {
-  if (check_token(tokenList, hc.parser.index, token_type.id)) {
+  if (!hc.symtab.types.find(e => e.id === tokenList[hc.parser.index].id)
+    && check_token(tokenList, hc.parser.index, token_type.id)) {
     if (is_assingop(tokenList, hc.parser.index + 1)) {
       let ast = parser_parse_exp(tokenList, false, prototypeIndex);
 
@@ -1329,8 +1384,8 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
       check_token(tokenList, hc.parser.index + 1, token_type.decrement)
     ) {
       return parser_parse_prepostfix(tokenList, false);
-      // } else if (check_token(tokenList, hc.parser.index + 1, token_type.dot)) {
-
+    } else if (check_token(tokenList, hc.parser.index + 1, token_type.dot)) {
+      return parser_parse_class_assig(tokenList, prototypeIndex);
     } else {
       let ast = parser_parse_call(tokenList);
       list_eat(tokenList, token_type.semi);
@@ -1342,6 +1397,7 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
   ast.token = tokenList[hc.parser.index];
   list_eat_type(tokenList);
 
+
   if (hc.symtab.prototypes.findIndex(e => e.id === tokenList[hc.parser.index].id) < 0) {
     if (!prototypeIndex) {
       check_symtab(tokenList, false);
@@ -1350,7 +1406,7 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
     check_symtab(tokenList, true);
   }
 
-  let symtabNode = tokenList[hc.parser.index];
+  const symtabNode = tokenList[hc.parser.index];
 
   ast.left = new AstNode(token_type.id);
   ast.left.token = tokenList[hc.parser.index];
