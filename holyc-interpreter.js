@@ -2247,10 +2247,12 @@ const output_out_block = (walk, expList, prototypeIndex) => {
       }
       break;
     case token_type.if:
-      output_out_ifelse(walk, expList, prototypeIndex);
+      const ifElseVal = output_out_ifelse(walk, expList, prototypeIndex);
+      if (ifElseVal === "{RETURN}") return ifElseVal;
       break;
     case token_type.for:
-      output_out_for(walk, expList, prototypeIndex);
+      const forVal = output_out_for(walk, expList, prototypeIndex);
+      if (forVal === "{RETURN}") return forVal;
       break;
     case token_type.str:
       printf(walk, prototypeIndex);
@@ -2261,13 +2263,13 @@ const output_out_block = (walk, expList, prototypeIndex) => {
       break;
     case token_type.return:
       output_out_return(walk, expList, prototypeIndex);
-      return;
+      return "{RETURN}";
     default:
       break;
   }
 
   output_out_block(walk.right, expList, prototypeIndex);
-  output_out_block(walk.next, expList, prototypeIndex);
+  return output_out_block(walk.next, expList, prototypeIndex);
 };
 
 /**
@@ -2282,15 +2284,18 @@ const output_out_ifelse = (ast, expList, prototypeIndex) => {
     elseBlock = ast.left.left.left.left.right;
   }
 
+  let outBlockVal = '';
   if (logical) {
-    output_out_block(ast.left.left.left.right, expList, prototypeIndex);
+    outBlockVal = output_out_block(ast.left.left.left.right, expList, prototypeIndex);
   } else if (elseBlock) {
-    output_out_block(elseBlock, expList, prototypeIndex);
+    outBlockVal = output_out_block(elseBlock, expList, prototypeIndex);
   }
 
   if (!logical && ast?.left?.left?.left?.next?.token.type === token_type.if) {
     output_out_ifelse(ast.left.left.left.next, expList);
   }
+
+  return outBlockVal;
 };
 
 /**
@@ -2316,22 +2321,27 @@ const output_out_for = (ast, expList, prototypeIndex) => {
     iterateValue = 1;
   }
 
+  let blockVal = '';
   switch (cond.type) {
     case token_type.less:
       for (let i = val; i < condVal; i += iterateValue) {
-        output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
+        blockVal = output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
+		if (blockVal === "{RETURN}") return blockVal;
         hc.symtab.global[symTabI].value =
           parseInt(hc.symtab.global[symTabI].value) + iterateValue;
       }
       break;
     case token_type.big:
       for (let i = val; i > condVal; i += iterateValue) {
-        output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
+        blockVal = output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
+		if (blockVal === "{RETURN}") return blockVal;
         hc.symtab.global[symTabI].value =
           parseInt(hc.symtab.global[symTabI].value) + iterateValue;
       }
       break;
   }
+
+  return blockVal;
 };
 
 /**
