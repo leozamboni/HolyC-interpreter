@@ -104,6 +104,7 @@ let hc = {
   symtab: {
     interactive: false,
     global: [],
+    scope: [],
     prototypes: [],
     class: [],
     types: [],
@@ -365,6 +366,7 @@ const init_hc = (inpStdin) => {
   !hc.symtab.interactive && (hc.symtab.global = []);
   !hc.symtab.interactive && (hc.symtab.prototypes = []);
   !hc.symtab.interactive && (hc.symtab.class = []);
+  !hc.symtab.interactive && (hc.symtab.scope = []);
 
   if (!hc.files.stdin) {
     hc.files.stderr += "Compile failure\nLexer: nothing to compile\n";
@@ -1397,13 +1399,11 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
   ast.token = tokenList[hc.parser.index];
   list_eat_type(tokenList);
 
-
-  if (hc.symtab.prototypes.findIndex(e => e.id === tokenList[hc.parser.index].id) < 0) {
-    if (!prototypeIndex) {
-      check_symtab(tokenList, false);
-    }
+  if (prototypeIndex && hc.symtab.prototypes[prototypeIndex - 1]?.args?.find(e => e.id === tokenList[hc.parser.index].id)
+  || prototypeIndex && hc.symtab.scope[prototypeIndex - 1]?.find(e => e.id === tokenList[hc.parser.index].id)) {
+    parser_error(tokenList[hc.parser.index]);
   } else {
-    check_symtab(tokenList, true);
+    check_symtab(tokenList, false);
   }
 
   const symtabNode = tokenList[hc.parser.index];
@@ -1413,13 +1413,23 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
   list_eat(tokenList, token_type.id);
 
   if (check_token(tokenList, hc.parser.index, token_type.semi)) {
-    hc.symtab.global.push({ ...symtabNode, value: 0 });
+    if (prototypeIndex) {
+		!hc.symtab.scope[prototypeIndex - 1] && (hc.symtab.scope[prototypeIndex - 1] = []); 
+		hc.symtab.scope[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
+	} else {
+		hc.symtab.global.push({ ...symtabNode, value: 0 });
+	}
 
     ast.left.left = new AstNode(token_type.semi);
     ast.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.semi);
   } else if (check_token(tokenList, hc.parser.index, token_type.comma)) {
-    hc.symtab.global.push({ ...symtabNode, value: 0 });
+    if (prototypeIndex) {
+		!hc.symtab.scope[prototypeIndex - 1] && (hc.symtab.scope[prototypeIndex - 1] = []); 
+		hc.symtab.scope[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
+	} else {
+		hc.symtab.global.push({ ...symtabNode, value: 0 });
+	}
 
     ast.left.left = new AstNode(token_type.comma);
     ast.left.left.token = tokenList[hc.parser.index];
@@ -1431,7 +1441,12 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
     ast.left.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.semi);
   } else if (check_token(tokenList, hc.parser.index, token_type.assig)) {
-    hc.symtab.global.push({ ...symtabNode, value: 0 });
+    if (prototypeIndex) {
+		!hc.symtab.scope[prototypeIndex - 1] && (hc.symtab.scope[prototypeIndex - 1] = []); 
+		hc.symtab.scope[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
+	} else {
+		hc.symtab.global.push({ ...symtabNode, value: 0 });
+	}
 
     ast.right = parser_parse_exp(tokenList, false, prototypeIndex);
 
