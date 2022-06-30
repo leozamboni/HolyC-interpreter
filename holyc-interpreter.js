@@ -1986,7 +1986,7 @@ const output_out_math_exp = (first, ast) => {
  * @arg {object} ast
  * @arg {boolean} inside
  */
-const output_out_logical_exp = (ast, inside) => {
+const output_out_logical_exp = (ast, inside, prototypeIndex) => {
   let first;
   let walk;
   let value = {
@@ -2009,7 +2009,14 @@ const output_out_logical_exp = (ast, inside) => {
   }
 
   if (first.type === token_type.id) {
-    value.number = parseInt(hc.symtab.global[get_symtab(first)].value);
+    let token;
+    if ((token = hc.symtab.prototypes[prototypeIndex]?.args?.find(e => e.id === first.id))) {
+      value.number = parseInt(token.value);
+    } else if ((token = hc.symtab.scoped[prototypeIndex]?.findIndex(e => e.id === first.id))) {
+      value.number = parseInt(token.value);
+    } else {
+      value.number = parseInt(hc.symtab.global[get_symtab(first)].value);
+    }
   } else {
     value.number = parseInt(first.id);
   }
@@ -2091,7 +2098,7 @@ const output_out_logical_exp = (ast, inside) => {
         value.number = tokenValue;
         break;
       case token_type.or:
-        const inside = output_out_logical_exp(walk, true);
+        const inside = output_out_logical_exp(walk, true, prototypeIndex);
         value.boolean = value.boolean || inside ? true : false;
         while (walk) {
           walk = walk.right;
@@ -2129,7 +2136,7 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
   let prototypeArgIndex = -1;
   let procedureToken;
 
-  if (check_ast_type(ast.token.type, "data_type")) {
+  if (check_ast_type(ast?.token.type, "data_type")) {
     procedureToken = ast.left.token
     if (prototypeIndex + 1 && hc.symtab.prototypes[prototypeIndex]?.args?.find(e => e.id === procedureToken.id)
       || hc.symtab.scoped[prototypeIndex]?.find(e => e.id === procedureToken.id)) {
@@ -2140,7 +2147,7 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
     } else {
       symTabI = get_symtab(ast.left.token);
     }
-  } else {
+  } else if (ast?.token) {
     procedureToken = ast.token
     if (prototypeIndex + 1 && hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === procedureToken.id)
       || hc.symtab.scoped[prototypeIndex]?.find(e => e.id === procedureToken.id)) {
@@ -2153,6 +2160,8 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
         symTabI = get_symtab(ast.token);
       }
     }
+  } else {
+    return;
   }
 
   let value;
@@ -2392,7 +2401,6 @@ const output_out_block = (walk, expList, prototypeIndex) => {
       break;
     case token_type.call:
       output_out_procedures(walk, expList)
-      //output_out_call(output_out_get_ast(expList, walk.token), expList);
       break;
     case token_type.return:
       output_out_return(walk, expList, prototypeIndex);
@@ -2410,7 +2418,7 @@ const output_out_block = (walk, expList, prototypeIndex) => {
  * @arg {object} ast
  */
 const output_out_ifelse = (ast, expList, prototypeIndex) => {
-  const logical = output_out_logical_exp(ast, false);
+  const logical = output_out_logical_exp(ast, false, prototypeIndex);
 
   let elseBlock;
   if (ast.left?.left?.left?.left) {
@@ -2612,7 +2620,8 @@ const printf = (ast, prototypeIndex) => {
       }
     }
   }
-
+  str = str.replace(/undefined/g, 'NULL');
+  str = str.replace(/null/g, 'NULL');
   hc.files.stdout += str.replace(/\\n|\\t/g, (e) => {
     switch (e) {
       case "\\r":
