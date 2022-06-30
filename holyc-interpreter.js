@@ -104,7 +104,7 @@ let hc = {
   symtab: {
     interactive: false,
     global: [],
-    scope: [],
+    scoped: [],
     prototypes: [],
     class: [],
     types: [],
@@ -366,7 +366,7 @@ const init_hc = (inpStdin) => {
   !hc.symtab.interactive && (hc.symtab.global = []);
   !hc.symtab.interactive && (hc.symtab.prototypes = []);
   !hc.symtab.interactive && (hc.symtab.class = []);
-  !hc.symtab.interactive && (hc.symtab.scope = []);
+  !hc.symtab.interactive && (hc.symtab.scoped = []);
 
   if (!hc.files.stdin) {
     hc.files.stderr += "Compile failure\nLexer: nothing to compile\n";
@@ -840,7 +840,9 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
 
   let ast;
 
-  if (hc.symtab.prototypes.find(e => e.id === tokenList[hc.parser.index].id)) {
+  if (hc.symtab.prototypes.find(e => e.id === tokenList[hc.parser.index].id)
+    && !check_token(tokenList, hc.parser.index - 1, token_type.number)
+    && !check_token(tokenList, hc.parser.index - 1, token_type.id)) {
     return parser_parse_call(tokenList)
   } else if (
     check_token(tokenList, hc.parser.index - 1, token_type.id) ||
@@ -872,20 +874,26 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
       let procedureArg;
       if (prototypeIndex) {
         procedureArg = hc.symtab.prototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[hc.parser.index].id)
+        if (!procedureArg) {
+          procedureArg = hc.symtab.scoped[prototypeIndex - 1]?.find(e => e.id === tokenList[hc.parser.index].id)
+        }
       } else {
         procedureArg = hc.symtab.prototypes.find(e => e.id === tokenList[hc.parser.index].id)
       }
+
       !procedureArg && check_symtab(tokenList, true);
 
       ast = new AstNode(token_type.id);
       ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.id);
     } else {
-      hc.symtab.global[get_symtab(tokenList[hc.parser.index - 2])] = {
-        id: tokenList[hc.parser.index - 2].id,
-        line: tokenList[hc.parser.index - 2].line,
-        const: tokenList[hc.parser.index].id,
-      };
+      if (!prototypeIndex) {
+        hc.symtab.global[get_symtab(tokenList[hc.parser.index - 2])] = {
+          id: tokenList[hc.parser.index - 2].id,
+          line: tokenList[hc.parser.index - 2].line,
+          value: tokenList[hc.parser.index].id,
+        };
+      }
 
       if (check_token(tokenList, hc.parser.index, token_type.true)) {
         hc.symtab.global[get_symtab(tokenList[hc.parser.index - 2])].value = 1;
@@ -909,10 +917,18 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
         list_eat(tokenList, token_type.number);
       }
     }
-  } else if (is_mathop(tokenList, hc.parser.index - 1) || check_token(tokenList, hc.parser.index - 1, token_type.return)) {
+  } else if (is_mathop(tokenList, hc.parser.index - 1)
+    || check_token(tokenList, hc.parser.index - 1, token_type.return)) {
     if (check_token(tokenList, hc.parser.index, token_type.id)) {
       let procedureArg;
-      prototypeIndex && (procedureArg = hc.symtab.prototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[hc.parser.index].id))
+      if (prototypeIndex) {
+        procedureArg = hc.symtab.prototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[hc.parser.index].id)
+        if (!procedureArg) {
+          procedureArg = hc.symtab.scoped[prototypeIndex - 1]?.find(e => e.id === tokenList[hc.parser.index].id)
+        }
+      } else {
+        procedureArg = hc.symtab.prototypes.find(e => e.id === tokenList[hc.parser.index].id)
+      }
       !procedureArg && check_symtab(tokenList, true);
 
       ast = new AstNode(token_type.id);
@@ -925,7 +941,14 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
     }
   } else if (check_token(tokenList, hc.parser.index, token_type.id)) {
     let procedureArg;
-    prototypeIndex && (procedureArg = hc.symtab.prototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[hc.parser.index].id))
+    if (prototypeIndex) {
+      procedureArg = hc.symtab.prototypes[prototypeIndex - 1].args.find(e => e.id === tokenList[hc.parser.index].id)
+      if (!procedureArg) {
+        procedureArg = hc.symtab.scoped[prototypeIndex - 1]?.find(e => e.id === tokenList[hc.parser.index].id)
+      }
+    } else {
+      procedureArg = hc.symtab.prototypes.find(e => e.id === tokenList[hc.parser.index].id)
+    }
     !procedureArg && check_symtab(tokenList, true);
 
     ast = new AstNode(token_type.id);
@@ -1241,7 +1264,7 @@ const parser_parse_call = (tokenList) => {
  * semantic analysis of inline variables declaration
  * @arg {array} tokenList
  */
-const parser_parse_inline_vars = (tokenList, classId) => {
+const parser_parse_inline_vars = (tokenList, classId, prototypeIndex) => {
   if (
     check_token(tokenList, hc.parser.index, token_type.semi) &&
     !check_token(tokenList, hc.parser.index - 1, token_type.comma)
@@ -1259,11 +1282,13 @@ const parser_parse_inline_vars = (tokenList, classId) => {
   if (check_token(tokenList, hc.parser.index, token_type.assig)) {
     if (classId) {
       hc.symtab.class[classId - 1].content.push({ ...symtabNode, value: 0 });
+    } else if (prototypeIndex) {
+      hc.symtab.scoped[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
     } else {
       hc.symtab.global.push({ ...symtabNode, value: 0 });
     }
 
-    ast.left = parser_parse_exp(tokenList, false);
+    ast.left = parser_parse_exp(tokenList, false, prototypeIndex);
 
     if (!check_token(tokenList, hc.parser.index, token_type.semi)) {
       ast.left.left = new AstNode(token_type.comma);
@@ -1273,6 +1298,8 @@ const parser_parse_inline_vars = (tokenList, classId) => {
   } else if (!check_token(tokenList, hc.parser.index, token_type.semi)) {
     if (classId) {
       hc.symtab.class[classId - 1].content.push({ ...symtabNode, value: 0 });
+    } else if (prototypeIndex) {
+      hc.symtab.scoped[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
     } else {
       hc.symtab.global.push({ ...symtabNode, value: 0 });
     }
@@ -1283,12 +1310,14 @@ const parser_parse_inline_vars = (tokenList, classId) => {
   } else {
     if (classId) {
       hc.symtab.class[classId - 1].content.push({ ...symtabNode, value: 0 });
+    } else if (prototypeIndex) {
+      hc.symtab.scoped[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
     } else {
       hc.symtab.global.push({ ...symtabNode, value: 0 });
     }
   }
 
-  ast.right = parser_parse_inline_vars(tokenList, classId);
+  ast.right = parser_parse_inline_vars(tokenList, classId, prototypeIndex);
 
   return ast;
 };
@@ -1400,7 +1429,7 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
   list_eat_type(tokenList);
 
   if (prototypeIndex && hc.symtab.prototypes[prototypeIndex - 1]?.args?.find(e => e.id === tokenList[hc.parser.index].id)
-  || prototypeIndex && hc.symtab.scope[prototypeIndex - 1]?.find(e => e.id === tokenList[hc.parser.index].id)) {
+    || prototypeIndex && hc.symtab.scoped[prototypeIndex - 1]?.find(e => e.id === tokenList[hc.parser.index].id)) {
     parser_error(tokenList[hc.parser.index]);
   } else {
     check_symtab(tokenList, false);
@@ -1414,22 +1443,22 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
 
   if (check_token(tokenList, hc.parser.index, token_type.semi)) {
     if (prototypeIndex) {
-		!hc.symtab.scope[prototypeIndex - 1] && (hc.symtab.scope[prototypeIndex - 1] = []); 
-		hc.symtab.scope[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
-	} else {
-		hc.symtab.global.push({ ...symtabNode, value: 0 });
-	}
+      !hc.symtab.scoped[prototypeIndex - 1] && (hc.symtab.scoped[prototypeIndex - 1] = []);
+      hc.symtab.scoped[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
+    } else {
+      hc.symtab.global.push({ ...symtabNode, value: 0 });
+    }
 
     ast.left.left = new AstNode(token_type.semi);
     ast.left.left.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.semi);
   } else if (check_token(tokenList, hc.parser.index, token_type.comma)) {
     if (prototypeIndex) {
-		!hc.symtab.scope[prototypeIndex - 1] && (hc.symtab.scope[prototypeIndex - 1] = []); 
-		hc.symtab.scope[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
-	} else {
-		hc.symtab.global.push({ ...symtabNode, value: 0 });
-	}
+      !hc.symtab.scoped[prototypeIndex - 1] && (hc.symtab.scoped[prototypeIndex - 1] = []);
+      hc.symtab.scoped[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
+    } else {
+      hc.symtab.global.push({ ...symtabNode, value: 0 });
+    }
 
     ast.left.left = new AstNode(token_type.comma);
     ast.left.left.token = tokenList[hc.parser.index];
@@ -1442,11 +1471,11 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
     list_eat(tokenList, token_type.semi);
   } else if (check_token(tokenList, hc.parser.index, token_type.assig)) {
     if (prototypeIndex) {
-		!hc.symtab.scope[prototypeIndex - 1] && (hc.symtab.scope[prototypeIndex - 1] = []); 
-		hc.symtab.scope[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
-	} else {
-		hc.symtab.global.push({ ...symtabNode, value: 0 });
-	}
+      !hc.symtab.scoped[prototypeIndex - 1] && (hc.symtab.scoped[prototypeIndex - 1] = []);
+      hc.symtab.scoped[prototypeIndex - 1].push({ ...symtabNode, value: 0 });
+    } else {
+      hc.symtab.global.push({ ...symtabNode, value: 0 });
+    }
 
     ast.right = parser_parse_exp(tokenList, false, prototypeIndex);
 
@@ -1455,7 +1484,7 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
       ast.left.left.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.comma);
 
-      ast.left.right = parser_parse_inline_vars(tokenList);
+      ast.left.right = parser_parse_inline_vars(tokenList, null, prototypeIndex);
 
       ast.left.left.left = new AstNode(token_type.semi);
       ast.left.left.left.token = tokenList[hc.parser.index];
@@ -1531,7 +1560,7 @@ const parser_parse_id = (tokenList, prototypeIndex) => {
  * @arg {array} tokenList
  * @arg {boolean} block
  */
-const parser_parse_prepostfix = (tokenList, block) => {
+const parser_parse_prepostfix = (tokenList, block, prototypeIndex) => {
   let ast;
 
   if (is_mathop(tokenList, hc.parser.index)) {
@@ -1545,13 +1574,33 @@ const parser_parse_prepostfix = (tokenList, block) => {
       list_eat_math(tokenList);
     }
 
-    check_symtab(tokenList, true);
+    if (prototypeIndex) {
+      let token = hc.symtab.prototypes[prototypeIndex]?.args?.findIndex(e => e.id === tokenList[hc.parser.index])
+      if (token < 0) {
+        token = hc.symtab.scoped[prototypeIndex].findIndex(e => e.id === tokenList[hc.parser.index])
+        if (token < 0) {
+          parser_error(tokenList[hc.parser.index])
+        }
+      }
+    } else {
+      check_symtab(tokenList, true);
+    }
 
     ast.right = new AstNode(token_type.id);
     ast.right.token = tokenList[hc.parser.index];
     list_eat(tokenList, token_type.id);
   } else {
-    check_symtab(tokenList, true);
+    if (prototypeIndex) {
+      let token = hc.symtab.prototypes[prototypeIndex]?.args?.findIndex(e => e.id === tokenList[hc.parser.index])
+      if (token < 0) {
+        token = hc.symtab.scoped[prototypeIndex].findIndex(e => e.id === tokenList[hc.parser.index])
+        if (token < 0) {
+          parser_error(tokenList[hc.parser.index])
+        }
+      }
+    } else {
+      check_symtab(tokenList, true);
+    }
 
     ast = new AstNode(token_type.id);
     ast.token = tokenList[hc.parser.index];
@@ -1581,7 +1630,7 @@ const parser_parse_prepostfix = (tokenList, block) => {
  * semantic analysis of if else statement
  * @arg {array} tokenList
  */
-const parser_parse_ifelse = (tokenList) => {
+const parser_parse_ifelse = (tokenList, prototypeIndex) => {
   let ast = new AstNode(token_type.if);
   ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.if);
@@ -1611,7 +1660,10 @@ const parser_parse_ifelse = (tokenList) => {
     };
     list_eat(tokenList, token_type.false);
   } else {
-    check_symtab(tokenList, true);
+    if (!hc.symtab.prototypes[prototypeIndex - 1]?.args?.find(e => e.id === tokenList[hc.parser.index].id)
+      && !hc.symtab.scoped[prototypeIndex - 1]?.find(e => e.id === tokenList[hc.parser.index].id)) {
+      check_symtab(tokenList, true);
+    }
 
     ast.left.left = new AstNode(token_type.id);
     ast.left.left.token = tokenList[hc.parser.index];
@@ -1664,7 +1716,7 @@ const parser_parse_ifelse = (tokenList) => {
  * semantic analysis of for statement
  * @arg {array} tokenList
  */
-const parser_parse_for = (tokenList) => {
+const parser_parse_for = (tokenList, prototypeIndex) => {
   let ast = new AstNode(token_type.for);
   ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.for);
@@ -1673,19 +1725,39 @@ const parser_parse_for = (tokenList) => {
   ast.next.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.rparen);
 
-  check_symtab(tokenList, true);
+  if (prototypeIndex) {
+    let token = hc.symtab.prototypes[prototypeIndex]?.args?.findIndex(e => e.id === tokenList[hc.parser.index])
+    if (token < 0) {
+      token = hc.symtab.scoped[prototypeIndex].findIndex(e => e.id === tokenList[hc.parser.index])
+      if (token < 0) {
+        parser_error(tokenList[hc.parser.index])
+      }
+    }
+  } else {
+    check_symtab(tokenList, true);
+  }
 
   ast.left = new AstNode(token_type.id);
   ast.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.id);
 
-  ast.right = parser_parse_exp(tokenList, false);
+  ast.right = parser_parse_exp(tokenList, false, prototypeIndex);
 
   ast.left.left = new AstNode(token_type.semi);
   ast.left.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.semi);
 
-  check_symtab(tokenList, true);
+  if (prototypeIndex) {
+    let token = hc.symtab.prototypes[prototypeIndex]?.args?.findIndex(e => e.id === tokenList[hc.parser.index])
+    if (token < 0) {
+      token = hc.symtab.scoped[prototypeIndex].findIndex(e => e.id === tokenList[hc.parser.index])
+      if (token < 0) {
+        parser_error(tokenList[hc.parser.index])
+      }
+    }
+  } else {
+    check_symtab(tokenList, true);
+  }
 
   ast.left.left.left = new AstNode(token_type.id);
   ast.left.left.left.token = tokenList[hc.parser.index];
@@ -1711,7 +1783,8 @@ const parser_parse_for = (tokenList) => {
   ) {
     ast.left.left.left.left.left.left.left = parser_parse_prepostfix(
       tokenList,
-      true
+      true,
+      prototypeIndex
     );
   } else {
     check_symtab(tokenList, true);
@@ -1722,7 +1795,8 @@ const parser_parse_for = (tokenList) => {
 
     ast.left.left.left.left.left.left.left = parser_parse_exp(
       tokenList,
-      true
+      true,
+      prototypeIndex
     );
   }
 
@@ -1734,7 +1808,7 @@ const parser_parse_for = (tokenList) => {
   ast.left.left.left.left.left.left.next.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.rbrace);
 
-  ast.left.left.left.left.left.left.right = parser_parse_block(tokenList);
+  ast.left.left.left.left.left.left.right = parser_parse_block(tokenList, prototypeIndex);
 
   ast.left.left.left.left.left.left.next.next = new AstNode(token_type.lbrace);
   ast.left.left.left.left.left.left.next.next.token = tokenList[hc.parser.index];
@@ -1776,10 +1850,10 @@ const parser_parse_block = (tokenList, prototypeIndex) => {
       ast = parser_parse_str(tokenList);
       break;
     case token_type.for:
-      ast = parser_parse_for(tokenList);
+      ast = parser_parse_for(tokenList, prototypeIndex);
       break;
     case token_type.if:
-      ast = parser_parse_ifelse(tokenList);
+      ast = parser_parse_ifelse(tokenList, prototypeIndex);
       break;
     case token_type.return:
       ast = parser_parse_return(tokenList, prototypeIndex);
@@ -2052,20 +2126,28 @@ const output_out_logical_exp = (ast, inside) => {
 const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => {
   if (ast?.left?.left?.token.id === "(") return;
   let symTabI = -1;
-  let prototypeArgIndex = 0;
+  let prototypeArgIndex = -1;
   let procedureToken;
 
   if (check_ast_type(ast.token.type, "data_type")) {
     procedureToken = ast.left.token
-    if (prototypeIndex + 1 && hc.symtab.prototypes[prototypeIndex]?.args?.find(e => e.id === procedureToken.id)) {
+    if (prototypeIndex + 1 && hc.symtab.prototypes[prototypeIndex]?.args?.find(e => e.id === procedureToken.id)
+      || hc.symtab.scoped[prototypeIndex]?.find(e => e.id === procedureToken.id)) {
       prototypeArgIndex = hc.symtab.prototypes[prototypeIndex]?.args.findIndex(e => e.id === procedureToken.id)
+      if (prototypeArgIndex < 0) {
+        prototypeArgIndex = hc.symtab.scoped[prototypeIndex].findIndex(e => e.id === procedureToken.id)
+      }
     } else {
       symTabI = get_symtab(ast.left.token);
     }
   } else {
     procedureToken = ast.token
-    if (prototypeIndex + 1 && hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === procedureToken.id)) {
+    if (prototypeIndex + 1 && hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === procedureToken.id)
+      || hc.symtab.scoped[prototypeIndex]?.find(e => e.id === procedureToken.id)) {
       prototypeArgIndex = hc.symtab.prototypes[prototypeIndex]?.args.findIndex(e => e.id === procedureToken.id)
+      if (prototypeArgIndex < 0) {
+        prototypeArgIndex = hc.symtab.scoped[prototypeIndex].findIndex(e => e.id === procedureToken.id)
+      }
     } else {
       if (ast.token.type === token_type.id) {
         symTabI = get_symtab(ast.token);
@@ -2102,7 +2184,8 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           value /= parseInt(walk.right.token.id);
         } else {
           let procedureArg;
-          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
+          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))
+            || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === walk.right.token.id))) {
             value /= parseInt(procedureArg.value);
           } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
@@ -2112,7 +2195,13 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? hc.symtab.global[symTabI].value = value : hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          if (symTabI >= 0) {
+            hc.symtab.global[symTabI].value = value
+          } else if (hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex]?.id === procedureToken.id) {
+            hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value
+          } else {
+            hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = value
+          }
         }
         break;
       case token_type.mul:
@@ -2121,7 +2210,8 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           value *= parseInt(walk.right.token.id);
         } else {
           let procedureArg;
-          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
+          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))
+            || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === walk.right.token.id))) {
             value += parseInt(procedureArg.value);
           } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
@@ -2131,7 +2221,13 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? hc.symtab.global[symTabI].value = value : hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          if (symTabI >= 0) {
+            hc.symtab.global[symTabI].value = value
+          } else if (hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex]?.id === procedureToken.id) {
+            hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value
+          } else {
+            hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = value
+          }
         }
         break;
       case token_type.assig:
@@ -2139,7 +2235,9 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           value = parseInt(walk.right.token.id);
         } else {
           let procedureArg;
-          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
+          if (prototypeIndex + 1
+            && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))
+            || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === walk.right.token.id))) {
             value = parseInt(procedureArg.value);
           } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
@@ -2149,7 +2247,13 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? hc.symtab.global[symTabI].value = value : hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          if (symTabI >= 0) {
+            hc.symtab.global[symTabI].value = value
+          } else if (hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex]?.id === procedureToken.id) {
+            hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value
+          } else {
+            hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = value
+          }
         }
         break;
       case token_type.assingsum:
@@ -2158,7 +2262,8 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           value += parseInt(walk.right.token.id);
         } else {
           let procedureArg;
-          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
+          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))
+            || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === walk.right.token.id))) {
             value += parseInt(procedureArg.value);
           } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
@@ -2168,7 +2273,13 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? hc.symtab.global[symTabI].value = value : hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          if (symTabI >= 0) {
+            hc.symtab.global[symTabI].value = value
+          } else if (hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex]?.id === procedureToken.id) {
+            hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value
+          } else {
+            hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = value
+          }
         }
         break;
       case token_type.assingsub:
@@ -2177,7 +2288,8 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           value -= parseInt(walk.right.token.id);
         } else {
           let procedureArg;
-          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))) {
+          if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))
+            || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === walk.right.token.id))) {
             value -= parseInt(procedureArg.value);
           } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
@@ -2187,7 +2299,13 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           }
         }
         if (!procedureReturn) {
-          symTabI >= 0 ? hc.symtab.global[symTabI].value = value : hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value;
+          if (symTabI >= 0) {
+            hc.symtab.global[symTabI].value = value
+          } else if (hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex]?.id === procedureToken.id) {
+            hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value
+          } else {
+            hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = value
+          }
         }
         break
       case token_type.semi:
@@ -2319,7 +2437,13 @@ const output_out_ifelse = (ast, expList, prototypeIndex) => {
  * @arg {array} expList
  */
 const output_out_for = (ast, expList, prototypeIndex) => {
-  const symTabI = get_symtab(ast.left.token);
+  let symTabI = get_symtab(ast.left.token);
+  if (!symTabI) {
+    symTabI = hc.symtab.prototypes[prototypeIndex]?.args?.findIndex(e => e.id === ast.left.token.id)
+    if (symTabI < 0) {
+      symTabI = hc.symtab.scoped[prototypeIndex]?.findIndex(e => e.id === ast.left.token.id)
+    }
+  }
   const val = parseInt(ast.right.right.token.id);
   const cond = ast.left.left.left.left.token;
   const condVal = parseInt(ast.left.left.left.left.left.token.id);
@@ -2341,17 +2465,33 @@ const output_out_for = (ast, expList, prototypeIndex) => {
     case token_type.less:
       for (let i = val; i < condVal; i += iterateValue) {
         blockVal = output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
-		if (blockVal === "{RETURN}") return blockVal;
-        hc.symtab.global[symTabI].value =
-          parseInt(hc.symtab.global[symTabI].value) + iterateValue;
+        if (blockVal === "{RETURN}") return blockVal;
+        if (hc.symtab.global[symTabI]?.id === ast.left.token.id) {
+          hc.symtab.global[symTabI].value =
+            parseInt(hc.symtab.global[symTabI].value) + iterateValue;
+        } else if (hc.symtab.prototypes[prototypeIndex]?.args[symTabI]?.id === ast.left.token.id) {
+          hc.symtab.prototypes[prototypeIndex].args[symTabI].value =
+            parseInt(hc.symtab.prototypes[prototypeIndex].args[symTabI].value) + iterateValue;
+        } else {
+          hc.symtab.scoped[prototypeIndex][symTabI].value =
+            parseInt(hc.symtab.scoped[prototypeIndex][symTabI]) + iterateValue;
+        }
       }
       break;
     case token_type.big:
       for (let i = val; i > condVal; i += iterateValue) {
         blockVal = output_out_block(ast.left.left.left.left.left.left.right, expList, prototypeIndex);
-		if (blockVal === "{RETURN}") return blockVal;
-        hc.symtab.global[symTabI].value =
-          parseInt(hc.symtab.global[symTabI].value) + iterateValue;
+        if (blockVal === "{RETURN}") return blockVal;
+        if (hc.symtab.global[symTabI]?.id === ast.left.token.id) {
+          hc.symtab.global[symTabI].value =
+            parseInt(hc.symtab.global[symTabI].value) + iterateValue;
+        } else if (hc.symtab.prototypes[prototypeIndex]?.args[symTabI]?.id === ast.left.token.id) {
+          hc.symtab.prototypes[prototypeIndex].args[symTabI].value =
+            parseInt(hc.symtab.prototypes[prototypeIndex].args[symTabI].value) + iterateValue;
+        } else {
+          hc.symtab.scoped[prototypeIndex][symTabI].value =
+            parseInt(hc.symtab.scoped[prototypeIndex][symTabI]) + iterateValue;
+        }
       }
       break;
   }
@@ -2399,54 +2539,54 @@ const output_out_return = (ast, expList, prototypeIndex) => {
  */
 const output = (expList) => {
   if (!expList) return hc.files.stdout;
-  try {
+  // try {
 
-    let expListAux = expList;
+  let expListAux = expList;
 
-    do {
-      switch (expListAux.ast.type) {
-        case token_type.bool:
-        case token_type.i0:
-        case token_type.u0:
-        case token_type.i8:
-        case token_type.u8:
-        case token_type.i16:
-        case token_type.u16:
-        case token_type.i32:
-        case token_type.u32:
-        case token_type.i64:
-        case token_type.u64:
-        case token_type.f64:
-        case token_type.id:
-          output_out_exp(expListAux.ast, expList);
-          break;
-        case token_type.if:
-          output_out_ifelse(expListAux.ast, expList);
-          break;
-        case token_type.for:
-          output_out_for(expListAux.ast, expList);
-          break;
-        case token_type.str:
-          let walk = expListAux.ast;
-          do {
-            printf(walk);
-            walk = walk.right;
-          } while (walk);
-          break;
-        case token_type.call:
-          output_out_procedures(expListAux.ast, expList)
-          break;
-        default:
-          break;
-      }
+  do {
+    switch (expListAux.ast.type) {
+      case token_type.bool:
+      case token_type.i0:
+      case token_type.u0:
+      case token_type.i8:
+      case token_type.u8:
+      case token_type.i16:
+      case token_type.u16:
+      case token_type.i32:
+      case token_type.u32:
+      case token_type.i64:
+      case token_type.u64:
+      case token_type.f64:
+      case token_type.id:
+        output_out_exp(expListAux.ast, expList);
+        break;
+      case token_type.if:
+        output_out_ifelse(expListAux.ast, expList);
+        break;
+      case token_type.for:
+        output_out_for(expListAux.ast, expList);
+        break;
+      case token_type.str:
+        let walk = expListAux.ast;
+        do {
+          printf(walk);
+          walk = walk.right;
+        } while (walk);
+        break;
+      case token_type.call:
+        output_out_procedures(expListAux.ast, expList)
+        break;
+      default:
+        break;
+    }
 
-      expListAux = expListAux.next;
-    } while (expListAux);
+    expListAux = expListAux.next;
+  } while (expListAux);
 
-    return hc.files.stdout;
-  } catch (err) {
-    internal_error(err);
-  }
+  return hc.files.stdout;
+  // } catch (err) {
+  //   internal_error(err);
+  // }
 };
 
 /**
@@ -2461,7 +2601,8 @@ const printf = (ast, prototypeIndex) => {
   let str = ast.token.id;
   if (ast.token.id.includes("%")) {
     let procedureArg;
-    if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === ast.left.right.token.id))) {
+    if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === ast.left.right.token.id))
+      || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === ast.left.right.token.id))) {
       str = str.replace("%d", procedureArg.value);
     } else {
       if (ast.left.right.token.type === token_type.number) {
