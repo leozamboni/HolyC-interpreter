@@ -2,224 +2,218 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HolyC Interpreter</title>
-    <script src="holyc-highlighter/holyc-highlighter.js"></script>
-    <script type="module">
-        import { holyc_web_run } from "./holyc-interpreter.js"
-        window.holyc_web_run = holyc_web_run;
-    </script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            font-family: monospace;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="holyc-highlighter/holyc-highlighter.js"></script>
+  <script type="module">
+    import { holyc_web_run } from "./holyc-interpreter.js"
+    window.holyc_web_run = holyc_web_run;
+  </script>
+  <style>
+    :root {
+      --border-color: #0000AA;
+    }
 
-        main {
-            font-size: 10pt;
-        }
+    @font-face {
+      font-family: 'templeos_font';
+      src: url('./templeos_font.ttf');
+    }
 
-        body {
-            text-align: center;
-        }
+    * {
+      padding: 0;
+      margin: 0;
+    }
 
-        em {
-            padding: 0 1ex;
-            border: dotted 1px #888;
-        }
+    em {
+      padding: 0 1ex;
+      border: dotted 1px #888;
+    }
 
-        .text-container {
-            text-align: justify;
-            display: table;
-            left: 25%;
-            position: relative;
-        }
+    .stdin,
+    .stdout,
+    .highlight {
+      outline: none;
+      border-style: double;
+      border-width: 8px;
+      border-color: var(--border-color);
+      font-size: 10px;
+      font-family: 'templeos_font';
+    }
 
-        .stdin,
-        .highlight {
-            width: 50vw;
-            height: 40vh;
-            position: absolute;
-        }
+    .stdin {
+      color: transparent;
+      caret-color: black;
+      white-space: break-spaces;
+    }
 
-        .stdin {
-            background-color: #55FFFF;
-            resize: none;
-            text-align: left;
-            color: transparent;
-            caret-color: black;
-            white-space: break-spaces;
-            outline: 5px solid #0000AA;
-            border: 0px;
-        }
+    .highlight {
+      border-color: transparent;
+      position: absolute;
+      overflow: hidden;
+      pointer-events: none;
+      -webkit-overflow-scrolling: touch;
+      text-align: left;
+    }
 
-        .highlight {
-            overflow: hidden;
-            pointer-events: none;
-            -webkit-overflow-scrolling: touch;
-            text-align: left;
-        }
+    .stdin,
+    .highlight {
+      flex-grow: 1;
+    }
 
-        span {
-            white-space: pre-wrap;
-            word-break: break-word;
-            overflow-wrap: break-word;
-            -ms-word-break: break-word;
-            word-break: break-word;
-            -ms-hyphens: auto;
-            -moz-hyphens: auto;
-            -webkit-hyphens: auto;
-            hyphens: auto;
-            overflow-wrap: break-word;
-        }
+    span {
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      -ms-word-break: break-word;
+      word-break: break-word;
+      -ms-hyphens: auto;
+      -moz-hyphens: auto;
+      -webkit-hyphens: auto;
+      hyphens: auto;
+      overflow-wrap: break-word;
+    }
 
-        .stdin::-moz-selection {
-            /* Code for Firefox */
-            background: white;
-        }
+    .stdin::-moz-selection {
+      /* Code for Firefox */
+      background: yellow;
+    }
 
-        .stdin::selection {
-            background: white;
-        }
+    .stdin::selection {
+      background: yellow;
+    }
 
-        #stderr {
-            text-align: center;
-            position: relative;
-            display: block;
-            top: 42vh;
-            color: red;
-        }
+    .stdout {
+      flex-grow: 1;
+    }
 
-        #examples {
-            margin-top: 45vh;
-        }
+    header {
+      width: 100%;
+      text-align: center;
+    }
 
-        footer {
-            font-size: 0.90em;
-        }
-    </style>
+    main {
+      height: 70vh;
+      display: flex;
+    }
+  </style>
 </head>
 
 <body>
-    <noscript>
-        <p><b>WARNING: JavaScript is Disabled!</b></p>
-        <p>
-            HOLYC Interpreter requires JavaScript. Please enable JavaScript for the
-            interpreter to work.
-        </p>
-    </noscript>
+  <noscript>
+    <p><b>WARNING: JavaScript is Disabled!</b></p>
+    <p>
+      HOLYC Interpreter requires JavaScript. Please enable JavaScript for the
+      interpreter to work.
+    </p>
+  </noscript>
 
-    <main>
-        <br>
+  <header>
+    <b>
+      <a href="http://leozamboni.github.io/compilers/holyc/2022/03/01/holyc-interpreter.html">"HolyC
+        Interpreter"</a>
+    </b>
+    <p>
+      (Interpreter & site by
+      <a href="https://github.com/leozamboni">Leonardo Z. Nunes</a>.)
+    </p>
+    <br>
+    <button onclick="holyc_web_run()">RUN(▶)</button>
+    <select onchange="examples()" id="examples">
+      <option value="">Examples</option>
+      <option value="helloWorld">Hello World</option>
+      <option value="conditionals">Conditionals</option>
+      <option value="procedures">Procedures</option>
+      <!-- <option value="class">Class</option> -->
+      <option value="fibonacci">Fibonacci</option>
+    </select>
+    <br>
+    <br>
+  </header>
 
-        <b>
-            <a href="http://leozamboni.github.io/compilers/holyc/2022/03/01/holyc-interpreter.html">"HolyC
-                Interpreter"</a>
-        </b>
+  <main>
+    <textarea class="stdin" id="stdin" onscroll="set_scroll()" oninput="highlight(this.value)"></textarea>
+    <div class='highlight' id="hl"></div>
+    <textarea class="stdout" id="stdout/stderr"></textarea>
+  </main>
 
-        <br>
-        <br>
+  <footer>
+    <br>
+    <hr>
+    <br>
+    <p>
+      This is not a complete HolyC language compiler yet but the source
+      code is in GitHub you can contribute
+      <a href="https://github.com/leozamboni/js-holyc-interpreter">here</a>, all currently implemented
+      features
+      are exemplified in the <em>Examples</em> select. New releases and updates are shared on <a
+        href="https://www.reddit.com/r/TempleOS_Official/">r/TempleOS_Official</a>.
+    </p>
+    <br>
+    <p>If you want to learn HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/">this
+        documentation</a>.</p>
+    <br>
+    <p>This site is under MIT <a
+        href="https://github.com/leozamboni/js-holyc-interpreter/blob/master/LICENSE">license</a>. HolyC and
+      TempleOS are creations of Terry Davis.</p>
+  </footer>
 
-        <p>
-            (Interpreter & site by
-            <a href="https://github.com/leozamboni">Leonardo Z. Nunes</a>.)
-        </p>
 
-        <br>
+  <script>
+    const stdin = document.getElementById("stdin")
+    stdin.value = '"hello world";';
+    highlight('"hello world";')
 
-        <div class='text-container'>
-            <textarea class='stdin' id="stdin" onscroll="set_scroll()" oninput="highlight(this.value)"></textarea>
-            <div class='highlight' id="hl"></div>
-        </div>
+    const resizehl = () => {
+      let hl = document.getElementById("hl")
+      hl.style.width = `${stdin.scrollWidth}px`
+      hl.style.height = `${stdin.clientHeight}px`
+      highlight(stdin.value)
+    }
+    new ResizeObserver(resizehl).observe(stdin)
 
-        <div>
-            <span id="stderr"></span>
-        </div>
+    stdin.addEventListener("keydown", function (e) {
+      if (e.key == "Tab") {
+        e.preventDefault();
+        let start = this.selectionStart;
+        let end = this.selectionEnd;
 
-        <select onchange="examples()" id="examples">
-            <option value="">Examples</option>
-            <option value="helloWorld">Hello World</option>
-            <option value="conditionals">Conditionals</option>
-            <option value="procedures">Procedures</option>
-			<!-- <option value="class">Class</option> --> 
-            <option value="fibonacci">Fibonacci</option>
-        </select>
+        // set textarea value to: text before caret + tab + text after caret
+        this.value =
+          this.value.substring(0, start) + "\t" + this.value.substring(end);
 
-        <br>
-        <br>
+        // put caret at right position again
+        this.selectionStart = this.selectionEnd = start + 1;
 
-        <button onclick="holyc_web_run()">RUN(▶)</button>
+        highlight(stdin.value)
+      }
+    });
+    const examples = () => {
+      let content = "";
+      switch (document.getElementById("examples").value) {
+        case "class":
+          content = "// HolyC Class\nclass Example {\n\tU16 a, b, c;\n\tU32 d, e, f;\n}Exp;\n\nclass Example2 {\n\tExp a;\n}Exp2;\n";
+          break;
+        case "helloWorld":
+          content = "// HolyC Hello world\n\"Holy World\\n\";\n\nU0\nHelloWorld()\n{\n\t\"Holy World\\n\";\n}\n\nU0\nWorld()\n{\n\t'World\\n';\n}\n\nU0\nHello()\n{\n\t'Ho';\n\t'l', 'y';\n\t' ';\n\tWorld();\n}\n\n'\\t';\nHello;\n'\\n';\nHelloWorld(\"*\");";
+          break;
+        case "fibonacci":
+          content = "// HolyC Fibonacci\nU0\nFibonacci()\n{\n\tU32 a = 0, b = 1, c, i;\n\n\tfor (i = 0; i < 20; i++)\n\t{\n\t\tc = a + b;\n\t\t\"%d\\n\", c;\n\t\ta = b;\n\t\tb = c;\n\t}\n}\n\nFibonacci;";
+          break;
+        case "conditionals":
+          content = "// Allows \"5 < 1 < 2 + 1 < 20\" instead of \"5 < 1 && 1 < 2 + 1 && 1 + 1 < 20\";\nif (5 < 1 < 2 + 1 < 20)\n{\n\t\"true\\n\";\n}\n\n// Conditionals with logicals;\nif (TRUE)\n{\n\tif (1 > 2)\n\t{\n\t\t\"1 > 2\\n\";\n\t}\n\telse if (1 > 2 || 2 > 3)\n\t{\n\t\t\"2 > 3\\n\";\n\t}\n\telse\n\t{\n\t\t\"all false conditions\\n\";\n\t}\n}\n\nif (TRUE > FALSE)\n{\n\t\"TRUE > FALSE\\n\";\n}\n\n// Conditionals with variables;\nU8 A = 1;\nU8 B = 2;\nif (A < B)\n{\n\t\"A < B\\n\";\n}\n\nif (A)\n{\n\t\"A != 0\\n\";\n\tA = 0;\n}\n\nif (A)\n{\n\t\"A == 0\\n\";\n}\n\n// Conditionals with math expressions.\nif (1 + 2 * 3 > 9)\n{\n\t\"1 + 2 * 3 > 9\\n\";\n}\nelse if (1 + 2 * 3 > A + 8)\n{\n\t\"1 + 2 * 3 > A + 8\\n\";\n}\n\n";
+          break;
+        case "procedures":
+          content = "// HolyC Procedures\nU0\nno_args()\n{\n\t\"no args\\n\";\n}\n\n// Function with no args, or just default args can be called without parentheses;\nno_args(\"*\");\nno_args();\nno_args;\n\nU8\ndefault_args(U8 abc=1, U8 def, U8 ghi=3)\n{\n\t\"arg 1: %d\\n\", abc;\n\tdef = def - 2;\n\t\"arg 2: %d\\n\", def;\n\t\"arg 3: %d\\n\", ghi;\n\treturn abc + def + ghi;\n}\n\n// Default args don't have to be on the end. This code is valid:\nU16 default_args_value = default_args(,4);\n\"%d\", default_args_value;";
+          break;
+        default:
+          content = "";
+      }
+      stdin.value = content;
+      highlight(content);
+    };
+  </script>
 
-        <br>
-        <br>
-
-    </main>
-    <footer>
-        <hr />
-        <br>
-        <p>
-            This is not a complete HolyC language compiler yet but the source
-            code is in GitHub you can contribute
-            <a href="https://github.com/leozamboni/js-holyc-interpreter">here</a>, all currently implemented
-            features
-            are exemplified in the <em>Examples</em> select. New releases and updates are shared on <a
-                href="https://www.reddit.com/r/TempleOS_Official/">r/TempleOS_Official</a>.
-        </p>
-        <br>
-        <p>If you want to learn HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/">this
-                documentation</a>.</p>
-        <br>
-        <p>This site is under MIT <a
-                href="https://github.com/leozamboni/js-holyc-interpreter/blob/master/LICENSE">license</a>. HolyC and
-            TempleOS are creations of Terry Davis.</p>
-    </footer>
-
-    <script>
-        document.getElementById("stdin").value = '"hello world";';
-        highlight('"hello world";')
-        document.getElementById("stdin").addEventListener("keydown", function (e) {
-            if (e.key == "Tab") {
-                e.preventDefault();
-                let start = this.selectionStart;
-                let end = this.selectionEnd;
-
-                // set textarea value to: text before caret + tab + text after caret
-                this.value =
-                    this.value.substring(0, start) + "\t" + this.value.substring(end);
-
-                // put caret at right position again
-                this.selectionStart = this.selectionEnd = start + 1;
-
-                highlight(document.getElementById("stdin").value)
-            }
-        });
-        const examples = () => {
-            let content = "";
-            switch (document.getElementById("examples").value) {
-                case "class":
-                    content = "// HolyC Class\nclass Example {\n\tU16 a, b, c;\n\tU32 d, e, f;\n}Exp;\n\nclass Example2 {\n\tExp a;\n}Exp2;\n";
-                    break;
-                case "helloWorld":
-                    content = "// HolyC Hello world\n\"Holy World\\n\";\n\nU0\nHelloWorld()\n{\n\t\"Holy World\\n\";\n}\n\nU0\nWorld()\n{\n\t'World\\n';\n}\n\nU0\nHello()\n{\n\t'Ho';\n\t'l', 'y';\n\t' ';\n\tWorld();\n}\n\n'\\t';\nHello;\n'\\n';\nHelloWorld(\"*\");";
-                    break;
-                case "fibonacci":
-                    content = "// HolyC Fibonacci\nU0\nFibonacci()\n{\n\tU32 a = 0, b = 1, c, i;\n\n\tfor (i = 0; i < 20; i++)\n\t{\n\t\tc = a + b;\n\t\t\"%d\\n\", c;\n\t\ta = b;\n\t\tb = c;\n\t}\n}\n\nFibonacci;";
-                    break;
-                case "conditionals":
-                    content = "// Allows \"5 < 1 < 2 + 1 < 20\" instead of \"5 < 1 && 1 < 2 + 1 && 1 + 1 < 20\";\nif (5 < 1 < 2 + 1 < 20)\n{\n\t\"true\\n\";\n}\n\n// Conditionals with logicals;\nif (TRUE)\n{\n\tif (1 > 2)\n\t{\n\t\t\"1 > 2\\n\";\n\t}\n\telse if (1 > 2 || 2 > 3)\n\t{\n\t\t\"2 > 3\\n\";\n\t}\n\telse\n\t{\n\t\t\"all false conditions\\n\";\n\t}\n}\n\nif (TRUE > FALSE)\n{\n\t\"TRUE > FALSE\\n\";\n}\n\n// Conditionals with variables;\nU8 A = 1;\nU8 B = 2;\nif (A < B)\n{\n\t\"A < B\\n\";\n}\n\nif (A)\n{\n\t\"A != 0\\n\";\n\tA = 0;\n}\n\nif (A)\n{\n\t\"A == 0\\n\";\n}\n\n// Conditionals with math expressions.\nif (1 + 2 * 3 > 9)\n{\n\t\"1 + 2 * 3 > 9\\n\";\n}\nelse if (1 + 2 * 3 > A + 8)\n{\n\t\"1 + 2 * 3 > A + 8\\n\";\n}\n\n";
-                    break;
-                case "procedures":
-                    content = "// HolyC Procedures\nU0\nno_args()\n{\n\t\"no args\\n\";\n}\n\n// Function with no args, or just default args can be called without parentheses;\nno_args(\"*\");\nno_args();\nno_args;\n\nU8\ndefault_args(U8 abc=1, U8 def, U8 ghi=3)\n{\n\t\"arg 1: %d\\n\", abc;\n\tdef = def - 2;\n\t\"arg 2: %d\\n\", def;\n\t\"arg 3: %d\\n\", ghi;\n\treturn abc + def + ghi;\n}\n\n// Default args don't have to be on the end. This code is valid:\nU16 default_args_value = default_args(,4);\n\"%d\", default_args_value;";
-                    break;
-                default:
-                    content = "";
-            }
-            document.getElementById("stdin").value = content;
-            highlight(content);
-        };
-    </script>
 </body>
 
 </html>
