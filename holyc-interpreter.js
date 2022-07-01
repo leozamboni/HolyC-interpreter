@@ -963,7 +963,7 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
   } else {
     parser_error(tokenList[hc.parser.index]);
   }
-
+  
   ast.right = parser_parse_exp(tokenList, arg, prototypeIndex);
 
   return ast;
@@ -1672,7 +1672,7 @@ const parser_parse_ifelse = (tokenList, prototypeIndex) => {
     list_eat(tokenList, token_type.id);
   }
 
-  ast.right = parser_parse_logical_exp(tokenList);
+  ast.right = parser_parse_logical_exp(tokenList, prototypeIndex);
 
   ast.left.left.left = new AstNode(token_type.lparen);
   ast.left.left.left.token = tokenList[hc.parser.index];
@@ -1682,7 +1682,7 @@ const parser_parse_ifelse = (tokenList, prototypeIndex) => {
   ast.left.left.next.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.rbrace);
 
-  ast.left.left.left.right = parser_parse_block(tokenList);
+  ast.left.left.left.right = parser_parse_block(tokenList, prototypeIndex);
 
   ast.left.left.next.next = new AstNode(token_type.lbrace);
   ast.left.left.next.next.token = tokenList[hc.parser.index];
@@ -1703,7 +1703,7 @@ const parser_parse_ifelse = (tokenList, prototypeIndex) => {
       ast.left.left.left.next.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.rbrace);
 
-      ast.left.left.left.left.right = parser_parse_block(tokenList);
+      ast.left.left.left.left.right = parser_parse_block(tokenList, prototypeIndex);
 
       ast.left.left.left.next.next = new AstNode(token_type.lbrace);
       ast.left.left.left.next.next.token = tokenList[hc.parser.index];
@@ -2011,10 +2011,11 @@ const output_out_logical_exp = (ast, inside, prototypeIndex) => {
   }
 
   if (first.type === token_type.id) {
-    let token;
+    let token = '';
+
     if ((token = hc.symtab.prototypes[prototypeIndex]?.args?.find(e => e.id === first.id))) {
       value.number = parseInt(token.value);
-    } else if ((token = hc.symtab.scoped[prototypeIndex]?.findIndex(e => e.id === first.id))) {
+    } else if ((token = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === first.id))) {
       value.number = parseInt(token.value);
     } else {
       value.number = parseInt(hc.symtab.global[get_symtab(first)].value);
@@ -2478,13 +2479,13 @@ const output_out_for = (ast, expList, prototypeIndex) => {
         if (blockVal === "{RETURN}") return blockVal;
         if (hc.symtab.global[symTabI]?.id === ast.left.token.id) {
           hc.symtab.global[symTabI].value =
-            parseInt(hc.symtab.global[symTabI].value) + iterateValue;
+          parseInt(hc.symtab.global[symTabI].value) + iterateValue;
         } else if (hc.symtab.prototypes[prototypeIndex]?.args[symTabI]?.id === ast.left.token.id) {
           hc.symtab.prototypes[prototypeIndex].args[symTabI].value =
-            parseInt(hc.symtab.prototypes[prototypeIndex].args[symTabI].value) + iterateValue;
+          parseInt(hc.symtab.prototypes[prototypeIndex].args[symTabI].value) + iterateValue;
         } else {
           hc.symtab.scoped[prototypeIndex][symTabI].value =
-            parseInt(hc.symtab.scoped[prototypeIndex][symTabI]) + iterateValue;
+            parseInt(hc.symtab.scoped[prototypeIndex][symTabI].value) + iterateValue;
         }
       }
       break;
@@ -2500,7 +2501,7 @@ const output_out_for = (ast, expList, prototypeIndex) => {
             parseInt(hc.symtab.prototypes[prototypeIndex].args[symTabI].value) + iterateValue;
         } else {
           hc.symtab.scoped[prototypeIndex][symTabI].value =
-            parseInt(hc.symtab.scoped[prototypeIndex][symTabI]) + iterateValue;
+            parseInt(hc.symtab.scoped[prototypeIndex][symTabI].value) + iterateValue;
         }
       }
       break;
