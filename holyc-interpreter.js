@@ -27,10 +27,10 @@
  *  python -m http.server 8000
  * 
  */
-const stderr = (value) => (document.getElementById("stdout/stderr").value += value)
+const stderr = (value) => (document.getElementById("stdout/stderr").value = value)
   && (document.getElementById("stdout/stderr").style.color = "red");
 const stdin = document.getElementById("stdin");
-const stdout = (value) => (document.getElementById("stdout/stderr").value += value)
+const stdout = (value) => (document.getElementById("stdout/stderr").value = value)
   && (document.getElementById("stdout/stderr").style.color = "black");
 
 export const holyc_web_run = () => stdout(output(parser(lexer(init_hc()))));
@@ -385,7 +385,7 @@ const init_hc = (inpStdin) => {
 // TODO: create a one step lexer
 const lexer = (hc) => {
   let token_list = [];
-
+  console.log(hc.symtab)
   while (1) {
     const token = lexer_lex(hc)
     if (!token) break;
