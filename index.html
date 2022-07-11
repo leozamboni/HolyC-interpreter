@@ -88,13 +88,22 @@
     }
 
     header {
-      width: 100%;
       text-align: center;
+    }
+
+    header, main, footer {
+      padding: 0 20px 0 20px;
     }
 
     main {
       height: 70vh;
       display: flex;
+    }
+
+    footer {
+      text-align: center;
+      padding-bottom: 20px;
+      font-size: 0.9em;
     }
   </style>
 </head>
@@ -109,15 +118,23 @@
   </noscript>
 
   <header>
+    <br>
+
     <b>
       <a href="http://leozamboni.github.io/compilers/holyc/2022/03/01/holyc-interpreter.html">"HolyC
         Interpreter"</a>
     </b>
+
+    <br>
+    <br>
+
     <p>
       (Interpreter & site by
       <a href="https://github.com/leozamboni">Leonardo Z. Nunes</a>.)
     </p>
+
     <br>
+
     <button onclick="holyc_web_run()">RUN(▶)</button>
     <select onchange="examples()" id="examples">
       <option value="">Examples</option>
