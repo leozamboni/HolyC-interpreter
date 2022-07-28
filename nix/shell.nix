@@ -1,5 +1,3 @@
-# nix-shell nix
-# start
 with import <nixpkgs> {};
 
 let
