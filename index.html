@@ -46,7 +46,7 @@
       caret-color: black;
       white-space: break-spaces;
     }
-    
+
     .highlight {
       border-color: transparent;
       position: absolute;
@@ -91,7 +91,9 @@
       text-align: center;
     }
 
-    header, main, footer {
+    header,
+    main,
+    footer {
       padding: 0 20px 0 20px;
     }
 
@@ -110,7 +112,10 @@
 
 <body>
   <noscript>
-    <p><b>WARNING: JavaScript is Disabled!</b></p>
+    <p>
+      <b>WARNING: JavaScript is Disabled!</b>
+    </p>
+
     <p>
       HOLYC Interpreter requires JavaScript. Please enable JavaScript for the
       interpreter to work.
@@ -121,7 +126,7 @@
     <br>
 
     <b>
-      <a href="http://leozamboni.github.io/compilers/holyc/2022/03/01/holyc-interpreter.html">"HolyC
+      <a href="https://leonardo.moe/compilers/holyc/javascript/2022/03/01/holyc-interpreter.html">"HolyC
         Interpreter"</a>
     </b>
 
@@ -130,12 +135,13 @@
 
     <p>
       (Interpreter & site by
-      <a href="https://github.com/leozamboni">Leonardo Z. Nunes</a>.)
+      <a href="https://leonardo.moe/">Leonardo Z. Nunes</a>.)
     </p>
 
     <br>
 
     <button onclick="holyc_web_run()">RUN(▶)</button>
+
     <select onchange="examples()" id="examples">
       <option value="">Examples</option>
       <option value="helloWorld">Hello World</option>
@@ -144,7 +150,9 @@
       <!-- <option value="class">Class</option> -->
       <option value="fibonacci">Fibonacci</option>
     </select>
+
     <!-- <button onclick="document.getElementById('stdout/stderr').value = ''">CLEAR(🗑️)</button> -->
+
     <br>
     <br>
   </header>
@@ -159,21 +167,35 @@
     <br>
     <hr>
     <br>
+
     <p>
-      This is not a complete HolyC language compiler yet but the source
-      code is in GitHub you can contribute
-      <a href="https://github.com/leozamboni/js-holyc-interpreter">here</a>, all currently implemented
-      features
+      It is a small HolyC compiler yet and the source code is in GitHub
+      <a href="https://github.com/leozamboni/js-holyc-interpreter">here</a>, all current features
       are exemplified in the <em>Examples</em> select. New releases and updates are shared on <a
         href="https://www.reddit.com/r/TempleOS_Official/">r/TempleOS_Official</a>.
     </p>
+
     <br>
-    <p>If you want to learn HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/">this
-        documentation</a>.</p>
+
+    <p>
+      If you want to learn HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/">this
+        documentation</a>.
+    </p>
+
     <br>
-    <p>This site is under MIT <a
-        href="https://github.com/leozamboni/js-holyc-interpreter/blob/master/LICENSE">license</a>. HolyC and
-      TempleOS are creations of Terry Davis.</p>
+
+    <p>
+      This site is under MIT <a
+        href="https://github.com/leozamboni/js-holyc-interpreter/blob/master/LICENSE">license</a>;
+      Converted TempleOS font by <a href="https://github.com/rendello/templeos_font">rendello</a>;
+      HolyC and TempleOS are creations of Terry Davis.
+    </p>
+
+    <br>
+
+    <p>
+      If you want to support this project star the repository (it makes me motivated ♥)
+    </p>
   </footer>
 
 
