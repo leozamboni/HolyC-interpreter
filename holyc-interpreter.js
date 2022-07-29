@@ -385,7 +385,7 @@ const init_hc = (inpStdin) => {
 // TODO: create a one step lexer
 const lexer = (hc) => {
   let token_list = [];
-  console.log(hc.symtab)
+
   while (1) {
     const token = lexer_lex(hc)
     if (!token) break;
