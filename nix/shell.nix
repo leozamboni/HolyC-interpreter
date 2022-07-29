@@ -3,7 +3,7 @@ with import <nixpkgs> {};
 let
   script = pkgs.writeShellScriptBin "start" 
   ''
-    python -m http.server 8000
+    steam-run $(which bun) dev
   '';
 in
   stdenv.mkDerivation {
@@ -11,6 +11,5 @@ in
     
     buildInputs = [
       script
-      python3
     ];
   }
