@@ -963,7 +963,7 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
   } else {
     parser_error(tokenList[hc.parser.index]);
   }
-  
+
   ast.right = parser_parse_exp(tokenList, arg, prototypeIndex);
 
   return ast;
@@ -1348,7 +1348,7 @@ const parser_parse_class_var_exp = (tokenList) => {
   ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.id);
 
-  if (check_token(tokenList, hc.parser.index, token_type.assig)) return null;
+  if (check_token(tokenList, hc.parser.index, token_type.assig)) return ast;
 
   ast.right = new AstNode(token_type.dot);
   ast.right.token = tokenList[hc.parser.index];
@@ -2188,8 +2188,41 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
     walk = ast;
   }
 
+  let classItems = [];
+  let lastWalk = null;
+  let first = walk;
+
   while (walk) {
     switch (walk.type) {
+      case token_type.dot:
+        classItems.push(lastWalk.token)
+        if (!walk.right?.right) {
+          classItems.push(walk.right.token)
+
+          value = 0;
+          while (first) {
+            switch (first.type) {
+              case token_type.assig:
+                if (first.left.token.type === token_type.number) {
+                  value = parseInt(first.left.token.id);
+                }
+                break
+              case token_type.div:
+                if (first.left.token.type === token_type.number) {
+                  value /= parseInt(first.left.token.id);
+                }
+                break;
+            }
+            first = first.left;
+          }
+
+          hc.symtab.global[symTabI].value = {
+            id: classItems.map(e => e.id).join('.'),
+            value: value
+          }
+          console.log(hc.symtab)
+        }
+        break
       case token_type.div:
       case token_type.assingdiv:
         if (walk.right.token.type === token_type.number) {
@@ -2323,6 +2356,7 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
       case token_type.semi:
         return walk;
     }
+    lastWalk = walk
     walk = walk.right;
   }
 
@@ -2479,10 +2513,10 @@ const output_out_for = (ast, expList, prototypeIndex) => {
         if (blockVal === "{RETURN}") return blockVal;
         if (hc.symtab.global[symTabI]?.id === ast.left.token.id) {
           hc.symtab.global[symTabI].value =
-          parseInt(hc.symtab.global[symTabI].value) + iterateValue;
+            parseInt(hc.symtab.global[symTabI].value) + iterateValue;
         } else if (hc.symtab.prototypes[prototypeIndex]?.args[symTabI]?.id === ast.left.token.id) {
           hc.symtab.prototypes[prototypeIndex].args[symTabI].value =
-          parseInt(hc.symtab.prototypes[prototypeIndex].args[symTabI].value) + iterateValue;
+            parseInt(hc.symtab.prototypes[prototypeIndex].args[symTabI].value) + iterateValue;
         } else {
           hc.symtab.scoped[prototypeIndex][symTabI].value =
             parseInt(hc.symtab.scoped[prototypeIndex][symTabI].value) + iterateValue;
@@ -2594,6 +2628,8 @@ const output = (expList) => {
     expListAux = expListAux.next;
   } while (expListAux);
 
+  console.log(hc.symtab)
+  console.log(expList)
   return hc.files.stdout;
   // } catch (err) {
   //   internal_error(err);
