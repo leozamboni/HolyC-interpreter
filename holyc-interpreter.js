@@ -163,6 +163,7 @@ const token_type = {
   bool: 47,
   class: 48,
   dot: 49,
+  classExp: 50,
 };
 
 const token_cases = [
@@ -832,7 +833,7 @@ const parser_parse_logical_exp = (tokenList) => {
  * semantic analysis of expresions
  * @arg {array} tokenList
  */
-const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
+const parser_parse_exp = (tokenList, arg, prototypeIndex, inClass) => {
   if (
     check_token(tokenList, hc.parser.index, token_type.semi) ||
     check_token(tokenList, hc.parser.index, token_type.comma) ||
@@ -890,11 +891,14 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex) => {
       list_eat(tokenList, token_type.id);
     } else {
       if (!prototypeIndex) {
-        hc.symtab.global[get_symtab(tokenList[hc.parser.index - 2])] = {
-          id: tokenList[hc.parser.index - 2].id,
-          line: tokenList[hc.parser.index - 2].line,
-          value: tokenList[hc.parser.index].id,
-        };
+        const index = get_symtab(tokenList[hc.parser.index - 2])
+        if (index != undefined) {
+          hc.symtab.global[index] = {
+            id: tokenList[hc.parser.index - 2].id,
+            line: tokenList[hc.parser.index - 2].line,
+            value: tokenList[hc.parser.index].id,
+          };
+        }
       }
 
       if (check_token(tokenList, hc.parser.index, token_type.true)) {
@@ -982,9 +986,28 @@ const parser_parse_str_args = (tokenList) => {
     check_token(tokenList, hc.parser.index, token_type.id) ||
     check_token(tokenList, hc.parser.index, token_type.number)
   ) {
-    ast = new AstNode(tokenList[hc.parser.index]?.type);
-    ast.token = tokenList[hc.parser.index];
-    list_eat(tokenList, tokenList[hc.parser.index].type);
+    if (check_token(tokenList, hc.parser.index + 1, token_type.dot)) {
+      let ids = [];
+
+      while (tokenList[hc.parser.index].type
+        !== token_type.semi) {
+        tokenList[hc.parser.index].type === token_type.id
+          && ids.push(tokenList[hc.parser.index].id)
+        hc.parser.index++;
+      }
+
+      hc.parser.index--;
+      tokenList[hc.parser.index].id = ids.join('.')
+      tokenList[hc.parser.index].type = token_type.classExp
+ 
+      ast = new AstNode(token_type.classExp);
+      ast.token = tokenList[hc.parser.index];
+      list_eat(tokenList, token_type.classExp);
+    } else {
+      ast = new AstNode(tokenList[hc.parser.index]?.type);
+      ast.token = tokenList[hc.parser.index];
+      list_eat(tokenList, tokenList[hc.parser.index].type);
+    }
   } else if (check_token(tokenList, hc.parser.index, token_type.str)) {
     ast = new AstNode(token_type.str);
     ast.token = tokenList[hc.parser.index];
@@ -2195,7 +2218,7 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
   while (walk) {
     switch (walk.type) {
       case token_type.dot:
-        classItems.push(lastWalk.token)
+        !lastWalk.left && classItems.push(lastWalk.token)
         if (!walk.right?.right) {
           classItems.push(walk.right.token)
 
@@ -2216,10 +2239,35 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
             first = first.left;
           }
 
-          hc.symtab.global[symTabI].value = {
-            id: classItems.map(e => e.id).join('.'),
-            value: value
+
+          if (!procedureReturn) {
+            if (symTabI >= 0) {
+              if (!Array.isArray(hc.symtab.global[symTabI].value)) {
+                hc.symtab.global[symTabI].value = []
+              }
+              hc.symtab.global[symTabI].value.push({
+                id: classItems.map(e => e.id).join('.'),
+                value: value
+              })
+            } else if (hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex]?.id === procedureToken.id) {
+              if (!Array.isArray(hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value)) {
+                hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = []
+              }
+              hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value.push({
+                id: classItems.map(e => e.id).join('.'),
+                value: value
+              })
+            } else {
+              if (!Array.isArray(hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value)) {
+                hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = []
+              }
+              hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value.push({
+                id: classItems.map(e => e.id).join('.'),
+                value: value
+              })
+            }
           }
+
           console.log(hc.symtab)
         }
         break
@@ -2655,7 +2703,15 @@ const printf = (ast, prototypeIndex) => {
       if (ast.left.right.token.type === token_type.number) {
         str = str.replace("%d", ast.left.right.token.id);
       } else {
-        str = str.replace("%d", hc.symtab.global[get_symtab(ast.left.right.token)].value);
+        if (ast.left.right.token.type === token_type.classExp) {
+          let classexp = ast.left.right.token.id.split('.')
+          let args = ast.left.right.token;
+
+          args.id = classexp.shift()
+          str = str.replace("%d", hc.symtab.global[get_symtab(args)].value.find(e => e.id === classexp.join('.'))?.value);
+        } else {
+          str = str.replace("%d", hc.symtab.global[get_symtab(ast.left.right.token)].value);
+        }
       }
     }
   }
