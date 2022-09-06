@@ -17,7 +17,7 @@
       let content = "";
       switch (document.getElementById("examples").value) {
         case "class":
-          content = "// HolyC Class\nclass Example {\n\tU16 a, b, c;\n\tU32 d, e, f;\n}Exp;\n\nclass Example2 {\n\tExp a;\n}Exp2;\n";
+          content = "// HolyC Class\nclass Example {\n\tU16 a, b, c;\n\tU32 d, e, f;\n}Exp;\n\nclass Example2 {\n\tExp a;\n}Exp2;\n\nExp2 a;\na.a = 10;";
           break;
         case "helloWorld":
           content = "// HolyC Hello world\n\"Holy World\\n\";\n\nU0\nHelloWorld()\n{\n\t\"Holy World\\n\";\n}\n\nU0\nWorld()\n{\n\t'World\\n';\n}\n\nU0\nHello()\n{\n\t'Ho';\n\t'l', 'y';\n\t' ';\n\tWorld();\n}\n\n'\\t';\nHello;\n'\\n';\nHelloWorld(\"*\");";
@@ -204,7 +204,7 @@
       <option value="helloWorld">Hello World</option>
       <option value="conditionals">Conditionals</option>
       <option value="procedures">Procedures</option>
-      <!-- <option value="class">Class</option> -->
+      <option value="class">Class</option>
       <option value="fibonacci">Fibonacci</option>
     </select>
 
