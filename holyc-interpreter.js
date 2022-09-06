@@ -886,9 +886,28 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex, inClass) => {
 
       !procedureArg && check_symtab(tokenList, true);
 
-      ast = new AstNode(token_type.id);
-      ast.token = tokenList[hc.parser.index];
-      list_eat(tokenList, token_type.id);
+      if (check_token(tokenList, hc.parser.index + 1, token_type.dot)) {
+        let ids = [];
+
+        while (tokenList[hc.parser.index].type
+          !== token_type.semi) {
+          tokenList[hc.parser.index].type === token_type.id
+            && ids.push(tokenList[hc.parser.index].id)
+          hc.parser.index++;
+        }
+
+        hc.parser.index--;
+        tokenList[hc.parser.index].id = ids.join('.')
+        tokenList[hc.parser.index].type = token_type.classExp
+
+        ast = new AstNode(token_type.classExp);
+        ast.token = tokenList[hc.parser.index];
+        list_eat(tokenList, token_type.classExp);
+      } else {
+        ast = new AstNode(token_type.id);
+        ast.token = tokenList[hc.parser.index];
+        list_eat(tokenList, token_type.id);
+      }
     } else {
       if (!prototypeIndex) {
         const index = get_symtab(tokenList[hc.parser.index - 2])
@@ -999,7 +1018,7 @@ const parser_parse_str_args = (tokenList) => {
       hc.parser.index--;
       tokenList[hc.parser.index].id = ids.join('.')
       tokenList[hc.parser.index].type = token_type.classExp
- 
+
       ast = new AstNode(token_type.classExp);
       ast.token = tokenList[hc.parser.index];
       list_eat(tokenList, token_type.classExp);
