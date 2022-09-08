@@ -1,13 +1,17 @@
-# HolyC Interpreter
+If you want to support this project star the repository (it makes me motivated ♥).
 
-It is a small HolyC compiler yet and all current features are exemplified in the ```Examples``` select.
+# Holy Interpreter
 
-Live: https://leozamboni.github.io/holyc-interpreter
+It is a small HolyC interpreter (yet) and all current features are exemplified in the ```Examples``` select.
+
+[Live](https://holy-js.github.io/holy-interpreter/)
 
 # Holy Node
 
-Holy Node is a node like backend implementation of HolyC Interpreter.
+[Holy Node](https://github.com/holy-js/holy-node) is a node like backend implementation of HolyC Interpreter.
 
-Repository: https://github.com/leozamboni/holy-node
+# Holy Script
 
-If you want to support this project star the repository (it makes me motivated ♥).
+[Holy Script](https://github.com/holy-js/holy-script) is a holy way to run embed holyc scripts in HTML 
+
+
