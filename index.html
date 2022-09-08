@@ -17,7 +17,7 @@
       let content = "";
       switch (document.getElementById("examples").value) {
         case "class":
-          content = "// HolyC Class\nclass Example {\n\tU16 a, b, c;\n\tU32 d, e, f;\n}Exp;\n\nclass Example2 {\n\tExp a;\n}Exp2;\n\nExp2 a;\n\na.a = 10;\n\"%d\\n\", a.a;\n\nU8 var = a.a * 2;\n\"var: %d\", var;";
+          content = "// HolyC Class (not finished yet)\nclass Example {\n\tU16 a, b, c;\n\tU32 d, e, f;\n}Exp;\n\nclass Example2 {\n\tExp a;\n}Exp2;\n\nExp2 a;\n\na.a = 10;\n\"%d\\n\", a.a;\n\nU8 var = a.a * 2 + 1;\n\"var: %d\", var;";
           break;
         case "helloWorld":
           content = "// HolyC Hello world\n\"Holy World\\n\";\n\nU0\nHelloWorld()\n{\n\t\"Holy World\\n\";\n}\n\nU0\nWorld()\n{\n\t'World\\n';\n}\n\nU0\nHello()\n{\n\t'Ho';\n\t'l', 'y';\n\t' ';\n\tWorld();\n}\n\n'\\t';\nHello;\n'\\n';\nHelloWorld(\"*\");";
@@ -226,7 +226,7 @@
     <br>
 
     <p>
-      It is a small HolyC compiler yet and the source code is in GitHub
+      It is a small (yet) self-made HolyC interpreter and the source code is in GitHub
       <a href="https://github.com/leozamboni/js-holyc-interpreter">here</a>, all current features
       are exemplified in the <em>Examples</em> select. New releases and updates are shared on <a
         href="https://www.reddit.com/r/TempleOS_Official/">r/TempleOS_Official</a>.
@@ -235,7 +235,7 @@
     <br>
 
     <p>
-      If you want to learn HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/">this
+      If you want to learn more about HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/">this
         documentation</a>.
     </p>
 
