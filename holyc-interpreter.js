@@ -24,7 +24,7 @@
  * so make sure you have it enabled in your browser;
  * For local run you need a HTTP server:
  *  
- *  python -m http.server 8000
+ *  bun dev
  * 
  */
 const stderr = (value) => (document.getElementById("stdout/stderr").value = value)
@@ -849,7 +849,8 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex, inClass) => {
     return parser_parse_call(tokenList)
   } else if (
     check_token(tokenList, hc.parser.index - 1, token_type.id) ||
-    check_token(tokenList, hc.parser.index - 1, token_type.number)
+    check_token(tokenList, hc.parser.index - 1, token_type.number) ||
+    check_token(tokenList, hc.parser.index - 1, token_type.classExp)
   ) {
     if (is_mathop(tokenList, hc.parser.index)) {
       if (
@@ -888,21 +889,21 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex, inClass) => {
 
       if (check_token(tokenList, hc.parser.index + 1, token_type.dot)) {
         let ids = [];
-
+        
         while (tokenList[hc.parser.index].type
-          !== token_type.semi) {
+          === token_type.id) {
           tokenList[hc.parser.index].type === token_type.id
             && ids.push(tokenList[hc.parser.index].id)
-          hc.parser.index++;
+          hc.parser.index+=2;
         }
-
-        hc.parser.index--;
+        hc.parser.index-=2;
         tokenList[hc.parser.index].id = ids.join('.')
         tokenList[hc.parser.index].type = token_type.classExp
-
+        
         ast = new AstNode(token_type.classExp);
         ast.token = tokenList[hc.parser.index];
         list_eat(tokenList, token_type.classExp);
+        console.log("901 >", tokenList[hc.parser.index])
       } else {
         ast = new AstNode(token_type.id);
         ast.token = tokenList[hc.parser.index];
@@ -2298,7 +2299,11 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           let procedureArg;
           if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))
             || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === walk.right.token.id))) {
-            value /= parseInt(procedureArg.value);
+            if (walk.right.token.type === token_type.classExp) {
+              value /= procedureArg.value.find(e => e.id === classExpIds.join('.'))?.value
+            } else {
+              value /= parseInt(procedureArg.value);
+            }
           } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
             value /= procedureArg.return;
@@ -2318,18 +2323,23 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
         break;
       case token_type.mul:
       case token_type.assingmul:
+        console.log("-->")
         if (walk.right.token.type === token_type.number) {
           value *= parseInt(walk.right.token.id);
         } else {
           let procedureArg;
           if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))
             || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === walk.right.token.id))) {
-            value += parseInt(procedureArg.value);
+            if (walk.right.token.type === token_type.classExp) {
+              value *= procedureArg.value.find(e => e.id === classExpIds.join('.'))?.value
+            } else {
+              value *= parseInt(procedureArg.value);
+            }
           } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
-            value += procedureArg.return;
+            value *= procedureArg.return;
           } else {
-            value += parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
+            value *= parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
           }
         }
         if (!procedureReturn) {
@@ -2343,6 +2353,13 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
         }
         break;
       case token_type.assig:
+        let classExpIds = ''
+        if (walk.right.token.type === token_type.classExp) {
+          classExpIds = walk.right.token.id.split('.')
+          walk.right.token.id = classExpIds[0]
+          classExpIds.shift()
+        }
+        console.log(walk.right.token)
         if (walk.right.token.type === token_type.number) {
           value = parseInt(walk.right.token.id);
         } else {
@@ -2350,14 +2367,25 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           if (prototypeIndex + 1
             && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))
             || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === walk.right.token.id))) {
-            value = parseInt(procedureArg.value);
+
+            if (walk.right.token.type === token_type.classExp) {
+              value = procedureArg.value.find(e => e.id === classExpIds.join('.'))?.value
+            } else {
+              value = parseInt(procedureArg.value);
+            }
+
           } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
             value = procedureArg.return;
           } else {
-            value = parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
+            if (walk.right.token.type === token_type.classExp) {
+              value = parseInt(hc.symtab.global[get_symtab(walk.right.token)].value.find(e => e.id === classExpIds.join('.'))?.value)
+            } else {
+              value = parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
+            }
           }
         }
+
         if (!procedureReturn) {
           if (symTabI >= 0) {
             hc.symtab.global[symTabI].value = value
@@ -2367,6 +2395,7 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
             hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = value
           }
         }
+        console.log("walk",walk)
         break;
       case token_type.assingsum:
       case token_type.add:
@@ -2376,7 +2405,11 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           let procedureArg;
           if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))
             || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === walk.right.token.id))) {
-            value += parseInt(procedureArg.value);
+            if (walk.right.token.type === token_type.classExp) {
+              value += procedureArg.value.find(e => e.id === classExpIds.join('.'))?.value
+            } else {
+              value += parseInt(procedureArg.value);
+            }
           } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
             value += procedureArg.return;
@@ -2402,7 +2435,11 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           let procedureArg;
           if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === walk.right.token.id))
             || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === walk.right.token.id))) {
-            value -= parseInt(procedureArg.value);
+            if (walk.right.token.type === token_type.classExp) {
+              value -= procedureArg.value.find(e => e.id === classExpIds.join('.'))?.value
+            } else {
+              value -= parseInt(procedureArg.value);
+            }
           } else if ((procedureArg = hc.symtab.prototypes.find(e => e.id === walk.right.token.id))) {
             output_out_procedures(walk.right, expList)
             value -= procedureArg.return;
