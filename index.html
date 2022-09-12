@@ -7,7 +7,7 @@
   <title>HolyC Interpreter</title>
   <script src="holyc-highlighter/holyc-highlighter.js"></script>
   <script type="module">
-    import { holyc_web_run } from "./holyc-interpreter.js"
+    import { holyc_web_run } from "./holy.js"
     import { highlight } from "./holyc-highlighter/holyc-highlighter.js"
 
     const stdin = document.getElementById("stdin")
@@ -31,6 +31,9 @@
         case "procedures":
           content = "// HolyC Procedures\nU0\nno_args()\n{\n\t\"no args\\n\";\n}\n\n// Function with no args, or just default args can be called without parentheses;\nno_args(\"*\");\nno_args();\nno_args;\n\nU8\ndefault_args(U8 abc=1, U8 def, U8 ghi=3)\n{\n\t\"arg 1: %d\\n\", abc;\n\tdef = def - 2;\n\t\"arg 2: %d\\n\", def;\n\t\"arg 3: %d\\n\", ghi;\n\treturn abc + def + ghi;\n}\n\n// Default args don't have to be on the end. This code is valid:\nU32 default_args_value = default_args(,4);\n\"%d\", default_args_value;";
           break;
+        case "define":
+          content = '// No define functions exist Terry is not a fan\n#define A "A"\n#define B 123\n\n"%d\\n", A;\n"%d\\n", B;\n'
+          break
         default:
           content = "";
       }
@@ -205,6 +208,7 @@
       <option value="conditionals">Conditionals</option>
       <option value="procedures">Procedures</option>
       <option value="class">Class</option>
+      <option value="define">Define</option>
       <option value="fibonacci">Fibonacci</option>
     </select>
 
@@ -235,7 +239,8 @@
     <br>
 
     <p>
-      If you want to learn more about HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/">this</a> documentation.
+      If you want to learn more about HolyC, you can use <a href="https://templeos.holyc.xyz/Wb/Doc/">this</a>
+      documentation.
     </p>
 
     <br>

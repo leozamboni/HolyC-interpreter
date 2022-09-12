@@ -164,6 +164,7 @@ const token_type = {
   class: 48,
   dot: 49,
   classExp: 50,
+  define: 51,
 };
 
 const token_cases = [
@@ -285,10 +286,11 @@ const token_keywords = [
   { id: "I64", type: token_type.i64 },
   { id: "U64", type: token_type.u64 },
   { id: "F64", type: token_type.f64 },
+  { id: "#define", type: token_type.define },
 ]
 
 const is_alpha = (char) => {
-  return /^[A-Z0-9_]$/i.test(char);
+  return /^[A-Z0-9_#]$/i.test(char);
 };
 
 const is_number = (char) => {
@@ -1862,6 +1864,53 @@ const parser_parse_for = (tokenList, prototypeIndex) => {
   return ast;
 };
 
+const parser_parse_define = (tokenList) => {
+  let ast = new AstNode(token_type.define);
+  ast.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.define);
+
+  let symtabNode = tokenList[hc.parser.index]
+  check_symtab(tokenList, false);
+  ast.left = new AstNode(token_type.id);
+  ast.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.id);
+
+  let value;  
+  if (check_token(tokenList, hc.parser.index, token_type.number)) {
+    value = tokenList[hc.parser.index].id
+    ast.left.left = new AstNode(token_type.number);
+    ast.left.left.token = tokenList[hc.parser.index];
+    list_eat(tokenList, token_type.number);
+  } else if (check_token(tokenList, hc.parser.index, token_type.true)) {
+    value = tokenList[hc.parser.index].id
+    ast.left.left = new AstNode(token_type.true);
+    ast.left.left.token = {
+      id: 1,
+      line: tokenList[hc.parser.index].line,
+      type: token_type.number,
+    };
+    list_eat(tokenList, token_type.true);
+  } else if (check_token(tokenList, hc.parser.index, token_type.false)) {
+    value = tokenList[hc.parser.index].id
+    ast.left.left = new AstNode(token_type.number);
+    ast.left.left.token = {
+      id: 0,
+      line: tokenList[hc.parser.index].line,
+      type: token_type.number,
+    };
+    list_eat(tokenList, token_type.false);
+  } else {
+    value = tokenList[hc.parser.index].id
+    ast.left.left = new AstNode(token_type.str);
+    ast.left.left.token = tokenList[hc.parser.index];
+    list_eat(tokenList, token_type.str);
+  }
+
+  hc.symtab.global.push({ ...symtabNode, value: value });
+
+  return ast;
+};
+
 /**
  * semantic analysis of blocks
  * @arg {array} tokenList
@@ -1941,6 +1990,9 @@ const parser_parse = (tokenList) => {
     case token_type.id:
       expList.ast = parser_parse_id(tokenList);
       break;
+    case token_type.define:
+        expList.ast = parser_parse_define(tokenList);
+        break;
     case token_type.increment:
     case token_type.decrement:
       expList.ast = parser_parse_prepostfix(tokenList, false);
@@ -2754,19 +2806,19 @@ const printf = (ast, prototypeIndex) => {
     let procedureArg;
     if (prototypeIndex + 1 && (procedureArg = hc.symtab.prototypes[prototypeIndex]?.args.find(e => e.id === ast.left.right.token.id))
       || (procedureArg = hc.symtab.scoped[prototypeIndex]?.find(e => e.id === ast.left.right.token.id))) {
-      str = str.replace("%d", procedureArg.value);
+      str = str.replace(/%d/g, procedureArg.value);
     } else {
       if (ast.left.right.token.type === token_type.number) {
-        str = str.replace("%d", ast.left.right.token.id);
+        str = str.replace(/%d/g, ast.left.right.token.id);
       } else {
         if (ast.left.right.token.type === token_type.classExp) {
           let classexp = ast.left.right.token.id.split('.')
           let args = ast.left.right.token;
 
           args.id = classexp.shift()
-          str = str.replace("%d", hc.symtab.global[get_symtab(args)].value.find(e => e.id === classexp.join('.'))?.value);
+          str = str.replace(/%d/g, hc.symtab.global[get_symtab(args)].value.find(e => e.id === classexp.join('.'))?.value);
         } else {
-          str = str.replace("%d", hc.symtab.global[get_symtab(ast.left.right.token)].value);
+          str = str.replace(/%d/g, hc.symtab.global[get_symtab(ast.left.right.token)].value);
         }
       }
     }

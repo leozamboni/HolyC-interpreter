@@ -12,7 +12,7 @@ in
     
     nativeBuildInputs = [
       bun
-
+      minify
       script
     ];
   }
