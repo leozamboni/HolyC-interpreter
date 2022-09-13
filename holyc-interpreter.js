@@ -33,7 +33,7 @@ const stdin = document.getElementById("stdin");
 const stdout = (value) => (document.getElementById("stdout/stderr").value = value)
   && (document.getElementById("stdout/stderr").style.color = "black");
 
-export const holyc_web_run = () => stdout(output(parser(lexer(init_hc()))));
+export const holyc_web_run = async () => stdout(await output(parser(await lexer(init_hc()))));
 
 /**
  * Back-end runtime 
@@ -43,9 +43,9 @@ export const holyc_web_run = () => stdout(output(parser(lexer(init_hc()))));
  * This procedures is only for holy node (the JS HolyC interpreter for back-ends);
  * Check github.com/leozamboni/holy-node
  */
-export const holy_node_interactive = (stdin) => output(hc.symtab.interactive = true && parser(lexer(init_hc(stdin))));
+export const holy_node_interactive = async (stdin) => await output(hc.symtab.interactive = true && parser(await lexer(init_hc(stdin))));
 
-export const holy_node_script = (stdin) => output(parser(lexer(init_hc(stdin))));
+export const holy_node_script = async (stdin) => await output(parser(await lexer(init_hc(stdin))));
 
 /**
  * AST Node
@@ -165,6 +165,7 @@ const token_type = {
   dot: 49,
   classExp: 50,
   define: 51,
+  include: 52,
 };
 
 const token_cases = [
@@ -287,6 +288,7 @@ const token_keywords = [
   { id: "U64", type: token_type.u64 },
   { id: "F64", type: token_type.f64 },
   { id: "#define", type: token_type.define },
+  { id: "#include", type: token_type.include },
 ]
 
 const is_alpha = (char) => {
@@ -300,6 +302,19 @@ const is_number = (char) => {
 const is_ignored = (char) => {
   char === '\n' && hc.lexer.line++;
   return /[ \n\t]/.test(char);
+}
+
+const lex_include = async (hc) => {
+  const token = lex_alpha(hc)
+  if (token.id !== '#include') return token
+
+  hc.lexer.index += 2
+  hc.files.stdin = await fetch(lex_string(hc).id)
+    .then(response => response.text())
+    .then(text => text) + hc.files.stdin.slice(hc.lexer.index, hc.files.stdin.length);
+  hc.lexer.index = 0;
+
+  return "{include}"
 }
 
 const lex_alpha = (hc) => {
@@ -344,13 +359,19 @@ const lex_string = (hc) => {
   return new Token(id, token_type.str, hc.lexer.line);
 }
 
-const lexer_lex = (hc) => {
+const lexer_lex = async (hc) => {
   while ((hc.lexer.char = hc.files.stdin[hc.lexer.index++])
     && hc.lexer.char) {
+    let token = ''
     if (is_ignored(hc.lexer.char)) continue;
+    if (hc.lexer.char === '#') {
+      token = await lex_include(hc);
+      if (token === '{include}') continue
+      else return token
+    }
     if (is_number(hc.lexer.char)) return lex_number(hc);
     if (is_alpha(hc.lexer.char)) return lex_alpha(hc);
-    const token = token_cases.find(e => e.char === hc.lexer.char)?.render(hc)
+    token = token_cases.find(e => e.char === hc.lexer.char)?.render(hc)
     if (token === "{comment}") continue;
     else if (token) return token;
     else lexer_error({ id: hc.lexer.char, line: hc.lexer.line })
@@ -386,11 +407,11 @@ const init_hc = (inpStdin) => {
 }
 
 // TODO: create a one step lexer
-const lexer = (hc) => {
+const lexer = async (hc) => {
   let token_list = [];
 
   while (1) {
-    const token = lexer_lex(hc)
+    const token = await lexer_lex(hc)
     if (!token) break;
     token_list.push(token)
   }
@@ -891,21 +912,20 @@ const parser_parse_exp = (tokenList, arg, prototypeIndex, inClass) => {
 
       if (check_token(tokenList, hc.parser.index + 1, token_type.dot)) {
         let ids = [];
-        
+
         while (tokenList[hc.parser.index].type
           === token_type.id) {
           tokenList[hc.parser.index].type === token_type.id
             && ids.push(tokenList[hc.parser.index].id)
-          hc.parser.index+=2;
+          hc.parser.index += 2;
         }
-        hc.parser.index-=2;
+        hc.parser.index -= 2;
         tokenList[hc.parser.index].id = ids.join('.')
         tokenList[hc.parser.index].type = token_type.classExp
-        
+
         ast = new AstNode(token_type.classExp);
         ast.token = tokenList[hc.parser.index];
         list_eat(tokenList, token_type.classExp);
-        console.log("901 >", tokenList[hc.parser.index])
       } else {
         ast = new AstNode(token_type.id);
         ast.token = tokenList[hc.parser.index];
@@ -1864,6 +1884,18 @@ const parser_parse_for = (tokenList, prototypeIndex) => {
   return ast;
 };
 
+const parser_parse_include = (tokenList) => {
+  let ast = new AstNode(token_type.include);
+  ast.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.include);
+
+  ast.left = new AstNode(token_type.str);
+  ast.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.str);
+
+  return ast;
+};
+
 const parser_parse_define = (tokenList) => {
   let ast = new AstNode(token_type.define);
   ast.token = tokenList[hc.parser.index];
@@ -1875,7 +1907,7 @@ const parser_parse_define = (tokenList) => {
   ast.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.id);
 
-  let value;  
+  let value;
   if (check_token(tokenList, hc.parser.index, token_type.number)) {
     value = tokenList[hc.parser.index].id
     ast.left.left = new AstNode(token_type.number);
@@ -1991,8 +2023,11 @@ const parser_parse = (tokenList) => {
       expList.ast = parser_parse_id(tokenList);
       break;
     case token_type.define:
-        expList.ast = parser_parse_define(tokenList);
-        break;
+      expList.ast = parser_parse_define(tokenList);
+      break;
+    case token_type.include:
+      expList.ast = parser_parse_include(tokenList);
+      break;
     case token_type.increment:
     case token_type.decrement:
       expList.ast = parser_parse_prepostfix(tokenList, false);
@@ -2339,8 +2374,6 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
               })
             }
           }
-
-          console.log(hc.symtab)
         }
         break
       case token_type.div:
@@ -2375,7 +2408,6 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
         break;
       case token_type.mul:
       case token_type.assingmul:
-        console.log("-->")
         if (walk.right.token.type === token_type.number) {
           value *= parseInt(walk.right.token.id);
         } else {
@@ -2411,7 +2443,6 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
           walk.right.token.id = classExpIds[0]
           classExpIds.shift()
         }
-        console.log(walk.right.token)
         if (walk.right.token.type === token_type.number) {
           value = parseInt(walk.right.token.id);
         } else {
@@ -2447,7 +2478,6 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
             hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = value
           }
         }
-        console.log("walk",walk)
         break;
       case token_type.assingsum:
       case token_type.add:
@@ -2738,9 +2768,8 @@ const output_out_return = (ast, expList, prototypeIndex) => {
  * output generation
  * @arg {array} expList
  */
-const output = (expList) => {
+const output = async (expList) => {
   if (!expList) return hc.files.stdout;
-  // try {
 
   let expListAux = expList;
 
@@ -2784,12 +2813,7 @@ const output = (expList) => {
     expListAux = expListAux.next;
   } while (expListAux);
 
-  console.log(hc.symtab)
-  console.log(expList)
   return hc.files.stdout;
-  // } catch (err) {
-  //   internal_error(err);
-  // }
 };
 
 /**

@@ -1,6 +1,6 @@
 {
-  "name": "holyc-interpreter",
   "type": "module",
+  "name": "holyc-interpreter",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

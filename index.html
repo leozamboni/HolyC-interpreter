@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HolyC Interpreter</title>
   <script src="holyc-highlighter/holyc-highlighter.js"></script>
-  <script type="module">
+  <script defer type="module">
     import { holyc_web_run } from "./holy.js"
     import { highlight } from "./holyc-highlighter/highlighter.js"
 
@@ -34,6 +34,9 @@
         case "define":
           content = '// No define functions exist Terry is not a fan\n#define A "A"\n#define B 123\n\n"%d\\n", A;\n"%d\\n", B;\n'
           break
+        case 'include':
+          content = '// work better in holy node (HJ or HC extension)\n#include "fibonacci.HJ"\n'
+          break;
         default:
           content = "";
       }
@@ -209,6 +212,7 @@
       <option value="procedures">Procedures</option>
       <option value="class">Class</option>
       <option value="define">Define</option>
+      <option value="include">Include</option>
       <option value="fibonacci">Fibonacci</option>
     </select>
 
