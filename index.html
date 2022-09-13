@@ -37,6 +37,9 @@
         case 'include':
           content = '// work better in holy node (HJ or HC extension)\n#include "fibonacci.HJ"\n'
           break;
+        case 'assignment':
+          content = '// variable assignment\n// BOOLEAN\nBool\nbool = FALSE;\n\n// SIGNED\n// I0 -- 0 bytes\nI8  // 8 bytes\n i8 = 0;\nI16 // 16 bytes\ni16 = 0;\nI32 // 32 bytes\ni32 = 0;\nI64 // 64 bytes\ni64 = 0;\n\n// UNSIGNED\n// U0 -- 0 bytes\nU8  // 8 bytes\n u8 = 0;\nU16 // 16 bytes\nu16 = 0;\nU32 // 32 bytes\nu32 = 0;\nU64 // 64 bytes\nu64 = 0;\n\n// YOU SHOULD NOT USE (FLOAT)\nF64 // 64 bytes\nf64 = 0;\n'
+          break;
         default:
           content = "";
       }
@@ -208,6 +211,7 @@
     <select onchange="examples()" id="examples">
       <option value="">Examples</option>
       <option value="helloWorld">Hello World</option>
+      <option value="assignment">Assignment</option>
       <option value="conditionals">Conditionals</option>
       <option value="procedures">Procedures</option>
       <option value="class">Class</option>
