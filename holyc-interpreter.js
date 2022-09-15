@@ -47,6 +47,8 @@ export const holy_node_interactive = async (stdin) => await output(hc.symtab.int
 
 export const holy_node_script = async (stdin) => await output(parser(await lexer(init_hc(stdin))));
 
+export const holy_script = async (stdin) => stdout(await output(parser(await lexer(init_hc(stdin)))));
+
 /**
  * AST Node
  * @constructor
