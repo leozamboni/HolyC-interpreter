@@ -27,10 +27,10 @@
  *  bun dev
  * 
  */
-const stderr = (value) => (document.getElementById("stdout/stderr").value = value)
+const stderr = (value) => (document.getElementById("stdout/stderr").innerText = value)
   && (document.getElementById("stdout/stderr").style.color = "red");
 const stdin = document.getElementById("stdin");
-const stdout = (value) => (document.getElementById("stdout/stderr").value = value)
+const stdout = (value) => (document.getElementById("stdout/stderr").innerText = value)
   && (document.getElementById("stdout/stderr").style.color = "black");
 
 export const holyc_web_run = async () => stdout(await output(parser(await lexer(init_hc()))));
