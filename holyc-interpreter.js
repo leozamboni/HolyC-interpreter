@@ -27,10 +27,10 @@
  *  bun dev
  * 
  */
-const stderr = (value) => (document.getElementById("stdout/stderr").innerText = value)
+const stderr = (value) => (document.getElementById("stdout/stderr").value = value)
   && (document.getElementById("stdout/stderr").style.color = "red");
 const stdin = document.getElementById("stdin");
-const stdout = (value) => (document.getElementById("stdout/stderr").innerText = value)
+const stdout = (value) => (document.getElementById("stdout/stderr").value = value)
   && (document.getElementById("stdout/stderr").style.color = "black");
 
 export const holyc_web_run = async () => stdout(await output(parser(await lexer(init_hc()))));
@@ -168,6 +168,8 @@ const token_type = {
   classExp: 50,
   define: 51,
   include: 52,
+  js: 53,
+  jscode: 54,
 };
 
 const token_cases = [
@@ -291,6 +293,8 @@ const token_keywords = [
   { id: "F64", type: token_type.f64 },
   { id: "#define", type: token_type.define },
   { id: "#include", type: token_type.include },
+  { id: "js", type: token_type.js },
+  { id: "endjs", type: token_type.endjs },
 ]
 
 const is_alpha = (char) => {
@@ -416,6 +420,22 @@ const lexer = async (hc) => {
     const token = await lexer_lex(hc)
     if (!token) break;
     token_list.push(token)
+    console.log("token")
+    if (token.type === token_type.js) {
+      console.log(token)
+      hc.lexer.char = hc.files.stdin[hc.lexer.index]
+      let id = '';
+      do {
+        hc.lexer.char = hc.files.stdin[hc.lexer.index++]
+        !hc.lexer.char && lexer_error({ id: "EOF", line: hc.lexer.line })
+        id += hc.lexer.char
+      }
+      while (hc?.files?.stdin.substring(hc.lexer.index, hc.lexer.index + 5) !== 'endjs');
+      console.log(id)
+      token_list.push(new Token(id, token_type.jscode, hc.lexer.line))
+      token_list.push(new Token('endjs', token_type.endjs, hc.lexer.line))
+      hc.lexer.index += 5
+    }
   }
 
   return token_list;
@@ -1898,6 +1918,22 @@ const parser_parse_include = (tokenList) => {
   return ast;
 };
 
+const parser_parse_js = (tokenList) => {
+  let ast = new AstNode(token_type.js);
+  ast.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.js);
+
+  ast.left = new AstNode(token_type.jscode);
+  ast.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.jscode);
+
+  ast.left.left = new AstNode(token_type.endjs);
+  ast.left.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.endjs);
+
+  return ast;
+};
+
 const parser_parse_define = (tokenList) => {
   let ast = new AstNode(token_type.define);
   ast.token = tokenList[hc.parser.index];
@@ -2026,6 +2062,9 @@ const parser_parse = (tokenList) => {
       break;
     case token_type.define:
       expList.ast = parser_parse_define(tokenList);
+      break;
+    case token_type.js:
+      expList.ast = parser_parse_js(tokenList);
       break;
     case token_type.include:
       expList.ast = parser_parse_include(tokenList);
@@ -2664,6 +2703,10 @@ const output_out_ifelse = (ast, expList, prototypeIndex) => {
   return outBlockVal;
 };
 
+const output_out_js = (ast) => {
+  eval(ast.left.token.id)
+}
+
 /**
  * code generation of for statement
  * @arg {object} ast
@@ -2797,6 +2840,9 @@ const output = async (expList) => {
         break;
       case token_type.for:
         output_out_for(expListAux.ast, expList);
+        break;
+      case token_type.js:
+        output_out_js(expListAux.ast);
         break;
       case token_type.str:
         let walk = expListAux.ast;

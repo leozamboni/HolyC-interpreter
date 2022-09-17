@@ -5,10 +5,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HolyC Interpreter</title>
-  <script src="holyc-highlighter/holyc-highlighter.js"></script>
+  <script src="holyc-highlighter/holy.js"></script>
   <script defer type="module">
-    import { holyc_web_run } from "./holy.js"
-    import { highlight } from "./holyc-highlighter/highlighter.js"
+    import { holyc_web_run } from "./holyc-interpreter.js"
+    import { highlight, set_scroll } from "./holyc-highlighter/highlighter.js"
 
     const stdin = document.getElementById("stdin")
     highlight((stdin.value = '"hello world";'))
@@ -39,6 +39,9 @@
           break;
         case 'assignment':
           content = '// variable assignment\n// BOOLEAN\nBool\nbool = FALSE;\n\n// SIGNED\n// I0 -- 0 bytes\nI8  // 8 bytes\n i8 = 0;\nI16 // 16 bytes\ni16 = 0;\nI32 // 32 bytes\ni32 = 0;\nI64 // 64 bytes\ni64 = 0;\n\n// UNSIGNED\n// U0 -- 0 bytes\nU8  // 8 bytes\n u8 = 0;\nU16 // 16 bytes\nu16 = 0;\nU32 // 32 bytes\nu32 = 0;\nU64 // 64 bytes\nu64 = 0;\n\n// YOU SHOULD NOT USE (FLOAT)\nF64 // 64 bytes\nf64 = 0;\n'
+          break;
+        case 'js':
+          content = '// this is not a HolyC feature but a HolyJS version of HolyC asm. It is very powerful be careful\njs\n\ndocument.getElementById("run_button").style.background =\'red\';\n\nendjs\n';
           break;
         default:
           content = "";
@@ -73,6 +76,7 @@
 
     window.holyc_web_run = holyc_web_run;
     window.highlight = highlight;
+    window.set_scroll = set_scroll;
     window.examples = examples;
     window.resizehl = resizehl;
   </script>
@@ -206,7 +210,7 @@
 
     <br>
 
-    <button onclick="holyc_web_run()">RUN(▶)</button>
+    <button onclick="holyc_web_run()" id="run_button">RUN(▶)</button>
 
     <select onchange="examples()" id="examples">
       <option value="">Examples</option>
@@ -217,6 +221,7 @@
       <option value="class">Class</option>
       <option value="define">Define</option>
       <option value="include">Include</option>
+      <option value="js">js (asm)</option>
       <option value="fibonacci">Fibonacci</option>
     </select>
 
