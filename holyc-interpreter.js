@@ -420,9 +420,9 @@ const lexer = async (hc) => {
     const token = await lexer_lex(hc)
     if (!token) break;
     token_list.push(token)
-    console.log("token")
+
     if (token.type === token_type.js) {
-      console.log(token)
+
       hc.lexer.char = hc.files.stdin[hc.lexer.index]
       let id = '';
       do {
@@ -431,9 +431,10 @@ const lexer = async (hc) => {
         id += hc.lexer.char
       }
       while (hc?.files?.stdin.substring(hc.lexer.index, hc.lexer.index + 5) !== 'endjs');
-      console.log(id)
+
       token_list.push(new Token(id, token_type.jscode, hc.lexer.line))
       token_list.push(new Token('endjs', token_type.endjs, hc.lexer.line))
+
       hc.lexer.index += 5
     }
   }
