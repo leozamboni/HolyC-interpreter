@@ -294,7 +294,6 @@ const token_keywords = [
   { id: "#define", type: token_type.define },
   { id: "#include", type: token_type.include },
   { id: "js", type: token_type.js },
-  { id: "endjs", type: token_type.endjs },
 ]
 
 const is_alpha = (char) => {
@@ -421,7 +420,10 @@ const lexer = async (hc) => {
     if (!token) break;
     token_list.push(token)
 
-    if (token.type === token_type.js) {
+    if (token.type === token_type.js && hc.files.stdin[hc.lexer.index + 1] === '{') {
+      hc.lexer.index++
+      token_list.push(new Token('{', token_type.rbrace, hc.lexer.line))
+      hc.lexer.index++
 
       hc.lexer.char = hc.files.stdin[hc.lexer.index]
       let id = '';
@@ -430,12 +432,13 @@ const lexer = async (hc) => {
         !hc.lexer.char && lexer_error({ id: "EOF", line: hc.lexer.line })
         id += hc.lexer.char
       }
-      while (hc?.files?.stdin.substring(hc.lexer.index, hc.lexer.index + 5) !== 'endjs');
-
+      while (hc?.files?.stdin.substring(hc.lexer.index, hc.lexer.index + 2) !== '};');
+    
       token_list.push(new Token(id, token_type.jscode, hc.lexer.line))
-      token_list.push(new Token('endjs', token_type.endjs, hc.lexer.line))
+      token_list.push(new Token('}', token_type.lbrace, hc.lexer.line))
+      token_list.push(new Token(';', token_type.semi, hc.lexer.line))
 
-      hc.lexer.index += 5
+      hc.lexer.index += 2
     }
   }
 
@@ -1924,13 +1927,21 @@ const parser_parse_js = (tokenList) => {
   ast.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.js);
 
-  ast.left = new AstNode(token_type.jscode);
+  ast.left = new AstNode(token_type.rbrace);
   ast.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.rbrace);
+
+  ast.left.left = new AstNode(token_type.jscode);
+  ast.left.left.token = tokenList[hc.parser.index];
   list_eat(tokenList, token_type.jscode);
 
-  ast.left.left = new AstNode(token_type.endjs);
-  ast.left.left.token = tokenList[hc.parser.index];
-  list_eat(tokenList, token_type.endjs);
+  ast.left.left.left = new AstNode(token_type.lbrace);
+  ast.left.left.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.lbrace);
+
+  ast.left.left.left.left = new AstNode(token_type.semi);
+  ast.left.left.left.left.token = tokenList[hc.parser.index];
+  list_eat(tokenList, token_type.semi);
 
   return ast;
 };
@@ -2705,7 +2716,7 @@ const output_out_ifelse = (ast, expList, prototypeIndex) => {
 };
 
 const output_out_js = (ast) => {
-  eval(ast.left.token.id)
+  eval(ast.left.left.token.id)
 }
 
 /**
