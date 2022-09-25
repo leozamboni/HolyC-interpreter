@@ -1,17 +1,17 @@
 If you want to support this project star the repository (it makes me motivated ♥).
 
-# Holy Interpreter
+# HolyJS
 
-It is a small (yet) self-made HolyC interpreter and all current features are exemplified in the ```Examples``` select.
+HolyJS is a small (yet) handwritten HolyC interpreter.
 
-[Live](https://holy-js.github.io/holy-interpreter/)
+[Playground](https://holy-js.github.io/holy-js/)
 
-# Holy Node
+# HolyNode
 
-[Holy Node](https://github.com/holy-js/holy-node) is a node like backend implementation of HolyC Interpreter.
+[HolyNode](https://github.com/holy-js/holy-node) is a node like backend implementation of HolyC Interpreter.
 
-# Holy Script
+# HolyScript
 
-[Holy Script](https://github.com/holy-js/holy-script) is a holy way to run embed holyc scripts in HTML 
+[HolyScript](https://github.com/holy-js/holy-script) is a holy way to run embed holyc scripts in HTML.
 
 
