@@ -7,8 +7,8 @@
   <title>HolyC Interpreter</title>
   <script src="holyc-highlighter/holyc-highlighter.js"></script>
   <script defer type="module">
-    import { holyc_web_run } from "./holy.js"
-    import { highlight } from "./holyc-highlighter/highlighter.js"
+    import { holyc_web_run } from "./holyc-interpreter.js"
+    import { highlight, set_scroll } from "./holyc-highlighter/highlighter.js"
 
     const stdin = document.getElementById("stdin")
     highlight((stdin.value = '"hello world";'))

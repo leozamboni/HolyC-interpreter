@@ -406,7 +406,6 @@ const init_hc = (inpStdin) => {
   return hc;
 }
 
-// TODO: create a one step lexer
 const lexer = async (hc) => {
   let token_list = [];
 
@@ -414,6 +413,27 @@ const lexer = async (hc) => {
     const token = await lexer_lex(hc)
     if (!token) break;
     token_list.push(token)
+
+    if (token.type === token_type.js && hc.files.stdin[hc.lexer.index + 1] === '{') {
+      hc.lexer.index++
+      token_list.push(new Token('{', token_type.rbrace, hc.lexer.line))
+      hc.lexer.index++
+
+      hc.lexer.char = hc.files.stdin[hc.lexer.index]
+      let id = '';
+      do {
+        hc.lexer.char = hc.files.stdin[hc.lexer.index++]
+        !hc.lexer.char && lexer_error({ id: "EOF", line: hc.lexer.line })
+        id += hc.lexer.char
+      }
+      while (hc?.files?.stdin.substring(hc.lexer.index, hc.lexer.index + 2) !== '};');
+
+      token_list.push(new Token(id, token_type.jscode, hc.lexer.line))
+      token_list.push(new Token('}', token_type.lbrace, hc.lexer.line))
+      token_list.push(new Token(';', token_type.semi, hc.lexer.line))
+
+      hc.lexer.index += 2
+    }
   }
 
   return token_list;
@@ -1978,6 +1998,9 @@ const parser_parse_block = (tokenList, prototypeIndex) => {
     case token_type.for:
       ast = parser_parse_for(tokenList, prototypeIndex);
       break;
+    case token_type.js:
+      ast = parser_parse_js(tokenList);
+      break;
     case token_type.if:
       ast = parser_parse_ifelse(tokenList, prototypeIndex);
       break;
@@ -2327,26 +2350,45 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
       case token_type.dot:
         !lastWalk.left && classItems.push(lastWalk.token)
         if (!walk.right?.right) {
+          console.log("aqui", first)
           classItems.push(walk.right.token)
 
           value = 0;
-          while (first) {
+          first = first.left;
             switch (first.type) {
+              case token_type.assingsub:
+              case token_type.sub:
+                if (first.left.token.type === token_type.number) {
+                  value -= parseInt(first.left.token.id);
+                }
+                break
+              case token_type.assingsum:
+              case token_type.add:
+                if (first.left.token.type === token_type.number) {
+                  value += parseInt(first.left.token.id);
+                }
+                break
+              case token_type.mul:
+              case token_type.assingmul:
+                if (first.left.token.type === token_type.number) {
+                  value *= parseInt(first.left.token.id);
+                }
+                break
               case token_type.assig:
                 if (first.left.token.type === token_type.number) {
                   value = parseInt(first.left.token.id);
                 }
                 break
+              case token_type.assingdiv:
               case token_type.div:
                 if (first.left.token.type === token_type.number) {
                   value /= parseInt(first.left.token.id);
                 }
                 break;
             }
-            first = first.left;
-          }
-
-
+            
+          
+            walk = first.left
           if (!procedureReturn) {
             if (symTabI >= 0) {
               if (!Array.isArray(hc.symtab.global[symTabI].value)) {
@@ -2407,6 +2449,7 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
         }
         break;
       case token_type.mul:
+        console.log("case token_type.mul:", walk)
       case token_type.assingmul:
         if (walk.right.token.type === token_type.number) {
           value *= parseInt(walk.right.token.id);
@@ -2426,14 +2469,46 @@ const output_out_exp = (ast, expList, left, prototypeIndex, procedureReturn) => 
             value *= parseInt(hc.symtab.global[get_symtab(walk.right.token)].value);
           }
         }
+        console.log(value)
         if (!procedureReturn) {
+          // if (symTabI >= 0) {
+          //   hc.symtab.global[symTabI].value = value
+          // } else if (hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex]?.id === procedureToken.id) {
+          //   hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value
+          // } else {
+          //   hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = value
+          // }
+
           if (symTabI >= 0) {
-            hc.symtab.global[symTabI].value = value
+            if (!Array.isArray(hc.symtab.global[symTabI].value)) {
+              hc.symtab.global[symTabI].value = []
+            }
+            console.log("cccc", hc.symtab.global[symTabI])
+            hc.symtab.global[symTabI].value.push({
+              id: classItems.map(e => e.id).join('.'),
+              value: value
+            })
           } else if (hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex]?.id === procedureToken.id) {
-            hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = value
+            console.log("aaaaa")
+            if (!Array.isArray(hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value)) {
+              hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value = []
+            }
+            hc.symtab.prototypes[prototypeIndex].args[prototypeArgIndex].value.push({
+              id: classItems.map(e => e.id).join('.'),
+              value: value
+            })
           } else {
-            hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = value
+            if (!Array.isArray(hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value)) {
+              hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value = []
+            }
+            console.log("bbbb")
+
+            hc.symtab.scoped[prototypeIndex][prototypeArgIndex].value.push({
+              id: classItems.map(e => e.id).join('.'),
+              value: value
+            })
           }
+        
         }
         break;
       case token_type.assig:
@@ -2624,6 +2699,9 @@ const output_out_block = (walk, expList, prototypeIndex) => {
       break;
     case token_type.call:
       output_out_procedures(walk, expList)
+      break;
+    case token_type.js:
+      output_out_js(walk);
       break;
     case token_type.return:
       output_out_return(walk, expList, prototypeIndex);
