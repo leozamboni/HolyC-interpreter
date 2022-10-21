@@ -27,25 +27,45 @@
  *  bun dev
  * 
  */
-const stderr = (value) => (document.getElementById("stdout/stderr").value = value)
-  && (document.getElementById("stdout/stderr").style.color = "red");
-const stdin = document.getElementById("stdin");
+let hc = {
+  modes: {
+    HolyNode: false
+  },
+  files: {
+    stdin: '',
+    stdout: '',
+    stderr: '',
+  },
+  lexer: {
+    char: '',
+    line: 1,
+    index: 0,
+  },
+  parser: {
+    index: 0,
+  },
+  symtab: {
+    idle: false,
+    global: [],
+    scoped: [],
+    prototypes: [],
+    class: [],
+    types: [],
+  },
+}
+
+const stderr = eval('(value) =>' + hc.modes.HolyNode ? undefined : '(document.getElementById("stdout/stderr").value = value) && (document.getElementById("stdout/stderr").style.color = "red")')
+const stdin = () => eval(hc.modes.HolyNode ? undefined : 'document.getElementById("stdin")');
 const stdout = (value) => (document.getElementById("stdout/stderr").value = value)
   && (document.getElementById("stdout/stderr").style.color = "black");
 
 export const holyc_web_run = async () => stdout(await output(parser(await lexer(init_hc()))));
 
-/**
- * Back-end runtime 
- * @arg {string} stdin
- * @requires
- * @description 
- * This procedures is only for holy node (the JS HolyC interpreter for back-ends);
- * Check github.com/leozamboni/holy-node
- */
-export const holy_node_interactive = async (stdin) => await output(hc.symtab.interactive = true && parser(await lexer(init_hc(stdin))));
+export const holy_node_idle = async (stdin) =>
+  (hc.symtab.idle = hc.modes.HolyNode = true) && await output(parser(await lexer(init_hc(stdin))));
 
-export const holy_node_script = async (stdin) => await output(parser(await lexer(init_hc(stdin))));
+export const holy_node_script = async (stdin) =>
+  (hc.modes.HolyNode = true) && await output(parser(await lexer(init_hc(stdin))));
 
 export const holy_script = async (stdin) => document.getElementById("stdout/stderr").innerText = await output(parser(await lexer(init_hc(stdin))));
 
@@ -89,30 +109,6 @@ class Token {
     this.type = type;
     this.line = line;
   }
-}
-
-let hc = {
-  files: {
-    stdin: '',
-    stdout: '',
-    stderr: '',
-  },
-  lexer: {
-    char: '',
-    line: 1,
-    index: 0,
-  },
-  parser: {
-    index: 0,
-  },
-  symtab: {
-    interactive: false,
-    global: [],
-    scoped: [],
-    prototypes: [],
-    class: [],
-    types: [],
-  },
 }
 
 const token_type = {
@@ -385,7 +381,7 @@ const lexer_lex = async (hc) => {
 
 const init_hc = (inpStdin) => {
   stderr && stderr('')
-  stdin && (hc.files.stdin = stdin.value) || (hc.files.stdin = inpStdin)
+  stdin()?.value && (hc.files.stdin = stdin().value) || (hc.files.stdin = inpStdin)
 
   hc.files.stdout = '';
   hc.files.stderr = '';
@@ -393,11 +389,11 @@ const init_hc = (inpStdin) => {
   hc.lexer.index = 0;
   hc.lexer.line = 1;
   hc.parser.index = 0;
-  !hc.symtab.interactive && (hc.symtab.types = []);
-  !hc.symtab.interactive && (hc.symtab.global = []);
-  !hc.symtab.interactive && (hc.symtab.prototypes = []);
-  !hc.symtab.interactive && (hc.symtab.class = []);
-  !hc.symtab.interactive && (hc.symtab.scoped = []);
+  !hc.symtab.idle && (hc.symtab.types = []);
+  !hc.symtab.idle && (hc.symtab.global = []);
+  !hc.symtab.idle && (hc.symtab.prototypes = []);
+  !hc.symtab.idle && (hc.symtab.class = []);
+  !hc.symtab.idle && (hc.symtab.scoped = []);
 
   if (!hc.files.stdin) {
     hc.files.stderr += "Compile failure\nLexer: nothing to compile\n";
