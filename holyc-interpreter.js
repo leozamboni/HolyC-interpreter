@@ -47,7 +47,7 @@ export const holy_node_interactive = async (stdin) => await output(hc.symtab.int
 
 export const holy_node_script = async (stdin) => await output(parser(await lexer(init_hc(stdin))));
 
-export const holy_script = async (stdin) => stdout(await output(parser(await lexer(init_hc(stdin)))));
+export const holy_script = async (stdin) => document.getElementById("stdout/stderr").innerText = await output(parser(await lexer(init_hc(stdin))));
 
 /**
  * AST Node
@@ -433,7 +433,7 @@ const lexer = async (hc) => {
         id += hc.lexer.char
       }
       while (hc?.files?.stdin.substring(hc.lexer.index, hc.lexer.index + 2) !== '};');
-    
+
       token_list.push(new Token(id, token_type.jscode, hc.lexer.line))
       token_list.push(new Token('}', token_type.lbrace, hc.lexer.line))
       token_list.push(new Token(';', token_type.semi, hc.lexer.line))
