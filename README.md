@@ -17,7 +17,8 @@ bun dev
 Create a input tag with "stdin" tag and another with "stdout/stderr":
 
 ```html
-<textarea id="stdin"></textarea> <textarea id="stdout/stderr"></textarea>
+<textarea id="stdin"></textarea> 
+<textarea id="stdout/stderr"></textarea>
 ```
 
 The stdin will be for the code and the stdout/stderr for the interpreter output.
