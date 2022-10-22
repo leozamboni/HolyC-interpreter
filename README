@@ -4,14 +4,14 @@ If you want to support this project star the repository (it makes me motivated â
 
 HolyJS is a small (yet) handwritten HolyC interpreter.
 
-[Playground](https://holy-js.github.io/holy-js/)
+[Playground](https://templeweb.github.io/HolyJS/)
 
 # HolyNode
 
-[HolyNode](https://github.com/holy-js/holy-node) is a node like backend implementation of HolyC Interpreter.
+[HolyNode](https://github.com/TempleWeb/HolyNode) is a node like backend implementation of HolyC Interpreter.
 
 # HolyScript
 
-[HolyScript](https://github.com/holy-js/holy-script) is a holy way to run embed holyc scripts in HTML.
+[HolyScript](https://github.com/TempleWeb/HolyScript) is a holy way to run embed holyc scripts in HTML.
 
 
