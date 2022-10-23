@@ -2,9 +2,9 @@
 
 HolyJS is a small (yet) handwritten HolyC interpreter.
 
-[Playground](https://templeweb.github.io/HolyJS/)
+[Playground](https://holy-js.github.io/HolyJS/)
 
-If you want a backend runtime use the [HolyNode](https://github.com/TempleWeb/HolyNode), a node like backend implementation of HolyJS.
+If you want a backend runtime use the [HolyNode](https://github.com/holy-js/HolyNode), a node like backend implementation of HolyJS.
 
 ## Self host
 
