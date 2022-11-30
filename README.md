@@ -1,10 +1,10 @@
-# HolyJS
+# HolyC Interpreter
 
-HolyJS is a small (yet) handwritten HolyC interpreter.
+A small sandboxed handwritten HolyC interpreter in JavaScript.
 
-[Playground](https://holy-js.github.io/HolyJS/)
+[Playground](https://leonardo.moe/holyc-interpreter/)
 
-If you want a backend runtime use the [HolyNode](https://github.com/holy-js/HolyNode), a node like backend implementation of HolyJS.
+If you want a CLI use [HolyC Interpreter CLI](https://github.com/leozamboni/holyc-interpreter-cli).
 
 ## Self host
 
