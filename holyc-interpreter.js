@@ -54,8 +54,7 @@ let hc = {
   },
 }
 
-const stderr = eval('(value) =>' + hc.modes.HolyNode ? undefined : '(document.getElementById("stdout/stderr").value = value) && (document.getElementById("stdout/stderr").style.color = "red")')
-
+const stderr = eval('(value) =>' + (hc.modes.HolyNode ? undefined : '(document.getElementById("stdout/stderr").value = value) && (document.getElementById("stdout/stderr").style.color = "red")'))
 const stdin = () => eval(hc.modes.HolyNode ? undefined : 'document.getElementById("stdin")');
 const stdout = (value) => (document.getElementById("stdout/stderr").value = value)
   && (document.getElementById("stdout/stderr").style.color = "black");
