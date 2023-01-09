@@ -1,6 +1,3 @@
-[submodule "holyhighlighter"] 
-  path = holyhighlighter
-  url = https://github.com/TempleWeb/HolyHighlighter
-[submodule "HolyHighlighter"]
-	path = HolyHighlighter
-	url = https://github.com/TempleWeb/HolyHighlighter
+[submodule "html-holyc-highlighter"]
+	path = html-holyc-highlighter
+	url = https://github.com/leozamboni/html-holyc-highlighter
