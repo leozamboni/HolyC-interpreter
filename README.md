@@ -6,6 +6,16 @@ A small sandboxed handwritten HolyC interpreter in JavaScript.
 
 If you want a CLI use [HolyC Interpreter CLI](https://github.com/leozamboni/holyc-interpreter-cli).
 
+## Run
+
+```
+pnpm start:nix
+```
+
+### Dependencies
+
+- bun
+
 ## Self host
 
 For local run you will need a HTTP server:
@@ -17,8 +27,7 @@ bun dev
 Create a input tag with "stdin" tag and another with "stdout/stderr":
 
 ```html
-<textarea id="stdin"></textarea> 
-<textarea id="stdout/stderr"></textarea>
+<textarea id="stdin"></textarea> <textarea id="stdout/stderr"></textarea>
 ```
 
 The stdin will be for the code and the stdout/stderr for the interpreter output.
