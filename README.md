@@ -2,14 +2,14 @@
 
 A small sandboxed handwritten HolyC interpreter in JavaScript.
 
-[Playground](https://leonardo.moe/holyc-interpreter/)
+[Demo](https://leozamboni.github.io/HolyC-interpreter/)
 
-If you want a CLI use [HolyC Interpreter CLI](https://github.com/leozamboni/holyc-interpreter-cli).
+If you want a CLI use [HolyC repl](https://github.com/leozamboni/HolyC-repl).
 
 ## Run
 
 ```
-pnpm start:nix
+bun dev
 ```
 
 ### Dependencies
@@ -49,4 +49,4 @@ And call this procedure with a button, for example:
 
 <hr/>
 
-If you want to support this project star the repository (it makes me motivated ♥).
+If you want to support this project you can star the repository.
